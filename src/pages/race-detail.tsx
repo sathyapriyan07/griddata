@@ -122,6 +122,7 @@ export default function RaceDetailPage() {
   })
 
   const [showAllStats, setShowAllStats] = useState(false)
+  const [showQ1Q2, setShowQ1Q2] = useState(false)
 
   if (!race) {
     return <PageSkeleton />
@@ -217,7 +218,6 @@ export default function RaceDetailPage() {
                     <TableHead>Pos</TableHead>
                     <TableHead>Driver</TableHead>
                     <TableHead>Team</TableHead>
-                    <TableHead>Car</TableHead>
                     {showAllStats && <TableHead>Grid</TableHead>}
                     <TableHead>Points</TableHead>
                     {showAllStats && <TableHead>Status</TableHead>}
@@ -246,13 +246,6 @@ export default function RaceDetailPage() {
                           {r.constructor.full_name ?? r.constructor.name}
                         </Link>
                       </TableCell>
-                      <TableCell>
-                        {r.constructor?.car_image_url || r.constructor?.logo_url ? (
-                          <img src={r.constructor.car_image_url ?? r.constructor.logo_url} alt={r.constructor.name} className="w-16 h-10 object-contain rounded" style={{ transform: 'scale(1.75)' }} />
-                        ) : (
-                          <div className="w-16 h-10 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
-                        )}
-                      </TableCell>
                       {showAllStats && <TableCell>{r.grid ?? "—"}</TableCell>}
                       <TableCell>{r.points}</TableCell>
                       {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
@@ -261,7 +254,7 @@ export default function RaceDetailPage() {
                   ))}
                   {(!results || results.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={showAllStats ? 8 : 5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={showAllStats ? 7 : 4} className="text-center text-muted-foreground">
                         No results available yet.
                       </TableCell>
                     </TableRow>
@@ -274,8 +267,26 @@ export default function RaceDetailPage() {
 
         <TabsContent value="qualifying">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex items-center justify-between">
               <CardTitle>Qualifying Results</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Show Q1/Q2</span>
+                <button
+                  onClick={() => setShowQ1Q2(!showQ1Q2)}
+                  aria-pressed={showQ1Q2}
+                  className={
+                    `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
+                    (showQ1Q2 ? "bg-primary" : "bg-muted")
+                  }
+                >
+                  <span
+                    className={
+                      `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
+                      (showQ1Q2 ? "translate-x-5" : "translate-x-1")
+                    }
+                  />
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -284,8 +295,8 @@ export default function RaceDetailPage() {
                     <TableHead>Pos</TableHead>
                     <TableHead>Driver</TableHead>
                     <TableHead>Team</TableHead>
-                    <TableHead>Q1</TableHead>
-                    <TableHead>Q2</TableHead>
+                    {showQ1Q2 && <TableHead>Q1</TableHead>}
+                    {showQ1Q2 && <TableHead>Q2</TableHead>}
                     <TableHead>Q3</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -309,14 +320,14 @@ export default function RaceDetailPage() {
                           {q.constructor.full_name ?? q.constructor.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{q.q1 ?? "—"}</TableCell>
-                      <TableCell className="font-mono text-xs">{q.q2 ?? "—"}</TableCell>
+                      {showQ1Q2 && <TableCell className="font-mono text-xs">{q.q1 ?? "—"}</TableCell>}
+                      {showQ1Q2 && <TableCell className="font-mono text-xs">{q.q2 ?? "—"}</TableCell>}
                       <TableCell className="font-mono text-xs">{q.q3 ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                   {(!qualifying || qualifying.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={showQ1Q2 ? 6 : 4} className="text-center text-muted-foreground">
                         No qualifying data available.
                       </TableCell>
                     </TableRow>

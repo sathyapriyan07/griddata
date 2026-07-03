@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { computeConstructorStats } from "@/lib/stats"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getConstructorColors } from "@/lib/constructorColors"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -47,11 +47,11 @@ export default function ConstructorDetailPage() {
       if (!teamUuid) return []
       const { data } = await supabase
         .from("race_results")
-        .select("*, races!inner(season_year, round, name, date), driver:drivers(driver_id, given_name, family_name)")
+        .select("*, races!inner(season_year, round, name, date, circuit_id, circuits!inner(name)), driver:drivers(driver_id, given_name, family_name)")
         .eq("constructor_id", teamUuid)
         .order("races(date)", { ascending: false, nullsFirst: false })
         .limit(100)
-      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string }; driver: { driver_id: string; given_name: string; family_name: string } })[]
+      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string; circuit_id: string; circuits: { name: string } }; driver: { driver_id: string; given_name: string; family_name: string } })[]
     },
     enabled: !!teamUuid,
   })
@@ -160,6 +160,86 @@ export default function ConstructorDetailPage() {
   }
 
   const sortedDriverRecords = [...driverRecords.values()].sort((a, b) => b.wins - a.wins)
+
+  const driverMilestones = (() => {
+    const map = new Map<string, {
+      driver_id: string
+      given_name: string
+      family_name: string
+      circuit_id: string
+      circuit_name: string
+      races: number
+      longestWins: number
+      longestPodiums: number
+      longestPoles: number
+      longestPoints: number
+      currentWinStreak: number
+      currentPodiumStreak: number
+      currentPoleStreak: number
+      currentPointsStreak: number
+    }>()
+
+    const rows = [...(constructorResults ?? [])]
+      .filter((r) => r.races?.circuit_id && r.races?.circuits?.name)
+      .sort((a, b) => new Date(a.races.date).getTime() - new Date(b.races.date).getTime())
+
+    for (const r of rows) {
+      const driverId = r.driver.driver_id
+      const circuitId = r.races.circuit_id
+      const circuitName = r.races.circuits?.name ?? "Unknown Circuit"
+      const key = `${driverId}|${circuitId}`
+      if (!map.has(key)) {
+        map.set(key, {
+          driver_id: driverId,
+          given_name: r.driver.given_name,
+          family_name: r.driver.family_name,
+          circuit_id: circuitId,
+          circuit_name: circuitName,
+          races: 0,
+          longestWins: 0,
+          longestPodiums: 0,
+          longestPoles: 0,
+          longestPoints: 0,
+          currentWinStreak: 0,
+          currentPodiumStreak: 0,
+          currentPoleStreak: 0,
+          currentPointsStreak: 0,
+        })
+      }
+      const entry = map.get(key)!
+      entry.races += 1
+
+      if (r.position === 1) {
+        entry.currentWinStreak += 1
+      } else {
+        entry.currentWinStreak = 0
+      }
+      entry.longestWins = Math.max(entry.longestWins, entry.currentWinStreak)
+
+      if (r.position !== null && r.position <= 3) {
+        entry.currentPodiumStreak += 1
+      } else {
+        entry.currentPodiumStreak = 0
+      }
+      entry.longestPodiums = Math.max(entry.longestPodiums, entry.currentPodiumStreak)
+
+      if (r.grid === 1) {
+        entry.currentPoleStreak += 1
+      } else {
+        entry.currentPoleStreak = 0
+      }
+      entry.longestPoles = Math.max(entry.longestPoles, entry.currentPoleStreak)
+
+      if (r.points > 0) {
+        entry.currentPointsStreak += 1
+      } else {
+        entry.currentPointsStreak = 0
+      }
+      entry.longestPoints = Math.max(entry.longestPoints, entry.currentPointsStreak)
+    }
+
+    return [...map.values()].sort((a, b) => b.longestWins - a.longestWins || b.longestPodiums - a.longestPodiums || b.longestPoints - a.longestPoints)
+  })()
 
   const stats = constructorResults && standings
     ? computeConstructorStats(constructorResults as RaceResult[], standings)
@@ -287,6 +367,7 @@ export default function ConstructorDetailPage() {
             <TabsTrigger value="results">Race Results</TabsTrigger>
             <TabsTrigger value="drivers">Driver Roster</TabsTrigger>
             <TabsTrigger value="records">Driver Records</TabsTrigger>
+            <TabsTrigger value="milestones">Driver Milestones</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="standings">
@@ -451,6 +532,53 @@ export default function ConstructorDetailPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground">
                         No race results available yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="milestones">
+          <Card>
+            <CardHeader>
+              <CardTitle>Driver Milestones — {team.name}</CardTitle>
+              <CardDescription>Best streaks by driver at each circuit with team results.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Driver</TableHead>
+                    <TableHead>Circuit</TableHead>
+                    <TableHead>Races</TableHead>
+                    <TableHead>Best Win Streak</TableHead>
+                    <TableHead>Best Podium Streak</TableHead>
+                    <TableHead>Best Pole Streak</TableHead>
+                    <TableHead>Best Points Streak</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {driverMilestones.map((item) => (
+                    <TableRow key={`${item.driver_id}-${item.circuit_id}`}>
+                      <TableCell>
+                        <Link to={`/drivers/${item.driver_id}`} className="font-medium hover:underline">
+                          {item.given_name} {item.family_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{item.circuit_name}</TableCell>
+                      <TableCell>{item.races}</TableCell>
+                      <TableCell>{item.longestWins}</TableCell>
+                      <TableCell>{item.longestPodiums}</TableCell>
+                      <TableCell>{item.longestPoles}</TableCell>
+                      <TableCell>{item.longestPoints}</TableCell>
+                    </TableRow>
+                  ))}
+                  {driverMilestones.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No driver milestones available yet.
                       </TableCell>
                     </TableRow>
                   )}

@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase"
 import { computeConstructorStats } from "@/lib/stats"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { getConstructorColors } from "@/lib/constructorColors"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
@@ -168,6 +169,8 @@ export default function ConstructorDetailPage() {
     return <PageSkeleton />
   }
 
+  const colors = getConstructorColors(team.name)
+
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
@@ -179,32 +182,37 @@ export default function ConstructorDetailPage() {
           />
         )}
         <div>
-        <h1 className="text-3xl font-bold">{team.name}</h1>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {team.nationality && <Badge>{team.nationality}</Badge>}
-          {team.founded_year && <Badge variant="secondary">Founded {team.founded_year}</Badge>}
+          <div className="flex items-center gap-3">
+            {colors && (
+              <div className="w-10 h-10 rounded-sm" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, border: `2px solid ${colors.accent}` }} />
+            )}
+            <h1 className="text-3xl font-bold">{team.name}</h1>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {team.nationality && <Badge>{team.nationality}</Badge>}
+            {team.founded_year && <Badge variant="secondary">Founded {team.founded_year}</Badge>}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-4 max-w-md text-sm">
+            {team.base && (
+              <div>
+                <span className="text-muted-foreground">Base</span>
+                <p className="font-medium">{team.base}</p>
+              </div>
+            )}
+            {team.principal && (
+              <div>
+                <span className="text-muted-foreground">Team Principal</span>
+                <p className="font-medium">{team.principal}</p>
+              </div>
+            )}
+            {team.engine_supplier && (
+              <div>
+                <span className="text-muted-foreground">Engine</span>
+                <p className="font-medium">{team.engine_supplier}</p>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-4 max-w-md text-sm">
-          {team.base && (
-            <div>
-              <span className="text-muted-foreground">Base</span>
-              <p className="font-medium">{team.base}</p>
-            </div>
-          )}
-          {team.principal && (
-            <div>
-              <span className="text-muted-foreground">Team Principal</span>
-              <p className="font-medium">{team.principal}</p>
-            </div>
-          )}
-          {team.engine_supplier && (
-            <div>
-              <span className="text-muted-foreground">Engine</span>
-              <p className="font-medium">{team.engine_supplier}</p>
-            </div>
-          )}
-        </div>
-      </div>
       </div>
 
       {stats && (

@@ -417,8 +417,11 @@ export default function RaceDetailPage() {
                             </Link>
                           </TableCell>
                           <TableCell>
-                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
-                              {r.constructor.name}
+                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline flex items-center gap-2">
+                              {r.constructor.logo_url && (
+                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-6 h-6 object-contain rounded" />
+                              )}
+                              <span>{r.constructor.name}</span>
                             </Link>
                           </TableCell>
                         </TableRow>

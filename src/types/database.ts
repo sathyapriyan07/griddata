@@ -122,6 +122,7 @@ export interface Constructor {
   id: string
   constructor_id: string
   name: string
+  full_name: string | null
   nationality: string | null
   founded_year: number | null
   principal: string | null

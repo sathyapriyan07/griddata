@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
@@ -8,7 +9,7 @@ import { Avatar } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Driver, RaceResult, SprintResult } from "@/types/database"
+import type { Driver, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
 
 export default function DriverDetailPage() {
   const { driverId } = useParams()
@@ -47,10 +48,10 @@ export default function DriverDetailPage() {
       if (!driverUuid) return []
       const { data } = await supabase
         .from("race_results")
-        .select("*, races!inner(season_year, round, name, date)")
+        .select("*, races!inner(season_year, round, name, date, circuit_id, distance_km, circuits!inner(name))")
         .eq("driver_id", driverUuid)
         .order("races(date)", { ascending: false, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string } })[]
+      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string; circuit_id: string; distance_km: number | null; circuits: { name: string } } })[]
     },
     enabled: !!driverUuid,
   })
@@ -65,6 +66,20 @@ export default function DriverDetailPage() {
         .eq("driver_id", driverUuid)
         .order("races(date)", { ascending: false, nullsFirst: false })
       return (data ?? []) as (SprintResult & { races: { season_year: number; round: number; name: string; date: string } })[]
+    },
+    enabled: !!driverUuid,
+  })
+
+  const { data: qualifyingResults } = useQuery({
+    queryKey: ["driver-qualifying-results", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return []
+      const { data } = await supabase
+        .from("qualifying_results")
+        .select("position, q1, q2, q3, races!inner(season_year, round, name, date)")
+        .eq("driver_id", driverUuid)
+        .order("races(date)", { ascending: false, nullsFirst: false })
+      return (data ?? []) as (QualifyingResult & { races: { season_year: number; round: number; name: string; date: string } })[]
     },
     enabled: !!driverUuid,
   })
@@ -244,6 +259,78 @@ export default function DriverDetailPage() {
   const podiumStreaks = results ? getStreaks(results as RaceResult[], "podiums") : []
   const pointStreaks = results ? getStreaks(results as RaceResult[], "points") : []
 
+  const frontRowStarts = qualifyingResults?.filter((q) => q.position !== null && q.position <= 2).length ?? 0
+  const q3Appearances = qualifyingResults?.filter((q) => q.q3 && q.q3.trim() !== "").length ?? 0
+  const pointsFinishes = stats?.pointsFinishes ?? 0
+  const top5Finishes = results?.filter((r) => r.position !== null && r.position <= 5).length ?? 0
+  const top10Finishes = results?.filter((r) => r.position !== null && r.position <= 10).length ?? 0
+  const totalLapsCompleted = results?.reduce((sum, r) => sum + (r.laps ?? 0), 0) ?? 0
+  const totalKilometersRaced = results?.reduce((sum, r) => sum + (r.races?.distance_km ?? 0), 0) ?? 0
+  const grandSlams = results?.filter((r) => r.position === 1 && r.grid === 1 && r.fastest_lap_rank === 1).length ?? 0
+  const averageQualifying = (() => {
+    const positions = qualifyingResults?.filter((q) => q.position !== null).map((q) => q.position!) ?? []
+    return positions.length > 0 ? positions.reduce((sum, pos) => sum + pos, 0) / positions.length : null
+  })()
+  const averageGrid = stats?.avgGridPosition ?? null
+
+  const [circuitSort, setCircuitSort] = useState<"wins" | "podiums" | "avgFinish">("wins")
+
+  const circuitPerformance = (() => {
+    const map = new Map<string, {
+      circuitId: string
+      circuitName: string
+      races: number
+      wins: number
+      podiums: number
+      poles: number
+      fastestLaps: number
+      points: number
+      finishCount: number
+      finishTotal: number
+    }>()
+
+    for (const r of results ?? []) {
+      const circuitId = r.races?.circuit_id ?? ""
+      const circuitName = r.races?.circuits?.name ?? r.races?.name ?? "Unknown"
+      if (!map.has(circuitId)) {
+        map.set(circuitId, {
+          circuitId,
+          circuitName,
+          races: 0,
+          wins: 0,
+          podiums: 0,
+          poles: 0,
+          fastestLaps: 0,
+          points: 0,
+          finishCount: 0,
+          finishTotal: 0,
+        })
+      }
+      const entry = map.get(circuitId)!
+      entry.races += 1
+      if (r.position === 1) entry.wins += 1
+      if (r.position !== null && r.position <= 3) entry.podiums += 1
+      if (r.grid === 1) entry.poles += 1
+      if (r.fastest_lap_rank === 1) entry.fastestLaps += 1
+      entry.points += r.points
+      if (r.position !== null) {
+        entry.finishCount += 1
+        entry.finishTotal += r.position
+      }
+    }
+
+    return [...map.values()]
+      .map((entry) => ({
+        ...entry,
+        averageFinish: entry.finishCount > 0 ? entry.finishTotal / entry.finishCount : null,
+      }))
+      .sort((a, b) => {
+        if (circuitSort === "wins") return b.wins - a.wins || a.averageFinish - b.averageFinish
+        if (circuitSort === "podiums") return b.podiums - a.podiums || a.averageFinish - b.averageFinish
+        return (a.averageFinish ?? Number.POSITIVE_INFINITY) - (b.averageFinish ?? Number.POSITIVE_INFINITY) || b.wins - a.wins
+      })
+  })()
+
   const seasons = results?.reduce(
     (acc, r) => {
       const sy = r.races.season_year
@@ -372,7 +459,9 @@ export default function DriverDetailPage() {
             <TabsTrigger value="team-records">Team Records</TabsTrigger>
             <TabsTrigger value="teammates">Teammate Battle</TabsTrigger>
             <TabsTrigger value="milestones">Milestones</TabsTrigger>
+            <TabsTrigger value="circuit-performance">Circuit Performance</TabsTrigger>
             <TabsTrigger value="achievements">Achievements</TabsTrigger>
+            <TabsTrigger value="advanced-stats">Advanced Stats</TabsTrigger>
             <TabsTrigger value="streaks">Streaks</TabsTrigger>
           </TabsList>
         </div>
@@ -737,6 +826,147 @@ export default function DriverDetailPage() {
               ) : (
                 <p className="text-muted-foreground">No wins yet — achievements will appear here once the driver has a win.</p>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="circuit-performance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Circuit Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <p className="text-sm text-muted-foreground">Sort by:</p>
+                <select
+                  value={circuitSort}
+                  onChange={(event) => setCircuitSort(event.target.value as "wins" | "podiums" | "avgFinish")}
+                  className="rounded-md border px-3 py-2"
+                >
+                  <option value="wins">Most wins</option>
+                  <option value="podiums">Most podiums</option>
+                  <option value="avgFinish">Best average finish</option>
+                </select>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Circuit</TableHead>
+                    <TableHead>Races</TableHead>
+                    <TableHead>Wins</TableHead>
+                    <TableHead>Podiums</TableHead>
+                    <TableHead>Poles</TableHead>
+                    <TableHead>Fastest Laps</TableHead>
+                    <TableHead>Average Finish</TableHead>
+                    <TableHead>Points</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {circuitPerformance.map((row) => (
+                    <TableRow key={row.circuitId}>
+                      <TableCell>{row.circuitName}</TableCell>
+                      <TableCell>{row.races}</TableCell>
+                      <TableCell>{row.wins}</TableCell>
+                      <TableCell>{row.podiums}</TableCell>
+                      <TableCell>{row.poles}</TableCell>
+                      <TableCell>{row.fastestLaps}</TableCell>
+                      <TableCell>{row.averageFinish ? row.averageFinish.toFixed(2) : "—"}</TableCell>
+                      <TableCell>{row.points}</TableCell>
+                    </TableRow>
+                  ))}
+                  {circuitPerformance.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        No circuit performance data available yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="advanced-stats">
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Stats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Front Row Starts</p>
+                    <p className="text-3xl font-bold mt-1">{frontRowStarts}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Points Finishes</p>
+                    <p className="text-3xl font-bold mt-1">{pointsFinishes}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Top 5 Finishes</p>
+                    <p className="text-3xl font-bold mt-1">{top5Finishes}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Top 10 Finishes</p>
+                    <p className="text-3xl font-bold mt-1">{top10Finishes}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Laps Led</p>
+                    <p className="text-3xl font-bold mt-1">—</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Total Laps Completed</p>
+                    <p className="text-3xl font-bold mt-1">{totalLapsCompleted}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Kilometers Raced</p>
+                    <p className="text-3xl font-bold mt-1">{totalKilometersRaced.toFixed(1)}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Q3 Appearances</p>
+                    <p className="text-3xl font-bold mt-1">{q3Appearances}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Grand Slams</p>
+                    <p className="text-3xl font-bold mt-1">{grandSlams}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Average Qualifying</p>
+                    <p className="text-3xl font-bold mt-1">{averageQualifying ? averageQualifying.toFixed(2) : "—"}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Average Grid</p>
+                    <p className="text-3xl font-bold mt-1">{averageGrid ? averageGrid.toFixed(2) : "—"}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Average Finish</p>
+                    <p className="text-3xl font-bold mt-1">{stats?.avgFinishingPosition ? stats.avgFinishingPosition.toFixed(2) : "—"}</p>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

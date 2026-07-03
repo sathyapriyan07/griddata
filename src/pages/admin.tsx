@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import {
@@ -43,6 +43,14 @@ function extractErrorMessage(err: unknown): string {
     return JSON.stringify(err)
   }
   return String(err)
+}
+
+function getSearchColumns(entityType: string) {
+  if (entityType === "drivers") return ["driver_id", "given_name", "family_name"]
+  if (entityType === "constructors") return ["constructor_id", "name", "full_name"]
+  if (entityType === "circuits") return ["circuit_id", "name", "country"]
+  if (entityType === "races") return ["name"]
+  return ["id"]
 }
 
 function SeasonImportForm({
@@ -185,13 +193,35 @@ function CrudTable({
   const [edits, setEdits] = useState<Record<string, string>>({})
   const [showAdd, setShowAdd] = useState(false)
   const [newRow, setNewRow] = useState<Record<string, string>>({})
+  const [searchText, setSearchText] = useState("")
+  const [searchInput, setSearchInput] = useState("")
+  const debounceRef = useRef<number | null>(null)
   const { data: rows, isLoading, refetch } = useQuery({
-    queryKey: [`crud-${entityType}`],
+    queryKey: [`crud-${entityType}`, searchText],
     queryFn: async () => {
-      const { data } = await supabase.from(entityType).select("*").order("created_at", { ascending: false }).limit(50)
+      const q = supabase.from(entityType).select("*")
+      if (searchText && searchText.trim().length > 0) {
+        const cols = getSearchColumns(entityType)
+        const term = `%${searchText.replace(/%/g, '\\%')}%`
+        const orClause = cols.map((c) => `${c}.ilike.${term}`).join(',')
+        const { data } = await q.or(orClause).order("created_at", { ascending: false }).limit(200)
+        return data ?? []
+      }
+      const { data } = await q.order("created_at", { ascending: false }).limit(50)
       return data ?? []
     },
   })
+
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current)
+    // debounce update to searchText so typing doesn't steal focus
+    debounceRef.current = window.setTimeout(() => {
+      setSearchText(searchInput)
+    }, 300)
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current)
+    }
+  }, [searchInput])
 
   const startEdit = (row: Record<string, unknown>) => {
     setEditingId(row.id as string)
@@ -230,11 +260,25 @@ function CrudTable({
 
   return (
     <div className="space-y-3">
-      {!showAdd ? (
-        <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
-          + Add New
-        </Button>
-      ) : (
+      <div className="flex items-center gap-2">
+        <input
+          type="search"
+          placeholder="Search..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="rounded border px-2 py-1 text-sm bg-background w-64"
+        />
+        {!showAdd ? (
+          <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
+            + Add New
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" onClick={() => { setShowAdd(false); setNewRow({}) }}>
+            Cancel Add
+          </Button>
+        )}
+      </div>
+      {showAdd && (
         <div className="flex flex-wrap gap-2 items-end border rounded-md p-3 bg-muted/30">
           {columns.map((col) => (
             <div key={col.key} className="flex flex-col gap-1">
@@ -248,7 +292,6 @@ function CrudTable({
             </div>
           ))}
           <Button variant="default" size="sm" onClick={addNew}>Save</Button>
-          <Button variant="outline" size="sm" onClick={() => { setShowAdd(false); setNewRow({}) }}>Cancel</Button>
         </div>
       )}
       <div className="overflow-x-auto">
@@ -951,6 +994,7 @@ export default function AdminPage() {
                     columns={[
                       { key: "constructor_id", label: "ID" },
                       { key: "name", label: "Name" },
+                      { key: "full_name", label: "Full Name" },
                       { key: "nationality", label: "Nationality" },
                     ]}
                   />

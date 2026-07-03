@@ -196,6 +196,7 @@ export default function RaceDetailPage() {
                     <TableHead>Pos</TableHead>
                     <TableHead>Driver</TableHead>
                     <TableHead>Team</TableHead>
+                    <TableHead>Car</TableHead>
                     <TableHead>Grid</TableHead>
                     <TableHead>Points</TableHead>
                     <TableHead>Status</TableHead>
@@ -221,8 +222,15 @@ export default function RaceDetailPage() {
                           to={`/constructors/${r.constructor.constructor_id}`}
                           className="hover:underline"
                         >
-                          {r.constructor.name}
+                          {r.constructor.full_name ?? r.constructor.name}
                         </Link>
+                      </TableCell>
+                      <TableCell>
+                        {r.constructor?.car_image_url || r.constructor?.logo_url ? (
+                          <img src={r.constructor.car_image_url ?? r.constructor.logo_url} alt={r.constructor.name} className="w-16 h-10 object-contain rounded" style={{ transform: 'scale(1.75)' }} />
+                        ) : (
+                          <div className="w-16 h-10 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
+                        )}
                       </TableCell>
                       <TableCell>{r.grid ?? "—"}</TableCell>
                       <TableCell>{r.points}</TableCell>
@@ -232,7 +240,7 @@ export default function RaceDetailPage() {
                   ))}
                   {(!results || results.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         No results available yet.
                       </TableCell>
                     </TableRow>
@@ -277,7 +285,7 @@ export default function RaceDetailPage() {
                           to={`/constructors/${q.constructor.constructor_id}`}
                           className="hover:underline"
                         >
-                          {q.constructor.name}
+                          {q.constructor.full_name ?? q.constructor.name}
                         </Link>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{q.q1 ?? "—"}</TableCell>
@@ -328,7 +336,7 @@ export default function RaceDetailPage() {
                             </TableCell>
                             <TableCell>
                               <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                                {s.constructor.name}
+                                {s.constructor.full_name ?? s.constructor.name}
                               </Link>
                             </TableCell>
                           </TableRow>
@@ -368,7 +376,7 @@ export default function RaceDetailPage() {
                         </TableCell>
                         <TableCell>
                           <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                            {s.constructor.name}
+                            {s.constructor.full_name ?? s.constructor.name}
                           </Link>
                         </TableCell>
                         <TableCell>{s.points}</TableCell>

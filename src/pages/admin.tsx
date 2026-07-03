@@ -335,7 +335,7 @@ export default function AdminPage() {
   const [adminRoleUserId, setAdminRoleUserId] = useState("")
   const [adminRoleStatus, setAdminRoleStatus] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<Profile[]>([])
-  const [uploadType, setUploadType] = useState<"driver" | "constructor" | "circuit">("driver")
+  const [uploadType, setUploadType] = useState<"driver" | "constructor" | "car" | "circuit">("driver")
   const [uploadEntityId, setUploadEntityId] = useState("")
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -732,7 +732,7 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm">Upload driver photo, team logo, or circuit image.</p>
+            <p className="text-sm">Upload driver photo, team logo, team car image, or circuit image.</p>
             <div className="flex gap-2">
               <select
                 value={uploadType}
@@ -741,6 +741,7 @@ export default function AdminPage() {
               >
                 <option value="driver">Driver</option>
                 <option value="constructor">Team</option>
+                <option value="car">Car (Team)</option>
                 <option value="circuit">Circuit</option>
               </select>
             </div>
@@ -787,8 +788,8 @@ export default function AdminPage() {
                     .getPublicUrl(filePath)
                   const publicUrl = urlData.publicUrl
 
-                  const column = uploadType === "driver" ? "photo_url" : uploadType === "constructor" ? "logo_url" : "image_url"
-                  const table = uploadType === "driver" ? "drivers" : uploadType === "constructor" ? "constructors" : "circuits"
+                  const column = uploadType === "driver" ? "photo_url" : uploadType === "constructor" ? "logo_url" : uploadType === "car" ? "car_image_url" : "image_url"
+                  const table = uploadType === "driver" ? "drivers" : uploadType === "constructor" || uploadType === "car" ? "constructors" : "circuits"
                   const idColumn = "id"
                   const { error: updateErr } = await supabase
                     .from(table)
@@ -813,7 +814,7 @@ export default function AdminPage() {
       </div>
 
       <Tabs defaultValue="sync">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="sync">Sync Jobs</TabsTrigger>
             <TabsTrigger value="crud">CRUD Tables</TabsTrigger>
@@ -870,7 +871,7 @@ export default function AdminPage() {
 
         <TabsContent value="crud">
           <Tabs defaultValue="drivers">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto hide-scrollbar">
               <TabsList className="inline-flex w-max min-w-full">
                 <TabsTrigger value="drivers">Drivers</TabsTrigger>
                 <TabsTrigger value="constructors">Teams</TabsTrigger>

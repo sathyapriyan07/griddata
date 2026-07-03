@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import type { DriverStanding, ConstructorStanding, Season } from "@/types/database"
 
 export default function StandingsPage() {
@@ -37,9 +37,14 @@ export default function StandingsPage() {
         .from("driver_standings")
         .select("*, driver:drivers(*)")
         .eq("season_year", selectedSeason)
-        .order("position", { ascending: true, nullsFirst: false })
-        .limit(25)
-      return (data ?? []) as (DriverStanding & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string } })[]
+        .order("points", { ascending: false, nullsFirst: false })
+      if (!data) return []
+      const grouped = new Map<string, DriverStanding & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string } }>()
+      for (const s of data as (DriverStanding & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string } })[]) {
+        const existing = grouped.get(s.driver_id)
+        if (!existing || s.points > existing.points) grouped.set(s.driver_id, s)
+      }
+      return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
     },
   })
 
@@ -50,9 +55,15 @@ export default function StandingsPage() {
         .from("constructor_standings")
         .select("*, constructor:constructors(*)")
         .eq("season_year", selectedSeason)
-        .order("position", { ascending: true, nullsFirst: false })
-        .limit(25)
-      return (data ?? []) as (ConstructorStanding & { constructor: { name: string; constructor_id: string; nationality: string } })[]
+        .order("points", { ascending: false, nullsFirst: false })
+        .limit(100)
+      if (!data) return []
+      const grouped = new Map<string, ConstructorStanding & { constructor: { name: string; constructor_id: string; nationality: string } }>()
+      for (const s of data as (ConstructorStanding & { constructor: { name: string; constructor_id: string; nationality: string } })[]) {
+        const existing = grouped.get(s.constructor_id)
+        if (!existing || s.points > existing.points) grouped.set(s.constructor_id, s)
+      }
+      return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99)).slice(0, 25)
     },
   })
 
@@ -74,59 +85,7 @@ export default function StandingsPage() {
       constructorId: s.constructor.constructor_id,
     }))
 
-  const { data: progressionData } = useQuery({
-    queryKey: ["standings-progression", selectedSeason],
-    queryFn: async () => {
-      const { data: races } = await supabase
-        .from("races")
-        .select("id, round, name")
-        .eq("season_year", selectedSeason)
-        .order("round", { ascending: true })
-      if (!races || races.length === 0) return null
 
-      const { data: topDrivers } = await supabase
-        .from("driver_standings")
-        .select("driver_id")
-        .eq("season_year", selectedSeason)
-        .is("race_id", null)
-        .order("position", { ascending: true })
-        .limit(5)
-      if (!topDrivers) return null
-
-      const topDriverIds = topDrivers.map((d) => d.driver_id)
-
-      const { data: perRound } = await supabase
-        .from("driver_standings")
-        .select("*, driver:drivers(given_name, family_name, driver_id)")
-        .eq("season_year", selectedSeason)
-        .not("race_id", "is", null)
-        .in("driver_id", topDriverIds)
-        .order("race_id", { ascending: true })
-
-      if (!perRound || perRound.length === 0) return null
-
-      const typed = perRound as (DriverStanding & { driver: { given_name: string; family_name: string; driver_id: string }; race_id: string })[]
-
-      const driverColors = ["hsl(var(--primary))", "#eab308", "#22c55e", "#ef4444", "#a855f7"]
-
-      const chartRows = races.map((race) => {
-        const row: Record<string, unknown> = { round: `R${race.round}` }
-        for (const dId of topDriverIds) {
-          const entry = typed.find((t) => t.driver_id === dId && t.race_id === race.id)
-          row[dId] = entry?.points ?? null
-        }
-        return row
-      })
-
-      const lines = topDriverIds.map((dId, i) => {
-        const driver = typed.find((t) => t.driver_id === dId)
-        const label = driver ? `${driver.driver.given_name} ${driver.driver.family_name.substring(0, 3)}` : dId.substring(0, 6)
-        return { dataKey: dId, label, color: driverColors[i % driverColors.length] }
-      })
-
-      return { chartRows, lines }
-    },
-  })
 
   const getPositionBadge = (pos: number | null) => {
     if (!pos) return <Badge variant="outline">—</Badge>
@@ -170,7 +129,7 @@ export default function StandingsPage() {
       </div>
 
       <Tabs defaultValue="drivers">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="drivers">Drivers' Championship</TabsTrigger>
             <TabsTrigger value="constructors">Constructors' Championship</TabsTrigger>
@@ -178,38 +137,6 @@ export default function StandingsPage() {
         </div>
 
         <TabsContent value="drivers">
-          {progressionData && progressionData.chartRows.length > 0 && (
-            <Card className="mb-4">
-              <CardHeader>
-                <CardTitle>Points Progression — {selectedSeason}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={progressionData.chartRows} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="round" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Legend />
-                      {progressionData.lines.map((line) => (
-                        <Line
-                          key={line.dataKey}
-                          type="monotone"
-                          dataKey={line.dataKey}
-                          name={line.label}
-                          stroke={line.color}
-                          strokeWidth={2}
-                          dot={false}
-                          connectNulls
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
           {chartData.length > 0 && (
             <Card className="mb-4">
               <CardHeader>

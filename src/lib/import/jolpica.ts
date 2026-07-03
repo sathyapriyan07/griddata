@@ -64,6 +64,37 @@ interface JolpicaCircuit {
   }
 }
 
+interface CircuitWikiData {
+  length_km: number | null
+  turns: number | null
+  first_gp_year: number | null
+}
+
+async function fetchCircuitWikiData(wikiUrl: string): Promise<CircuitWikiData> {
+  try {
+    const title = decodeURIComponent(wikiUrl.split("/wiki/")[1])
+    const apiUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvprop=content&rvslots=main&titles=${encodeURIComponent(title)}&format=json&origin=*`
+    const res = await fetch(apiUrl)
+    if (!res.ok) return { length_km: null, turns: null, first_gp_year: null }
+    const json = await res.json()
+    const pages = json.query?.pages ?? {}
+    const content: string = Object.values(pages)[0]?.revisions?.[0]?.slots?.main?.["*"] ?? ""
+
+    const lengthMatch = content.match(/\|\s*length\s*=\s*([\d.]+)/i)
+    const turnsMatch = content.match(/\|\s*turns\s*=\s*(\d+)/i)
+    const firstGpMatch = content.match(/\|\s*first_held\s*=\s*(\d{4})/i)
+      ?? content.match(/\|\s*inaugural\s*=\s*(\d{4})/i)
+
+    return {
+      length_km: lengthMatch ? parseFloat(lengthMatch[1]) : null,
+      turns: turnsMatch ? parseInt(turnsMatch[1], 10) : null,
+      first_gp_year: firstGpMatch ? parseInt(firstGpMatch[1], 10) : null,
+    }
+  } catch {
+    return { length_km: null, turns: null, first_gp_year: null }
+  }
+}
+
 interface JolpicaConstructor {
   constructorId: string
   url: string
@@ -233,16 +264,21 @@ export async function importSeasons(): Promise<Season[]> {
 
 export async function importCircuits(): Promise<Circuit[]> {
   const circuits = await fetchAllPaginated<JolpicaCircuit>("/circuits.json?")
-  const records: Omit<Circuit, "id" | "created_at" | "updated_at">[] = circuits.map((c) => ({
+
+  const wikiDataList = await Promise.all(
+    circuits.map((c) => c.url ? fetchCircuitWikiData(c.url) : Promise.resolve({ length_km: null, turns: null, first_gp_year: null }))
+  )
+
+  const records: Omit<Circuit, "id" | "created_at" | "updated_at">[] = circuits.map((c, i) => ({
     circuit_id: c.circuitId,
     name: c.circuitName,
     location: c.Location.locality,
     country: c.Location.country,
     lat: parseFloat(c.Location.lat) || null,
     lng: parseFloat(c.Location.long) || null,
-    length_km: null,
-    first_gp_year: null,
-    turns: null,
+    length_km: wikiDataList[i].length_km,
+    first_gp_year: wikiDataList[i].first_gp_year,
+    turns: wikiDataList[i].turns,
     direction: null,
     image_url: null,
     source: "jolpica",

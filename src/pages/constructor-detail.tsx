@@ -48,7 +48,7 @@ export default function ConstructorDetailPage() {
         .from("race_results")
         .select("*, races!inner(season_year, round, name, date), driver:drivers(driver_id, given_name, family_name)")
         .eq("constructor_id", teamUuid)
-        .order("race_id", { ascending: false })
+        .order("races(date)", { ascending: false, nullsFirst: false })
         .limit(100)
       return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string }; driver: { driver_id: string; given_name: string; family_name: string } })[]
     },
@@ -64,7 +64,16 @@ export default function ConstructorDetailPage() {
         .select("*")
         .eq("constructor_id", teamUuid)
         .order("season_year", { ascending: false })
-      return (data ?? []) as ConstructorStanding[]
+        .order("points", { ascending: false })
+      if (!data) return []
+      const grouped = new Map<number, ConstructorStanding>()
+      for (const s of data as ConstructorStanding[]) {
+        const existing = grouped.get(s.season_year)
+        if (!existing || (s.points > existing.points)) {
+          grouped.set(s.season_year, s)
+        }
+      }
+      return [...grouped.values()].sort((a, b) => b.season_year - a.season_year)
     },
     enabled: !!teamUuid,
   })
@@ -78,21 +87,18 @@ export default function ConstructorDetailPage() {
         .select("drivers!inner(driver_id, given_name, family_name, nationality), races!inner(season_year)")
         .eq("constructor_id", teamUuid)
       if (!data) return []
-      const seen = new Set<string>()
-      const out: { driver_id: string; given_name: string; family_name: string; nationality: string | null; season_year: number }[] = []
+      const driverMap = new Map<string, { driver_id: string; given_name: string; family_name: string; nationality: string | null; seasons: number[] }>()
       for (const r of data as unknown as { drivers: { driver_id: string; given_name: string; family_name: string; nationality: string | null }; races: { season_year: number } }[]) {
-        const key = `${r.drivers.driver_id}|${r.races.season_year}`
-        if (seen.has(key)) continue
-        seen.add(key)
-        out.push({
-          driver_id: r.drivers.driver_id,
-          given_name: r.drivers.given_name,
-          family_name: r.drivers.family_name,
-          nationality: r.drivers.nationality,
-          season_year: r.races.season_year,
-        })
+        const did = r.drivers.driver_id
+        if (!driverMap.has(did)) {
+          driverMap.set(did, { driver_id: did, given_name: r.drivers.given_name, family_name: r.drivers.family_name, nationality: r.drivers.nationality, seasons: [] })
+        }
+        const entry = driverMap.get(did)!
+        if (!entry.seasons.includes(r.races.season_year)) {
+          entry.seasons.push(r.races.season_year)
+        }
       }
-      return out.sort((a, b) => b.season_year - a.season_year)
+      return [...driverMap.values()].sort((a, b) => b.seasons[0] - a.seasons[0])
     },
     enabled: !!teamUuid,
   })
@@ -110,21 +116,45 @@ export default function ConstructorDetailPage() {
     enabled: !!teamUuid,
   })
 
+  const { data: sprintResults } = useQuery({
+    queryKey: ["constructor-sprints", teamUuid],
+    queryFn: async () => {
+      if (!teamUuid) return []
+      const { data } = await supabase
+        .from("sprint_results")
+        .select("driver_id, position, points")
+        .eq("constructor_id", teamUuid)
+      return (data ?? []) as { driver_id: string; position: number | null; points: number }[]
+    },
+    enabled: !!teamUuid,
+  })
+
   const driverRecords = (constructorResults ?? []).reduce((acc, r) => {
     const did = r.driver.driver_id
-    if (!acc.has(did)) acc.set(did, { driver_id: did, given_name: r.driver.given_name, family_name: r.driver.family_name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0 })
+    if (!acc.has(did)) acc.set(did, { driver_id: did, given_name: r.driver.given_name, family_name: r.driver.family_name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0, sprints: 0, sprintWins: 0, sprintPodiums: 0, sprintPoints: 0 })
     const rec = acc.get(did)!
     rec.races++
     if (r.position === 1) rec.wins++
     if (r.position !== null && r.position <= 3) rec.podiums++
     rec.points += r.points
     return acc
-  }, new Map<string, { driver_id: string; given_name: string; family_name: string; races: number; wins: number; podiums: number; points: number; poles: number }>())
+  }, new Map<string, { driver_id: string; given_name: string; family_name: string; races: number; wins: number; podiums: number; points: number; poles: number; sprints: number; sprintWins: number; sprintPodiums: number; sprintPoints: number }>())
 
   for (const q of qualiResults ?? []) {
     const did = q.driver_id
     if (driverRecords.has(did) && q.position === 1) {
       driverRecords.get(did)!.poles++
+    }
+  }
+
+  for (const s of sprintResults ?? []) {
+    const did = s.driver_id
+    if (driverRecords.has(did)) {
+      const rec = driverRecords.get(did)!
+      rec.sprints++
+      if (s.position === 1) rec.sprintWins++
+      if (s.position !== null && s.position <= 3) rec.sprintPodiums++
+      rec.sprintPoints += s.points
     }
   }
 
@@ -140,7 +170,15 @@ export default function ConstructorDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-start gap-4">
+        {team.logo_url && (
+          <img
+            src={team.logo_url}
+            alt={`${team.name} logo`}
+            className="w-16 h-16 object-contain rounded-md"
+          />
+        )}
+        <div>
         <h1 className="text-3xl font-bold">{team.name}</h1>
         <div className="flex flex-wrap gap-2 mt-2">
           {team.nationality && <Badge>{team.nationality}</Badge>}
@@ -166,6 +204,7 @@ export default function ConstructorDetailPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {stats && (
@@ -221,8 +260,20 @@ export default function ConstructorDetailPage() {
         </div>
       )}
 
+      {team.car_image_url && (
+        <Card>
+          <CardContent className="p-4">
+            <img
+              src={team.car_image_url}
+              alt={`${team.name} car`}
+              className="w-full max-h-64 object-contain rounded-md"
+            />
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs defaultValue="standings">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="standings">Season Standings</TabsTrigger>
             <TabsTrigger value="results">Race Results</TabsTrigger>
@@ -332,14 +383,14 @@ export default function ConstructorDetailPage() {
                 </TableHeader>
                 <TableBody>
                   {drivers?.map((d) => (
-                    <TableRow key={`${d.driver_id}-${d.season_year}`}>
+                    <TableRow key={d.driver_id}>
                       <TableCell>
                         <Link to={`/drivers/${d.driver_id}`} className="hover:underline font-medium">
                           {d.given_name} {d.family_name}
                         </Link>
                       </TableCell>
                       <TableCell>{d.nationality ?? "—"}</TableCell>
-                      <TableCell>{d.season_year}</TableCell>
+                      <TableCell>{d.seasons.join(", ")}</TableCell>
                     </TableRow>
                   ))}
                   {(!drivers || drivers.length === 0) && (
@@ -380,11 +431,11 @@ export default function ConstructorDetailPage() {
                           {d.given_name} {d.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{d.races}</TableCell>
-                      <TableCell className="font-semibold">{d.wins}</TableCell>
-                      <TableCell>{d.races > 0 ? `${(d.wins / d.races * 100).toFixed(1)}%` : "—"}</TableCell>
-                      <TableCell>{d.podiums}</TableCell>
-                      <TableCell className="font-bold">{d.points}</TableCell>
+                      <TableCell>{d.races + d.sprints}</TableCell>
+                      <TableCell className="font-semibold">{d.wins + d.sprintWins}</TableCell>
+                      <TableCell>{d.races + d.sprints > 0 ? `${((d.wins + d.sprintWins) / (d.races + d.sprints) * 100).toFixed(1)}%` : "—"}</TableCell>
+                      <TableCell>{d.podiums + d.sprintPodiums}</TableCell>
+                      <TableCell className="font-bold">{d.points + d.sprintPoints}</TableCell>
                       <TableCell>{d.poles}</TableCell>
                     </TableRow>
                   ))}

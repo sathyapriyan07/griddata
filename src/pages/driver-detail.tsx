@@ -49,7 +49,7 @@ export default function DriverDetailPage() {
         .from("race_results")
         .select("*, races!inner(season_year, round, name, date)")
         .eq("driver_id", driverUuid)
-        .order("race_id", { ascending: false })
+        .order("races(date)", { ascending: false, nullsFirst: false })
       return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string } })[]
     },
     enabled: !!driverUuid,
@@ -63,7 +63,7 @@ export default function DriverDetailPage() {
         .from("sprint_results")
         .select("*, races!inner(season_year, round, name, date)")
         .eq("driver_id", driverUuid)
-        .order("race_id", { ascending: false })
+        .order("races(date)", { ascending: false, nullsFirst: false })
       return (data ?? []) as (SprintResult & { races: { season_year: number; round: number; name: string; date: string } })[]
     },
     enabled: !!driverUuid,
@@ -95,11 +95,24 @@ export default function DriverDetailPage() {
     enabled: !!driverUuid,
   })
 
+  const { data: teamSprintStats } = useQuery({
+    queryKey: ["driver-team-sprint-stats", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return []
+      const { data } = await supabase
+        .from("sprint_results")
+        .select("position, points, constructors!inner(constructor_id, name)")
+        .eq("driver_id", driverUuid)
+      return (data ?? []) as { position: number | null; points: number; constructors: { constructor_id: string; name: string } }[]
+    },
+    enabled: !!driverUuid,
+  })
+
   const driverTeamRecords = (() => {
-    const teams = new Map<string, { constructor_id: string; name: string; races: number; wins: number; podiums: number; points: number; poles: number }>()
+    const teams = new Map<string, { constructor_id: string; name: string; races: number; wins: number; podiums: number; points: number; poles: number; sprints: number; sprintWins: number; sprintPodiums: number; sprintPoints: number }>()
     for (const r of teamRaceStats ?? []) {
       const cid = r.constructors.constructor_id
-      if (!teams.has(cid)) teams.set(cid, { constructor_id: cid, name: r.constructors.name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0 })
+      if (!teams.has(cid)) teams.set(cid, { constructor_id: cid, name: r.constructors.name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0, sprints: 0, sprintWins: 0, sprintPodiums: 0, sprintPoints: 0 })
       const t = teams.get(cid)!
       t.races++
       if (r.position === 1) t.wins++
@@ -109,6 +122,16 @@ export default function DriverDetailPage() {
     for (const q of teamQualiStats ?? []) {
       const cid = q.constructors.constructor_id
       if (teams.has(cid) && q.position === 1) teams.get(cid)!.poles++
+    }
+    for (const s of teamSprintStats ?? []) {
+      const cid = s.constructors.constructor_id
+      if (teams.has(cid)) {
+        const t = teams.get(cid)!
+        t.sprints++
+        if (s.position === 1) t.sprintWins++
+        if (s.position !== null && s.position <= 3) t.sprintPodiums++
+        t.sprintPoints += s.points
+      }
     }
     return [...teams.values()].sort((a, b) => b.wins - a.wins)
   })()
@@ -140,6 +163,82 @@ export default function DriverDetailPage() {
   })
 
   const stats = results ? computeDriverCareerStats(results as RaceResult[], sprints as SprintResult[]) : null
+  const { data: winsWithCircuit } = useQuery({
+    queryKey: ["driver-wins-circuit", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return []
+      const { data } = await supabase
+        .from("race_results")
+        .select("position, grid, races!inner(season_year, round, name, date, circuit_id)")
+        .eq("driver_id", driverUuid)
+        .eq("position", 1)
+        .order("race_id", { ascending: true })
+      return (data ?? []) as { position: number | null; grid: number | null; races: { season_year: number; round: number; name: string; date: string; circuit_id: string } }[]
+    },
+    enabled: !!driverUuid,
+  })
+
+  const { data: circuitsMap } = useQuery({
+    queryKey: ["circuits-map"],
+    queryFn: async () => {
+      const { data } = await supabase.from("circuits").select("id, name")
+      return new Map((data ?? [] as { id: string; name: string }[]).map((c) => [c.id, c.name]))
+    },
+    staleTime: Infinity,
+  })
+
+  const achievements = (() => {
+    if (!winsWithCircuit || winsWithCircuit.length === 0) return null
+    const wins = winsWithCircuit
+
+    const circuitWins = new Map<string, { name: string; count: number }>()
+    for (const w of wins) {
+      const cid = w.races.circuit_id
+      const cname = circuitsMap?.get(cid) ?? "Unknown"
+      const existing = circuitWins.get(cid)
+      if (existing) existing.count++
+      else circuitWins.set(cid, { name: cname, count: 1 })
+    }
+    const favoriteCircuit = [...circuitWins.values()].sort((a, b) => b.count - a.count)[0]
+
+    const firstWin = wins[0]
+    const latestWin = wins[wins.length - 1]
+
+    const seasonWins = new Map<number, number>()
+    for (const w of wins) {
+      seasonWins.set(w.races.season_year, (seasonWins.get(w.races.season_year) ?? 0) + 1)
+    }
+    const bestSeason = [...seasonWins.entries()].sort((a, b) => b[1] - a[1])[0]
+
+    const seasonsSorted = [...seasonWins.keys()].sort((a, b) => a - b)
+    let consecutiveStreak = 1
+    let bestStreak = 1
+    for (let i = 1; i < seasonsSorted.length; i++) {
+      if (seasonsSorted[i] === seasonsSorted[i - 1] + 1) {
+        consecutiveStreak++
+        bestStreak = Math.max(bestStreak, consecutiveStreak)
+      } else {
+        consecutiveStreak = 1
+      }
+    }
+
+    const comebackWins = wins.filter((w) => w.grid != null && w.grid > 5).length
+    const poleWins = wins.filter((w) => w.grid === 1).length
+    const nonPoleWins = wins.length - poleWins
+
+    return {
+      totalWins: wins.length,
+      favoriteCircuit,
+      firstWin,
+      latestWin,
+      bestSeason,
+      consecutiveWinningSeasons: bestStreak,
+      comebackWins,
+      poleWins,
+      nonPoleWins,
+    }
+  })()
+
   const milestones = results ? detectMilestones(results as RaceResult[]) : []
   const winStreaks = results ? getStreaks(results as RaceResult[], "wins") : []
   const podiumStreaks = results ? getStreaks(results as RaceResult[], "podiums") : []
@@ -265,7 +364,7 @@ export default function DriverDetailPage() {
       )}
 
       <Tabs defaultValue="results">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="results">Race Results</TabsTrigger>
             <TabsTrigger value="seasons">Season by Season</TabsTrigger>
@@ -273,6 +372,7 @@ export default function DriverDetailPage() {
             <TabsTrigger value="team-records">Team Records</TabsTrigger>
             <TabsTrigger value="teammates">Teammate Battle</TabsTrigger>
             <TabsTrigger value="milestones">Milestones</TabsTrigger>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
             <TabsTrigger value="streaks">Streaks</TabsTrigger>
           </TabsList>
         </div>
@@ -339,10 +439,6 @@ export default function DriverDetailPage() {
                       <TableHead>Wins</TableHead>
                       <TableHead>Podiums</TableHead>
                       <TableHead>Points</TableHead>
-                      <TableHead>Sprints</TableHead>
-                      <TableHead>SW</TableHead>
-                      <TableHead>SP</TableHead>
-                      <TableHead>SPts</TableHead>
                       <TableHead>Avg Finish</TableHead>
                       <TableHead>Win Rate</TableHead>
                   </TableRow>
@@ -363,22 +459,18 @@ export default function DriverDetailPage() {
                             </Link>
                           ) : "—"}
                         </TableCell>
-                        <TableCell>{seasonData.races}</TableCell>
-                        <TableCell>{seasonData.wins}</TableCell>
-                        <TableCell>{seasonData.podiums}</TableCell>
-                        <TableCell className="font-bold">{seasonData.points}</TableCell>
-                        <TableCell>{seasonData.sprints}</TableCell>
-                        <TableCell>{seasonData.sprintWins}</TableCell>
-                        <TableCell>{seasonData.sprintPodiums}</TableCell>
-                        <TableCell>{seasonData.sprintPoints}</TableCell>
+                        <TableCell>{seasonData.races + seasonData.sprints}</TableCell>
+                        <TableCell>{seasonData.wins + seasonData.sprintWins}</TableCell>
+                        <TableCell>{seasonData.podiums + seasonData.sprintPodiums}</TableCell>
+                        <TableCell className="font-bold">{seasonData.points + seasonData.sprintPoints}</TableCell>
                         <TableCell>{seasonData.avgFinishingPosition?.toFixed(1) ?? "—"}</TableCell>
-                        <TableCell>{(seasonData.winRate * 100).toFixed(0)}%</TableCell>
+                        <TableCell>{seasonData.races + seasonData.sprints > 0 ? `${((seasonData.wins + seasonData.sprintWins) / (seasonData.races + seasonData.sprints) * 100).toFixed(0)}%` : "—"}</TableCell>
                       </TableRow>
                     )
                   })}
                   {seasons.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         No season data available.
                       </TableCell>
                     </TableRow>
@@ -403,33 +495,71 @@ export default function DriverDetailPage() {
                       name: teamSeasons[0].constructor_name,
                       constructor_id: teamSeasons[0].constructor_id,
                     }
+                    const currentTeamRecord = driverTeamRecords.find((t) => t.constructor_id === currentTeam.constructor_id)
                     const seenCtors = new Set<string>()
                     const priorTeams = teamSeasons.filter((ts) => {
+                      if (ts.constructor_id === currentTeam.constructor_id) return false
                       if (seenCtors.has(ts.constructor_id)) return false
-                      if (ts.season_year === latestSeason && ts.constructor_id === currentTeam.constructor_id) return false
                       seenCtors.add(ts.constructor_id)
                       return true
                     })
                     return (
                       <>
                         <Card className="border-primary/30 bg-primary/5">
-                          <CardContent className="p-4 flex items-center justify-between">
-                            <div>
-                              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Current Team</p>
-                              <Link
-                                to={`/constructors/${currentTeam.constructor_id}`}
-                                className="text-xl font-bold hover:underline"
-                              >
-                                {currentTeam.name}
-                              </Link>
-                              <p className="text-sm text-muted-foreground">since {latestSeason}</p>
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Current Team</p>
+                                <Link
+                                  to={`/constructors/${currentTeam.constructor_id}`}
+                                  className="text-xl font-bold hover:underline"
+                                >
+                                  {currentTeam.name}
+                                </Link>
+                                <p className="text-sm text-muted-foreground">since {latestSeason}</p>
+                              </div>
+                              <Badge variant="default" className="text-xs">{latestSeason}</Badge>
                             </div>
-                            <Badge variant="default" className="text-xs">{latestSeason}</Badge>
+                            {currentTeamRecord && (
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm pt-2 border-t border-primary/20">
+                                <div>
+                                  <span className="text-muted-foreground">Races</span>
+                                  <p className="font-semibold">{currentTeamRecord.races + currentTeamRecord.sprints}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Wins</span>
+                                  <p className="font-semibold">{currentTeamRecord.wins + currentTeamRecord.sprintWins}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Podiums</span>
+                                  <p className="font-semibold">{currentTeamRecord.podiums + currentTeamRecord.sprintPodiums}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Points</span>
+                                  <p className="font-semibold">{currentTeamRecord.points + currentTeamRecord.sprintPoints}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Poles</span>
+                                  <p className="font-semibold">{currentTeamRecord.poles}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Win Rate</span>
+                                  <p className="font-semibold">
+                                    {currentTeamRecord.races + currentTeamRecord.sprints > 0
+                                      ? `${((currentTeamRecord.wins + currentTeamRecord.sprintWins) / (currentTeamRecord.races + currentTeamRecord.sprints) * 100).toFixed(1)}%`
+                                      : "—"}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
-                        {priorTeams.map((ts) => (
-                          <TeamHistoryCard key={ts.constructor_id} entry={ts} teamSeasons={teamSeasons} results={results ?? []} driverUuid={driverUuid!} />
-                        ))}
+                        {priorTeams.map((ts) => {
+                          const teamRecord = driverTeamRecords.find((t) => t.constructor_id === ts.constructor_id)
+                          return (
+                            <TeamHistoryCard key={ts.constructor_id} entry={ts} teamSeasons={teamSeasons} results={results ?? []} driverUuid={driverUuid!} teamRecord={teamRecord} />
+                          )
+                        })}
                       </>
                     )
                   })()}
@@ -467,11 +597,11 @@ export default function DriverDetailPage() {
                           {t.name}
                         </Link>
                       </TableCell>
-                      <TableCell>{t.races}</TableCell>
-                      <TableCell className="font-semibold">{t.wins}</TableCell>
-                      <TableCell>{t.races > 0 ? `${(t.wins / t.races * 100).toFixed(1)}%` : "—"}</TableCell>
-                      <TableCell>{t.podiums}</TableCell>
-                      <TableCell className="font-bold">{t.points}</TableCell>
+                      <TableCell>{t.races + t.sprints}</TableCell>
+                      <TableCell className="font-semibold">{t.wins + t.sprintWins}</TableCell>
+                      <TableCell>{t.races + t.sprints > 0 ? `${((t.wins + t.sprintWins) / (t.races + t.sprints) * 100).toFixed(1)}%` : "—"}</TableCell>
+                      <TableCell>{t.podiums + t.sprintPodiums}</TableCell>
+                      <TableCell className="font-bold">{t.points + t.sprintPoints}</TableCell>
                       <TableCell>{t.poles}</TableCell>
                     </TableRow>
                   ))}
@@ -525,12 +655,87 @@ export default function DriverDetailPage() {
                     <Card key={i} className="bg-muted/50">
                       <CardContent className="p-3">
                         <p className="text-sm font-medium">{m.description}</p>
+                        {m.raceName && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {m.seasonYear} Round {m.round} — {m.raceName}
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               ) : (
                 <p className="text-muted-foreground">No milestones detected yet.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="achievements">
+          <Card>
+            <CardHeader>
+              <CardTitle>Achievements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {achievements ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Total Wins</p>
+                      <p className="text-3xl font-bold mt-1">{achievements.totalWins}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Favorite Circuit</p>
+                      <p className="text-lg font-bold mt-1">{achievements.favoriteCircuit.name}</p>
+                      <p className="text-sm text-muted-foreground">{achievements.favoriteCircuit.count} wins</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Best Season</p>
+                      <p className="text-lg font-bold mt-1">{achievements.bestSeason[0]}</p>
+                      <p className="text-sm text-muted-foreground">{achievements.bestSeason[1]} wins</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Consecutive Winning Seasons</p>
+                      <p className="text-3xl font-bold mt-1">{achievements.consecutiveWinningSeasons}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Pole-to-Win</p>
+                      <p className="text-3xl font-bold mt-1">{achievements.poleWins}</p>
+                      <p className="text-sm text-muted-foreground">{achievements.totalWins > 0 ? `${(achievements.poleWins / achievements.totalWins * 100).toFixed(0)}% conversion` : "—"}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Comeback Wins</p>
+                      <p className="text-3xl font-bold mt-1">{achievements.comebackWins}</p>
+                      <p className="text-sm text-muted-foreground">(started outside top 5)</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/50 sm:col-span-2 lg:col-span-3">
+                    <CardContent className="p-4 flex flex-col sm:flex-row gap-6">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">First Win</p>
+                        <p className="text-lg font-bold mt-1">{achievements.firstWin.races.name}</p>
+                        <p className="text-sm text-muted-foreground">{achievements.firstWin.races.season_year} Round {achievements.firstWin.races.round} — {new Date(achievements.firstWin.races.date).toLocaleDateString()}</p>
+                      </div>
+                      <div className="sm:border-l sm:pl-6">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Latest Win</p>
+                        <p className="text-lg font-bold mt-1">{achievements.latestWin.races.name}</p>
+                        <p className="text-sm text-muted-foreground">{achievements.latestWin.races.season_year} Round {achievements.latestWin.races.round} — {new Date(achievements.latestWin.races.date).toLocaleDateString()}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No wins yet — achievements will appear here once the driver has a win.</p>
               )}
             </CardContent>
           </Card>
@@ -718,28 +923,36 @@ function TeamHistoryCard({
   teamSeasons,
   results,
   driverUuid,
+  teamRecord,
 }: {
   entry: { constructor_id: string; constructor_name: string; season_year: number }
   teamSeasons: { constructor_id: string; constructor_name: string; season_year: number }[]
   results: (RaceResult & { races: { season_year: number; round: number; name: string; date: string } })[]
   driverUuid: string
+  teamRecord?: { races: number; wins: number; podiums: number; points: number; poles: number; sprints: number; sprintWins: number; sprintPodiums: number; sprintPoints: number }
 }) {
-  const teamResults = results.filter(
-    (r) => r.driver_id === driverUuid && r.constructor_id === entry.constructor_id
-  )
   const seasons = [...new Set(
     teamSeasons
       .filter((ts) => ts.constructor_id === entry.constructor_id)
       .map((ts) => ts.season_year)
   )].sort((a, b) => b - a)
 
-  const wins = teamResults.filter((r) => r.position === 1).length
-  const podiums = teamResults.filter((r) => r.position !== null && r.position <= 3).length
-  const points = teamResults.reduce((s, r) => s + r.points, 0)
-  const finished = teamResults.filter((r) => r.position !== null)
-  const avgFinish = finished.length > 0
-    ? finished.reduce((s, r) => s + r.position!, 0) / finished.length
-    : null
+  const t = teamRecord ?? (() => {
+    const teamResults = results.filter(
+      (r) => r.driver_id === driverUuid && r.constructor_id === entry.constructor_id
+    )
+    return {
+      races: teamResults.length,
+      wins: teamResults.filter((r) => r.position === 1).length,
+      podiums: teamResults.filter((r) => r.position !== null && r.position <= 3).length,
+      points: teamResults.reduce((s, r) => s + r.points, 0),
+      poles: 0,
+      sprints: 0,
+      sprintWins: 0,
+      sprintPodiums: 0,
+      sprintPoints: 0,
+    }
+  })()
 
   return (
     <Card className="bg-muted/30">
@@ -751,31 +964,43 @@ function TeamHistoryCard({
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5">
-              {teamResults.length} races
+              {t.races + t.sprints} races
             </span>
-            {wins > 0 && (
+            {t.wins + t.sprintWins > 0 && (
               <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full px-2 py-0.5">
-                {wins} {wins === 1 ? "win" : "wins"}
+                {t.wins + t.sprintWins} {t.wins + t.sprintWins === 1 ? "win" : "wins"}
               </span>
             )}
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div>
+            <span className="text-muted-foreground">Races</span>
+            <p className="font-semibold">{t.races + t.sprints}</p>
+          </div>
+          <div>
             <span className="text-muted-foreground">Wins</span>
-            <p className="font-semibold">{wins}</p>
+            <p className="font-semibold">{t.wins + t.sprintWins}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Podiums</span>
-            <p className="font-semibold">{podiums}</p>
+            <p className="font-semibold">{t.podiums + t.sprintPodiums}</p>
           </div>
           <div>
             <span className="text-muted-foreground">Points</span>
-            <p className="font-semibold">{points}</p>
+            <p className="font-semibold">{t.points + t.sprintPoints}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Avg Finish</span>
-            <p className="font-semibold">{avgFinish?.toFixed(1) ?? "—"}</p>
+            <span className="text-muted-foreground">Poles</span>
+            <p className="font-semibold">{t.poles}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Win Rate</span>
+            <p className="font-semibold">
+              {t.races + t.sprints > 0
+                ? `${((t.wins + t.sprintWins) / (t.races + t.sprints) * 100).toFixed(1)}%`
+                : "—"}
+            </p>
           </div>
         </div>
       </CardContent>

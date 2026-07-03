@@ -54,9 +54,14 @@ export default function HomePage() {
         .from("driver_standings")
         .select("*, driver:drivers(*)")
         .eq("season_year", currentSeason)
-        .order("position", { ascending: true, nullsFirst: false })
-        .limit(3)
-      return (data ?? []) as { position: number | null; points: number; wins: number; driver: { given_name: string; family_name: string; driver_id: string } }[]
+        .order("points", { ascending: false, nullsFirst: false })
+      if (!data) return []
+      const grouped = new Map<string, { position: number | null; points: number; wins: number; driver: { given_name: string; family_name: string; driver_id: string } }>()
+      for (const s of data as { position: number | null; points: number; wins: number; driver: { given_name: string; family_name: string; driver_id: string } }[]) {
+        const existing = grouped.get(s.driver.driver_id)
+        if (!existing || s.points > existing.points) grouped.set(s.driver.driver_id, s)
+      }
+      return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
     },
   })
 
@@ -67,9 +72,14 @@ export default function HomePage() {
         .from("constructor_standings")
         .select("*, constructor:constructors(*)")
         .eq("season_year", currentSeason)
-        .order("position", { ascending: true, nullsFirst: false })
-        .limit(3)
-      return (data ?? []) as { position: number | null; points: number; constructor: { name: string; constructor_id: string } }[]
+        .order("points", { ascending: false, nullsFirst: false })
+      if (!data) return []
+      const grouped = new Map<string, { position: number | null; points: number; constructor: { name: string; constructor_id: string } }>()
+      for (const s of data as { position: number | null; points: number; constructor: { name: string; constructor_id: string } }[]) {
+        const existing = grouped.get(s.constructor.constructor_id)
+        if (!existing || s.points > existing.points) grouped.set(s.constructor.constructor_id, s)
+      }
+      return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
     },
   })
 

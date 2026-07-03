@@ -114,50 +114,51 @@ export default function CircuitDetailPage() {
           {circuit.location}, {circuit.country}
         </p>
         <div className="flex flex-wrap gap-2 mt-2">
-          {circuit.first_gp_year && (
-            <Badge>First GP: {circuit.first_gp_year}</Badge>
-          )}
           {circuit.direction && (
             <Badge variant="secondary">Direction: {circuit.direction}</Badge>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {circuit.length_km && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Length</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{circuit.length_km.toFixed(3)} km</p>
-            </CardContent>
-          </Card>
-        )}
-        {circuit.turns && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Turns</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{circuit.turns}</p>
-            </CardContent>
-          </Card>
-        )}
-        {races && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">GPs Held</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{races.length}</p>
-            </CardContent>
-          </Card>
-        )}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Length</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {circuit.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Turns</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{circuit.turns ?? "—"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">First GP</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{circuit.first_gp_year ?? "—"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">GPs Held</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{races?.length ?? "—"}</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="races">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="races">Grands Prix</TabsTrigger>
             <TabsTrigger value="winners">Winners</TabsTrigger>

@@ -1,0 +1,1 @@
+ALTER TABLE constructors ADD COLUMN car_image_url TEXT;

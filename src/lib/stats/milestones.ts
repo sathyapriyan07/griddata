@@ -5,6 +5,8 @@ export interface Milestone {
   description: string
   achievedAt: string | null
   round: number | null
+  raceName: string | null
+  seasonYear: number | null
 }
 
 export interface Streak {
@@ -15,19 +17,21 @@ export interface Streak {
   active: boolean
 }
 
-export function detectMilestones(results: RaceResult[]): Milestone[] {
+export function detectMilestones(results: (RaceResult & { races?: { season_year?: number; round?: number; name?: string } })[]): Milestone[] {
   const milestones: Milestone[] = []
   const sorted = [...results].sort((a, b) => (a.race_id < b.race_id ? -1 : 1))
 
   let winCount = 0
   let podiumCount = 0
-  let poleCount = 0
   let raceCount = 0
 
   const milestoneNumbers = [1, 10, 25, 50, 100, 150, 200, 250, 300]
 
   for (const result of sorted) {
     raceCount++
+    const raceName = result.races?.name ?? null
+    const seasonYear = result.races?.season_year ?? null
+    const round = result.races?.round ?? null
     if (result.position === 1) {
       winCount++
       if (milestoneNumbers.includes(winCount)) {
@@ -35,7 +39,9 @@ export function detectMilestones(results: RaceResult[]): Milestone[] {
           type: "wins",
           description: `${winCount}${getOrdinal(winCount)} career win`,
           achievedAt: null,
-          round: null,
+          round,
+          raceName,
+          seasonYear,
         })
       }
     }
@@ -46,18 +52,20 @@ export function detectMilestones(results: RaceResult[]): Milestone[] {
           type: "podiums",
           description: `${podiumCount}${getOrdinal(podiumCount)} career podium`,
           achievedAt: null,
-          round: null,
+          round,
+          raceName,
+          seasonYear,
         })
       }
-    }
-    if (result.position === 1 && poleCount === 0) {
     }
     if (milestoneNumbers.includes(raceCount)) {
       milestones.push({
         type: "races",
         description: `${raceCount}${getOrdinal(raceCount)} career race`,
         achievedAt: null,
-        round: null,
+        round,
+        raceName,
+        seasonYear,
       })
     }
   }

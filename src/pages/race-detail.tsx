@@ -172,7 +172,7 @@ export default function RaceDetailPage() {
       </div>
 
       <Tabs defaultValue="results">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
             <TabsTrigger value="results">Race Results</TabsTrigger>
             <TabsTrigger value="qualifying">Qualifying</TabsTrigger>

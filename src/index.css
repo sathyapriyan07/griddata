@@ -1,9 +1,28 @@
 @import "tailwindcss";
 
+/* Formula1 custom fonts - place the two TTF files into the project's public/ folder:
+   public/Formula1-Bold_web_0.ttf
+   public/Formula1-Regular_web_0.ttf
+*/
+@font-face {
+  font-family: 'Formula1';
+  src: url('/Formula1-Regular_web_0.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Formula1';
+  src: url('/Formula1-Bold_web_0.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Formula1", ui-sans-serif, system-ui, sans-serif;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));

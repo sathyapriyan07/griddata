@@ -227,19 +227,13 @@ export default function RaceDetailPage() {
                 </TableHeader>
                 <TableBody>
                   {results?.map((r) => (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
                       <TableCell className="font-medium">
                         {r.position ?? r.position_text ?? "DNF"}
                       </TableCell>
                       <TableCell>
-                        <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline flex items-center gap-2">
-                          {(() => {
-                            const c = getConstructorColors(r.constructor.name || "")
-                            return (
-                              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
-                            )
-                          })()}
-                          <span>{r.driver.given_name} {r.driver.family_name}</span>
+                        <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                          {r.driver.given_name} {r.driver.family_name}
                         </Link>
                       </TableCell>
                       <TableCell>
@@ -303,15 +297,11 @@ export default function RaceDetailPage() {
                 </TableHeader>
                 <TableBody>
                   {qualifying?.map((q) => (
-                    <TableRow key={q.id}>
+                    <TableRow key={q.id} style={{ borderLeft: `4px solid ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}` }}>
                       <TableCell className="font-medium">{q.position}</TableCell>
                       <TableCell>
-                        <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline flex items-center gap-2">
-                          {(() => {
-                            const c = getConstructorColors(q.constructor.name || "")
-                            return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
-                          })()}
-                          <span>{q.driver.given_name} {q.driver.family_name}</span>
+                        <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline">
+                          {q.driver.given_name} {q.driver.family_name}
                         </Link>
                       </TableCell>
                       <TableCell>
@@ -358,15 +348,11 @@ export default function RaceDetailPage() {
                       [...sprints]
                         .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                         .map((s) => (
-                          <TableRow key={s.id}>
+                          <TableRow key={s.id} style={{ borderLeft: `4px solid ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}` }}>
                             <TableCell className="font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
-                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline flex items-center gap-2">
-                                {(() => {
-                                  const c = getConstructorColors(s.constructor.name || "")
-                                  return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
-                                })()}
-                                <span>{s.driver.given_name} {s.driver.family_name}</span>
+                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
+                                {s.driver.given_name} {s.driver.family_name}
                               </Link>
                             </TableCell>
                             <TableCell>
@@ -402,22 +388,18 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {sprints?.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="font-medium">{s.position ?? "DNF"}</TableCell>
-                        <TableCell>
-                          <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline flex items-center gap-2">
-                            {(() => {
-                              const c = getConstructorColors(s.constructor.name || "")
-                              return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
-                            })()}
-                            <span>{s.driver.given_name} {s.driver.family_name}</span>
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                            <span>{s.constructor.name}</span>
-                          </Link>
-                        </TableCell>
+                      <TableRow key={s.id} style={{ borderLeft: `4px solid ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                          <TableCell className="font-medium">{s.position ?? "DNF"}</TableCell>
+                          <TableCell>
+                            <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
+                              {s.driver.given_name} {s.driver.family_name}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
+                              <span>{s.constructor.name}</span>
+                            </Link>
+                          </TableCell>
                         <TableCell>{s.points}</TableCell>
                         <TableCell>{s.laps ?? "—"}</TableCell>
                         <TableCell>{s.status ?? "—"}</TableCell>
@@ -455,16 +437,12 @@ export default function RaceDetailPage() {
                   {results?.length ? (
                     [...results]
                       .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                      .map((r) => (
-                        <TableRow key={r.id}>
+                        .map((r) => (
+                        <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
                           <TableCell className="font-medium">{r.grid ?? "—"}</TableCell>
                           <TableCell>
-                            <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline flex items-center gap-2">
-                              {(() => {
-                                const c = getConstructorColors(r.constructor.name || "")
-                                return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
-                              })()}
-                              <span>{r.driver.given_name} {r.driver.family_name}</span>
+                            <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                              {r.driver.given_name} {r.driver.family_name}
                             </Link>
                           </TableCell>
                           <TableCell>

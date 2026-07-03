@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom"
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -120,6 +121,8 @@ export default function RaceDetailPage() {
     enabled: !!raceId,
   })
 
+  const [showAllStats, setShowAllStats] = useState(false)
+
   if (!race) {
     return <PageSkeleton />
   }
@@ -186,8 +189,26 @@ export default function RaceDetailPage() {
 
         <TabsContent value="results">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex items-center justify-between">
               <CardTitle>Race Results</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">All Stats</span>
+                <button
+                  onClick={() => setShowAllStats(!showAllStats)}
+                  aria-pressed={showAllStats}
+                  className={
+                    `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
+                    (showAllStats ? "bg-primary" : "bg-muted")
+                  }
+                >
+                  <span
+                    className={
+                      `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
+                      (showAllStats ? "translate-x-5" : "translate-x-1")
+                    }
+                  />
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -197,10 +218,10 @@ export default function RaceDetailPage() {
                     <TableHead>Driver</TableHead>
                     <TableHead>Team</TableHead>
                     <TableHead>Car</TableHead>
-                    <TableHead>Grid</TableHead>
+                    {showAllStats && <TableHead>Grid</TableHead>}
                     <TableHead>Points</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Fastest Lap</TableHead>
+                    {showAllStats && <TableHead>Status</TableHead>}
+                    {showAllStats && <TableHead>Fastest Lap</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -232,15 +253,15 @@ export default function RaceDetailPage() {
                           <div className="w-16 h-10 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
                         )}
                       </TableCell>
-                      <TableCell>{r.grid ?? "—"}</TableCell>
+                      {showAllStats && <TableCell>{r.grid ?? "—"}</TableCell>}
                       <TableCell>{r.points}</TableCell>
-                      <TableCell>{r.status ?? "—"}</TableCell>
-                      <TableCell>{r.fastest_lap_time ?? "—"}</TableCell>
+                      {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
+                      {showAllStats && <TableCell>{r.fastest_lap_time ?? "—"}</TableCell>}
                     </TableRow>
                   ))}
                   {(!results || results.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={showAllStats ? 8 : 5} className="text-center text-muted-foreground">
                         No results available yet.
                       </TableCell>
                     </TableRow>

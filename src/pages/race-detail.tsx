@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom"
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
+import { getConstructorColors } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -231,19 +232,19 @@ export default function RaceDetailPage() {
                         {r.position ?? r.position_text ?? "DNF"}
                       </TableCell>
                       <TableCell>
-                        <Link
-                          to={`/drivers/${r.driver.driver_id}`}
-                          className="hover:underline"
-                        >
-                          {r.driver.given_name} {r.driver.family_name}
+                        <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline flex items-center gap-2">
+                          {(() => {
+                            const c = getConstructorColors(r.constructor.name || "")
+                            return (
+                              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
+                            )
+                          })()}
+                          <span>{r.driver.given_name} {r.driver.family_name}</span>
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Link
-                          to={`/constructors/${r.constructor.constructor_id}`}
-                          className="hover:underline"
-                        >
-                          {r.constructor.full_name ?? r.constructor.name}
+                        <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
+                          <span>{r.constructor.name}</span>
                         </Link>
                       </TableCell>
                       {showAllStats && <TableCell>{r.grid ?? "—"}</TableCell>}
@@ -305,19 +306,17 @@ export default function RaceDetailPage() {
                     <TableRow key={q.id}>
                       <TableCell className="font-medium">{q.position}</TableCell>
                       <TableCell>
-                        <Link
-                          to={`/drivers/${q.driver.driver_id}`}
-                          className="hover:underline"
-                        >
-                          {q.driver.given_name} {q.driver.family_name}
+                        <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline flex items-center gap-2">
+                          {(() => {
+                            const c = getConstructorColors(q.constructor.name || "")
+                            return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
+                          })()}
+                          <span>{q.driver.given_name} {q.driver.family_name}</span>
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Link
-                          to={`/constructors/${q.constructor.constructor_id}`}
-                          className="hover:underline"
-                        >
-                          {q.constructor.full_name ?? q.constructor.name}
+                        <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline">
+                          <span>{q.constructor.name}</span>
                         </Link>
                       </TableCell>
                       {showQ1Q2 && <TableCell className="font-mono text-xs">{q.q1 ?? "—"}</TableCell>}
@@ -362,13 +361,17 @@ export default function RaceDetailPage() {
                           <TableRow key={s.id}>
                             <TableCell className="font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
-                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
-                                {s.driver.given_name} {s.driver.family_name}
+                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline flex items-center gap-2">
+                                {(() => {
+                                  const c = getConstructorColors(s.constructor.name || "")
+                                  return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
+                                })()}
+                                <span>{s.driver.given_name} {s.driver.family_name}</span>
                               </Link>
                             </TableCell>
                             <TableCell>
                               <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                                {s.constructor.full_name ?? s.constructor.name}
+                                <span>{s.constructor.name}</span>
                               </Link>
                             </TableCell>
                           </TableRow>
@@ -402,13 +405,17 @@ export default function RaceDetailPage() {
                       <TableRow key={s.id}>
                         <TableCell className="font-medium">{s.position ?? "DNF"}</TableCell>
                         <TableCell>
-                          <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
-                            {s.driver.given_name} {s.driver.family_name}
+                          <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline flex items-center gap-2">
+                            {(() => {
+                              const c = getConstructorColors(s.constructor.name || "")
+                              return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
+                            })()}
+                            <span>{s.driver.given_name} {s.driver.family_name}</span>
                           </Link>
                         </TableCell>
                         <TableCell>
                           <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                            {s.constructor.full_name ?? s.constructor.name}
+                            <span>{s.constructor.name}</span>
                           </Link>
                         </TableCell>
                         <TableCell>{s.points}</TableCell>
@@ -452,8 +459,12 @@ export default function RaceDetailPage() {
                         <TableRow key={r.id}>
                           <TableCell className="font-medium">{r.grid ?? "—"}</TableCell>
                           <TableCell>
-                            <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
-                              {r.driver.given_name} {r.driver.family_name}
+                            <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline flex items-center gap-2">
+                              {(() => {
+                                const c = getConstructorColors(r.constructor.name || "")
+                                return <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: c?.primary ?? "#6b7280" }} aria-hidden />
+                              })()}
+                              <span>{r.driver.given_name} {r.driver.family_name}</span>
                             </Link>
                           </TableCell>
                           <TableCell>

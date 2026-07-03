@@ -668,6 +668,31 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Cars</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Manage Cars</h3>
+              <CrudTable
+                entityType="cars"
+                columns={[
+                  { key: "car_id", label: "Car ID" },
+                  { key: "name", label: "Name" },
+                  { key: "engine_name", label: "Engine" },
+                  { key: "power_unit_name", label: "Power Unit" },
+                  { key: "chassis_name", label: "Chassis" },
+                ]}
+              />
+
+              <hr />
+
+              <h3 className="text-sm font-medium">Assign Car to Teams & Upload Images</h3>
+              <CarAssignmentPanel constructorsList={constructorsList ?? []} />
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="pb-2">
@@ -1059,6 +1084,184 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+function CarAssignmentPanel({ constructorsList }: { constructorsList: { id: string; constructor_id: string; name: string }[] }) {
+  const [carsList, setCarsList] = useState<{ id: string; car_id: string; name: string }[]>([])
+  const [selectedCarId, setSelectedCarId] = useState<string | null>(null)
+  const [selectedConstructors, setSelectedConstructors] = useState<Record<string, { selected: boolean; fromYear: number | null; toYear: number | null }>>({})
+  const [yearForImage, setYearForImage] = useState<number | null>(new Date().getFullYear())
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [carImages, setCarImages] = useState<{ id: string; year: number; image_url: string; caption: string | null }[]>([])
+  const [status, setStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const { data } = await supabase.from("cars").select("id, car_id, name").order("created_at", { ascending: false })
+      if (mounted && data) setCarsList(data as any)
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedCarId) return
+    ;(async () => {
+      const { data } = await supabase.from("car_teams").select("constructor_id").eq("car_id", selectedCarId)
+      const map: Record<string, { selected: boolean; fromYear: number | null; toYear: number | null }> = {}
+      ;(data ?? []).forEach((r: any) => { map[r.constructor_id] = { selected: true, fromYear: r.assigned_from_year ?? null, toYear: r.assigned_to_year ?? null } })
+      setSelectedConstructors(map)
+
+      const { data: imgs } = await supabase.from("car_images").select("id, year, image_url, caption").eq("car_id", selectedCarId).order("year", { ascending: false })
+      setCarImages((imgs as any) ?? [])
+    })()
+  }, [selectedCarId])
+
+  const toggleConstructor = (id: string) => {
+    setSelectedConstructors((s) => ({ ...s, [id]: { selected: !s[id]?.selected, fromYear: s[id]?.fromYear ?? null, toYear: s[id]?.toYear ?? null } }))
+  }
+
+  const setConstructorYears = (id: string, fromYear: number | null, toYear: number | null) => {
+    setSelectedConstructors((s) => ({ ...s, [id]: { selected: true, fromYear, toYear } }))
+  }
+
+  const saveAssignments = async () => {
+    if (!selectedCarId) return setStatus("Select a car first")
+    setStatus("Saving assignments...")
+    // remove existing assignments for this car then insert new ones (with years)
+    await supabase.from("car_teams").delete().eq("car_id", selectedCarId)
+    const toInsert = Object.keys(selectedConstructors)
+      .filter((k) => selectedConstructors[k].selected)
+      .map((constructor_id) => ({
+        car_id: selectedCarId,
+        constructor_id,
+        assigned_from_year: selectedConstructors[constructor_id].fromYear,
+        assigned_to_year: selectedConstructors[constructor_id].toYear,
+      }))
+    if (toInsert.length > 0) {
+      const { error } = await supabase.from("car_teams").insert(toInsert)
+      if (error) setStatus(`Error: ${error.message}`)
+      else setStatus("Assignments saved")
+    } else {
+      setStatus("Assignments cleared")
+    }
+  }
+
+  const uploadImage = async () => {
+    if (!selectedCarId) return setStatus("Select a car first")
+    if (!imageFile || !yearForImage) return setStatus("Select a year and image file")
+    setStatus("Uploading image...")
+    const ext = imageFile.name.split('.').pop() || 'png'
+    const car = carsList.find((c) => c.id === selectedCarId)
+    const path = `cars/${car?.car_id || selectedCarId}/${yearForImage}.${ext}`
+    const { error: uploadErr } = await supabase.storage.from('images').upload(path, imageFile, { upsert: true })
+    if (uploadErr) return setStatus(`Upload failed: ${uploadErr.message}`)
+    const { data: urlData } = supabase.storage.from('images').getPublicUrl(path)
+    const publicUrl = urlData?.publicUrl
+    if (!publicUrl) return setStatus('Could not get public URL')
+    const { error } = await supabase.from('car_images').upsert({ car_id: selectedCarId, year: yearForImage, image_url: publicUrl })
+    if (error) return setStatus(`DB save failed: ${error.message}`)
+    setStatus('Image uploaded')
+    // refresh images
+    const { data: imgs } = await supabase.from("car_images").select("id, year, image_url, caption").eq("car_id", selectedCarId).order("year", { ascending: false })
+    setCarImages((imgs as any) ?? [])
+  }
+
+  const updateImageCaption = async (id: string, caption: string) => {
+    const { error } = await supabase.from('car_images').update({ caption }).eq('id', id)
+    if (error) setStatus(`Caption save error: ${error.message}`)
+    else {
+      setStatus('Caption saved')
+      const { data: imgs } = await supabase.from("car_images").select("id, year, image_url, caption").eq("car_id", selectedCarId).order("year", { ascending: false })
+      setCarImages((imgs as any) ?? [])
+    }
+  }
+
+  const deleteImage = async (img: { id: string; year: number; image_url: string }) => {
+    if (!confirm('Delete this image?')) return
+    setStatus('Deleting...')
+    // attempt to delete storage object if we can derive path
+    try {
+      const url = img.image_url
+      const marker = '/storage/v1/object/public/images/'
+      let path = ''
+      const idx = url.indexOf(marker)
+      if (idx !== -1) {
+        path = url.substring(idx + marker.length)
+        await supabase.storage.from('images').remove([path])
+      }
+    } catch (e) {
+      // ignore storage delete errors
+    }
+    const { error } = await supabase.from('car_images').delete().eq('id', img.id)
+    if (error) setStatus(`Delete failed: ${error.message}`)
+    else {
+      setStatus('Deleted')
+      const { data: imgs } = await supabase.from("car_images").select("id, year, image_url, caption").eq("car_id", selectedCarId).order("year", { ascending: false })
+      setCarImages((imgs as any) ?? [])
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2 items-center">
+        <select value={selectedCarId ?? ''} onChange={(e) => setSelectedCarId(e.target.value || null)} className="rounded border px-2 py-1 bg-background">
+          <option value="">Select a car...</option>
+          {carsList.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.car_id})</option>)}
+        </select>
+        <Button variant="outline" size="sm" onClick={async () => { const { data } = await supabase.from('cars').select('id, car_id, name').order('created_at', { ascending: false }); setCarsList((data as any) ?? []) }}>Refresh</Button>
+      </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div className="text-sm font-medium mb-2">Assign to Teams</div>
+          <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+            {constructorsList.map((ct) => (
+              <div key={ct.id} className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={!!selectedConstructors[ct.id]?.selected} onChange={() => toggleConstructor(ct.id)} />
+                <span className="flex-1">{ct.name}</span>
+                {selectedConstructors[ct.id]?.selected && (
+                  <div className="flex items-center gap-2">
+                    <input type="number" placeholder="from" value={selectedConstructors[ct.id]?.fromYear ?? ''} onChange={(e) => setConstructorYears(ct.id, Number(e.target.value) || null, selectedConstructors[ct.id]?.toYear ?? null)} className="w-20 rounded border px-2 py-1 bg-background text-sm" />
+                    <input type="number" placeholder="to" value={selectedConstructors[ct.id]?.toYear ?? ''} onChange={(e) => setConstructorYears(ct.id, selectedConstructors[ct.id]?.fromYear ?? null, Number(e.target.value) || null)} className="w-20 rounded border px-2 py-1 bg-background text-sm" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="mt-2">
+            <Button variant="default" size="sm" onClick={saveAssignments}>Save Assignments</Button>
+          </div>
+        </div>
+
+        <div>
+          <div className="text-sm font-medium mb-2">Upload Car Image (per year)</div>
+          <div className="flex gap-2 items-center">
+            <input type="number" value={yearForImage ?? ''} onChange={(e) => setYearForImage(Number(e.target.value) || new Date().getFullYear())} className="w-24 rounded border px-2 py-1 bg-background" />
+            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+            <Button variant="default" size="sm" onClick={uploadImage}>Upload</Button>
+          </div>
+          <div className="mt-2">
+            {status && <div className="text-xs text-muted-foreground">{status}</div>}
+            <div className="mt-2 grid gap-2">
+              {carImages.map((img) => (
+                <div key={img.id} className="flex items-center gap-2">
+                  <img src={img.image_url} alt={`car-${img.year}`} className="w-24 h-12 object-contain rounded" />
+                  <div className="flex-1">
+                    <div className="text-sm">{img.year}</div>
+                    <div className="flex gap-2 items-center mt-1">
+                      <input className="rounded border px-2 py-1 text-sm bg-background" defaultValue={img.caption ?? ''} onBlur={(e) => updateImageCaption(img.id, e.target.value)} placeholder="Caption (optional)" />
+                      <Button variant="outline" size="sm" onClick={() => deleteImage(img)}>Delete</Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

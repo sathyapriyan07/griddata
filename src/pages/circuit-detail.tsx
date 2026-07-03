@@ -197,15 +197,24 @@ export default function CircuitDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">{circuit.name}</h1>
-        <p className="text-lg text-muted-foreground">
-          {circuit.location}, {circuit.country}
-        </p>
-        <div className="flex flex-wrap gap-2 mt-2">
-          {circuit.direction && (
-            <Badge variant="secondary">Direction: {circuit.direction}</Badge>
-          )}
+      <div className="flex items-start gap-4">
+        {circuit.image_url && (
+          <img
+            src={circuit.image_url}
+            alt={`${circuit.name} image`}
+            className="w-48 h-48 object-contain rounded-md"
+          />
+        )}
+        <div>
+          <h1 className="text-3xl font-bold">{circuit.name}</h1>
+          <p className="text-lg text-muted-foreground">
+            {circuit.location}, {circuit.country}
+          </p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {circuit.direction && (
+              <Badge variant="secondary">Direction: {circuit.direction}</Badge>
+            )}
+          </div>
         </div>
       </div>
 

@@ -337,6 +337,8 @@ export default function AdminPage() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [uploadType, setUploadType] = useState<"driver" | "constructor" | "car" | "circuit">("driver")
   const [uploadEntityId, setUploadEntityId] = useState("")
+  const [uploadSearch, setUploadSearch] = useState("")
+  const [searchAll, setSearchAll] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState<string | null>(null)
@@ -348,7 +350,7 @@ export default function AdminPage() {
       const { data } = await supabase.from("drivers").select("id, driver_id, given_name, family_name").order("family_name")
       return (data ?? []) as { id: string; driver_id: string; given_name: string; family_name: string }[]
     },
-    enabled: uploadType === "driver",
+    enabled: uploadType === "driver" || searchAll,
   })
 
   const { data: constructorsList } = useQuery({
@@ -357,7 +359,7 @@ export default function AdminPage() {
       const { data } = await supabase.from("constructors").select("id, constructor_id, name").order("name")
       return (data ?? []) as { id: string; constructor_id: string; name: string }[]
     },
-    enabled: uploadType === "constructor",
+    enabled: uploadType === "constructor" || uploadType === "car" || searchAll,
   })
 
   const { data: circuitsList } = useQuery({
@@ -366,7 +368,7 @@ export default function AdminPage() {
       const { data } = await supabase.from("circuits").select("id, circuit_id, name, country").order("name")
       return (data ?? []) as { id: string; circuit_id: string; name: string; country: string | null }[]
     },
-    enabled: uploadType === "circuit",
+    enabled: uploadType === "circuit" || searchAll,
   })
 
   const { data: userProfile } = useQuery({
@@ -745,22 +747,62 @@ export default function AdminPage() {
                 <option value="circuit">Circuit</option>
               </select>
             </div>
-            <select
-              value={uploadEntityId}
-              onChange={(e) => setUploadEntityId(e.target.value)}
-              className="rounded-md border px-2 py-1 text-sm bg-background w-full"
-            >
-              <option value="">Select {uploadType}...</option>
-              {uploadType === "driver" && driversList?.map((d) => (
-                <option key={d.id} value={d.id}>{d.given_name} {d.family_name}</option>
-              ))}
-              {uploadType === "constructor" && constructorsList?.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              {uploadType === "circuit" && circuitsList?.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} {c.country ? `(${c.country})` : ""}</option>
-              ))}
-            </select>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="search"
+                  placeholder="Search..."
+                  value={uploadSearch}
+                  onChange={(e) => setUploadSearch(e.target.value)}
+                  className="rounded-md border px-2 py-1 text-sm bg-background w-full"
+                />
+                <label className="text-sm flex items-center gap-1">
+                  <input type="checkbox" checked={searchAll} onChange={(e) => setSearchAll(e.target.checked)} />
+                  <span>Search all</span>
+                </label>
+              </div>
+
+              <select
+                value={uploadEntityId}
+                onChange={(e) => {
+                  const val = e.target.value
+                  if (val.includes("|")) {
+                    const [type, id] = val.split("|")
+                    setUploadType(type as typeof uploadType)
+                    setUploadEntityId(id)
+                  } else {
+                    setUploadEntityId(val)
+                  }
+                }}
+                className="rounded-md border px-2 py-1 text-sm bg-background w-full"
+              >
+                <option value="">Select {uploadType}...</option>
+                {searchAll ? (
+                  // combined list
+                  [
+                    ...(driversList ?? []).map((d) => ({ type: "driver", id: d.id, label: `${d.given_name} ${d.family_name}` })),
+                    ...(constructorsList ?? []).map((c) => ({ type: "constructor", id: c.id, label: c.name })),
+                    ...(circuitsList ?? []).map((c) => ({ type: "circuit", id: c.id, label: `${c.name} ${c.country ?? ""}` })),
+                  ]
+                    .filter((item) => item.label.toLowerCase().includes(uploadSearch.toLowerCase()))
+                    .map((item) => (
+                      <option key={`${item.type}|${item.id}`} value={`${item.type}|${item.id}`}>{`[${item.type}] ${item.label}`}</option>
+                    ))
+                ) : (
+                  <>
+                    {uploadType === "driver" && (driversList ?? []).filter(d => d.given_name.toLowerCase().includes(uploadSearch.toLowerCase()) || d.family_name.toLowerCase().includes(uploadSearch.toLowerCase())).map((d) => (
+                      <option key={d.id} value={d.id}>{d.given_name} {d.family_name}</option>
+                    ))}
+                    {(uploadType === "constructor" || uploadType === "car") && (constructorsList ?? []).filter(c => c.name.toLowerCase().includes(uploadSearch.toLowerCase())).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                    {uploadType === "circuit" && (circuitsList ?? []).filter(c => c.name.toLowerCase().includes(uploadSearch.toLowerCase()) || (c.country ?? "").toLowerCase().includes(uploadSearch.toLowerCase())).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name} {c.country ? `(${c.country})` : ""}</option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
             <input
               type="file"
               accept="image/*"

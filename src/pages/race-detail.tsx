@@ -172,15 +172,17 @@ export default function RaceDetailPage() {
       </div>
 
       <Tabs defaultValue="results">
-        <TabsList>
-          <TabsTrigger value="results">Race Results</TabsTrigger>
-          <TabsTrigger value="qualifying">Qualifying</TabsTrigger>
-          <TabsTrigger value="sprint">Sprint</TabsTrigger>
-          <TabsTrigger value="grid">Starting Grid</TabsTrigger>
-          <TabsTrigger value="pitstops">Pit Stops</TabsTrigger>
-          <TabsTrigger value="weather">Weather</TabsTrigger>
-          <TabsTrigger value="sessions">Session Times</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="results">Race Results</TabsTrigger>
+            <TabsTrigger value="qualifying">Qualifying</TabsTrigger>
+            <TabsTrigger value="sprint">Sprint</TabsTrigger>
+            <TabsTrigger value="grid">Starting Grid</TabsTrigger>
+            <TabsTrigger value="pitstops">Pit Stops</TabsTrigger>
+            <TabsTrigger value="weather">Weather</TabsTrigger>
+            <TabsTrigger value="sessions">Session Times</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="results">
           <Card>

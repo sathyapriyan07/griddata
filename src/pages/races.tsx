@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
@@ -6,11 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Race, Season } from "@/types/database"
 
-const CURRENT_SEASON = 2025
-
 export default function RacesPage() {
-  const [selectedSeason, setSelectedSeason] = useState(CURRENT_SEASON)
-
   const { data: seasons } = useQuery({
     queryKey: ["seasons"],
     queryFn: async () => {
@@ -22,6 +18,14 @@ export default function RacesPage() {
       return (data ?? []) as Season[]
     },
   })
+
+  const [selectedSeason, setSelectedSeason] = useState(new Date().getFullYear())
+
+  useEffect(() => {
+    if (seasons?.[0]?.year) {
+      setSelectedSeason(seasons[0].year)
+    }
+  }, [seasons])
 
   const { data: races, isLoading } = useQuery({
     queryKey: ["races", selectedSeason],
@@ -57,7 +61,7 @@ export default function RacesPage() {
             </option>
           ))}
           {(!seasons || seasons.length === 0) && (
-            <option value={CURRENT_SEASON}>{CURRENT_SEASON}</option>
+            <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
           )}
         </select>
       </div>

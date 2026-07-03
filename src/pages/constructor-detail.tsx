@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Constructor, RaceResult, ConstructorStanding, DriverConstructorHistory } from "@/types/database"
+import type { Constructor, RaceResult, ConstructorStanding } from "@/types/database"
 
 export default function ConstructorDetailPage() {
   const { constructorId } = useParams()
@@ -74,14 +74,61 @@ export default function ConstructorDetailPage() {
     queryFn: async () => {
       if (!teamUuid) return []
       const { data } = await supabase
-        .from("driver_constructor_history")
-        .select("*, drivers!inner(driver_id, given_name, family_name, nationality)")
+        .from("race_results")
+        .select("drivers!inner(driver_id, given_name, family_name, nationality), races!inner(season_year)")
         .eq("constructor_id", teamUuid)
-        .order("season_year", { ascending: false })
-      return (data ?? []) as (DriverConstructorHistory & { drivers: { driver_id: string; given_name: string; family_name: string; nationality: string | null } })[]
+      if (!data) return []
+      const seen = new Set<string>()
+      const out: { driver_id: string; given_name: string; family_name: string; nationality: string | null; season_year: number }[] = []
+      for (const r of data as unknown as { drivers: { driver_id: string; given_name: string; family_name: string; nationality: string | null }; races: { season_year: number } }[]) {
+        const key = `${r.drivers.driver_id}|${r.races.season_year}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push({
+          driver_id: r.drivers.driver_id,
+          given_name: r.drivers.given_name,
+          family_name: r.drivers.family_name,
+          nationality: r.drivers.nationality,
+          season_year: r.races.season_year,
+        })
+      }
+      return out.sort((a, b) => b.season_year - a.season_year)
     },
     enabled: !!teamUuid,
   })
+
+  const { data: qualiResults } = useQuery({
+    queryKey: ["constructor-quali", teamUuid],
+    queryFn: async () => {
+      if (!teamUuid) return []
+      const { data } = await supabase
+        .from("qualifying_results")
+        .select("driver_id, position")
+        .eq("constructor_id", teamUuid)
+      return (data ?? []) as { driver_id: string; position: number | null }[]
+    },
+    enabled: !!teamUuid,
+  })
+
+  const driverRecords = (constructorResults ?? []).reduce((acc, r) => {
+    const did = r.driver.driver_id
+    if (!acc.has(did)) acc.set(did, { driver_id: did, given_name: r.driver.given_name, family_name: r.driver.family_name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0 })
+    const rec = acc.get(did)!
+    rec.races++
+    if (r.position === 1) rec.wins++
+    if (r.position !== null && r.position <= 3) rec.podiums++
+    rec.points += r.points
+    return acc
+  }, new Map<string, { driver_id: string; given_name: string; family_name: string; races: number; wins: number; podiums: number; points: number; poles: number }>())
+
+  for (const q of qualiResults ?? []) {
+    const did = q.driver_id
+    if (driverRecords.has(did) && q.position === 1) {
+      driverRecords.get(did)!.poles++
+    }
+  }
+
+  const sortedDriverRecords = [...driverRecords.values()].sort((a, b) => b.wins - a.wins)
 
   const stats = constructorResults && standings
     ? computeConstructorStats(constructorResults as RaceResult[], standings)
@@ -175,11 +222,14 @@ export default function ConstructorDetailPage() {
       )}
 
       <Tabs defaultValue="standings">
-        <TabsList>
-          <TabsTrigger value="standings">Season Standings</TabsTrigger>
-          <TabsTrigger value="results">Race Results</TabsTrigger>
-          <TabsTrigger value="drivers">Driver Roster</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="standings">Season Standings</TabsTrigger>
+            <TabsTrigger value="results">Race Results</TabsTrigger>
+            <TabsTrigger value="drivers">Driver Roster</TabsTrigger>
+            <TabsTrigger value="records">Driver Records</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="standings">
           <Card>
             <CardHeader>
@@ -281,21 +331,67 @@ export default function ConstructorDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {drivers?.map((dch) => (
-                    <TableRow key={`${dch.drivers.driver_id}-${dch.season_year}`}>
+                  {drivers?.map((d) => (
+                    <TableRow key={`${d.driver_id}-${d.season_year}`}>
                       <TableCell>
-                        <Link to={`/drivers/${dch.drivers.driver_id}`} className="hover:underline font-medium">
-                          {dch.drivers.given_name} {dch.drivers.family_name}
+                        <Link to={`/drivers/${d.driver_id}`} className="hover:underline font-medium">
+                          {d.given_name} {d.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{dch.drivers.nationality ?? "—"}</TableCell>
-                      <TableCell>{dch.season_year}</TableCell>
+                      <TableCell>{d.nationality ?? "—"}</TableCell>
+                      <TableCell>{d.season_year}</TableCell>
                     </TableRow>
                   ))}
                   {(!drivers || drivers.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center text-muted-foreground">
                         No driver data available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="records">
+          <Card>
+            <CardHeader>
+              <CardTitle>Driver Records — {team.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Driver</TableHead>
+                    <TableHead>Races</TableHead>
+                    <TableHead>Wins</TableHead>
+                    <TableHead>Win %</TableHead>
+                    <TableHead>Podiums</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Poles</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedDriverRecords.map((d) => (
+                    <TableRow key={d.driver_id}>
+                      <TableCell>
+                        <Link to={`/drivers/${d.driver_id}`} className="font-medium hover:underline">
+                          {d.given_name} {d.family_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{d.races}</TableCell>
+                      <TableCell className="font-semibold">{d.wins}</TableCell>
+                      <TableCell>{d.races > 0 ? `${(d.wins / d.races * 100).toFixed(1)}%` : "—"}</TableCell>
+                      <TableCell>{d.podiums}</TableCell>
+                      <TableCell className="font-bold">{d.points}</TableCell>
+                      <TableCell>{d.poles}</TableCell>
+                    </TableRow>
+                  ))}
+                  {sortedDriverRecords.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No race results available yet.
                       </TableCell>
                     </TableRow>
                   )}

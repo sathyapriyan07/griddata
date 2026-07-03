@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
@@ -9,10 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts"
 import type { DriverStanding, ConstructorStanding, Season } from "@/types/database"
 
-const CURRENT_SEASON = 2025
-
 export default function StandingsPage() {
-  const [selectedSeason, setSelectedSeason] = useState(CURRENT_SEASON)
+  const [selectedSeason, setSelectedSeason] = useState(new Date().getFullYear())
 
   const { data: seasons } = useQuery({
     queryKey: ["seasons"],
@@ -25,6 +23,12 @@ export default function StandingsPage() {
       return (data ?? []) as Season[]
     },
   })
+
+  useEffect(() => {
+    if (seasons?.[0]?.year) {
+      setSelectedSeason(seasons[0].year)
+    }
+  }, [seasons])
 
   const { data: driverStandings } = useQuery({
     queryKey: ["driver-standings", selectedSeason],
@@ -160,16 +164,18 @@ export default function StandingsPage() {
             <option key={s.year} value={s.year}>{s.year}</option>
           ))}
           {(!seasons || seasons.length === 0) && (
-            <option value={CURRENT_SEASON}>{CURRENT_SEASON}</option>
+            <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
           )}
         </select>
       </div>
 
       <Tabs defaultValue="drivers">
-        <TabsList>
-          <TabsTrigger value="drivers">Drivers' Championship</TabsTrigger>
-          <TabsTrigger value="constructors">Constructors' Championship</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="drivers">Drivers' Championship</TabsTrigger>
+            <TabsTrigger value="constructors">Constructors' Championship</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="drivers">
           {progressionData && progressionData.chartRows.length > 0 && (

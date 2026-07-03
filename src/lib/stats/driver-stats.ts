@@ -132,7 +132,8 @@ export function computeSprintStats(sprints: SprintResult[]): SprintStats {
 
 export function computeDriverSeasonStats(
   results: RaceResult[],
-  season: number
+  season: number,
+  sprints: SprintResult[] = []
 ): DriverSeasonStats {
   const seasonResults = results.filter(
     (r) => r.race_id && season
@@ -148,6 +149,10 @@ export function computeDriverSeasonStats(
       ? finished.reduce((a, b) => a + b.position!, 0) / finished.length
       : null
 
+  const sprintWins = sprints.filter((s) => s.position === 1).length
+  const sprintPodiums = sprints.filter((s) => s.position !== null && s.position <= 3).length
+  const sprintPoints = sprints.reduce((sum, s) => sum + s.points, 0)
+
   return {
     season,
     team: "",
@@ -161,5 +166,9 @@ export function computeDriverSeasonStats(
     podiumRate: seasonResults.length > 0 ? podiums / seasonResults.length : 0,
     teammateQualiComparison: { won: 0, lost: 0 },
     teammateRaceComparison: { won: 0, lost: 0 },
+    sprints: sprints.length,
+    sprintWins,
+    sprintPodiums,
+    sprintPoints,
   }
 }

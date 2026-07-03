@@ -157,11 +157,13 @@ export default function CircuitDetailPage() {
       </div>
 
       <Tabs defaultValue="races">
-        <TabsList>
-          <TabsTrigger value="races">Grands Prix</TabsTrigger>
-          <TabsTrigger value="winners">Winners</TabsTrigger>
-          <TabsTrigger value="fastest-laps">Fastest Laps</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="races">Grands Prix</TabsTrigger>
+            <TabsTrigger value="winners">Winners</TabsTrigger>
+            <TabsTrigger value="fastest-laps">Fastest Laps</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="races">
           <Card>

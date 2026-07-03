@@ -756,6 +756,42 @@ export async function importPerRoundStandings(season: number): Promise<{
   return { driverStandings: driverCount, constructorStandings: constructorCount }
 }
 
+export async function importDriverConstructorHistory(season: number): Promise<number> {
+  const { data: raceResults } = await supabase
+    .from("race_results")
+    .select("driver_id, constructor_id, races!inner(season_year)")
+    .eq("races.season_year", season)
+
+  if (!raceResults || raceResults.length === 0) return 0
+
+  const seen = new Set<string>()
+  const records: { driver_id: string; constructor_id: string; season_year: number }[] = []
+
+  for (const r of raceResults) {
+    const key = `${r.driver_id}|${r.constructor_id}|${season}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    records.push({ driver_id: r.driver_id, constructor_id: r.constructor_id, season_year: season })
+  }
+
+  const { error } = await supabase
+    .from("driver_constructor_history")
+    .upsert(records, { onConflict: "driver_id,constructor_id,season_year", ignoreDuplicates: true })
+
+  if (error) throw error
+  return records.length
+}
+
+export async function importDriverConstructorHistoryAll(): Promise<number> {
+  const { data: seasons } = await supabase.from("seasons").select("year")
+  if (!seasons) return 0
+  let total = 0
+  for (const { year } of seasons) {
+    total += await importDriverConstructorHistory(year)
+  }
+  return total
+}
+
 export async function importFullSeason(season: number): Promise<{
   races: number
   results: number
@@ -769,6 +805,7 @@ export async function importFullSeason(season: number): Promise<{
   const totalQualifying = await importAllQualifying(season)
   const totalSprint = await importAllSprintResults(season)
   const totalPitStops = await importAllPitStops(season)
+  await importDriverConstructorHistory(season)
 
   return {
     races: raceRecords.length,

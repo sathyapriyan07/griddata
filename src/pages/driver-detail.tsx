@@ -8,7 +8,7 @@ import { Avatar } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Driver, RaceResult, SprintResult, DriverConstructorHistory } from "@/types/database"
+import type { Driver, RaceResult, SprintResult } from "@/types/database"
 
 export default function DriverDetailPage() {
   const { driverId } = useParams()
@@ -69,16 +69,72 @@ export default function DriverDetailPage() {
     enabled: !!driverUuid,
   })
 
-  const { data: dch } = useQuery({
-    queryKey: ["driver-dch", driverUuid],
+  const { data: teamRaceStats } = useQuery({
+    queryKey: ["driver-team-race-stats", driverUuid],
     queryFn: async () => {
       if (!driverUuid) return []
       const { data } = await supabase
-        .from("driver_constructor_history")
-        .select("*, constructors!inner(name, constructor_id)")
+        .from("race_results")
+        .select("position, points, constructors!inner(constructor_id, name)")
         .eq("driver_id", driverUuid)
-        .order("season_year", { ascending: false })
-      return (data ?? []) as (DriverConstructorHistory & { constructors: { name: string; constructor_id: string } })[]
+      return (data ?? []) as { position: number | null; points: number; constructors: { constructor_id: string; name: string } }[]
+    },
+    enabled: !!driverUuid,
+  })
+
+  const { data: teamQualiStats } = useQuery({
+    queryKey: ["driver-team-quali-stats", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return []
+      const { data } = await supabase
+        .from("qualifying_results")
+        .select("position, constructor_id, constructors!inner(constructor_id, name)")
+        .eq("driver_id", driverUuid)
+      return (data ?? []) as { position: number | null; constructor_id: string; constructors: { constructor_id: string; name: string } }[]
+    },
+    enabled: !!driverUuid,
+  })
+
+  const driverTeamRecords = (() => {
+    const teams = new Map<string, { constructor_id: string; name: string; races: number; wins: number; podiums: number; points: number; poles: number }>()
+    for (const r of teamRaceStats ?? []) {
+      const cid = r.constructors.constructor_id
+      if (!teams.has(cid)) teams.set(cid, { constructor_id: cid, name: r.constructors.name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0 })
+      const t = teams.get(cid)!
+      t.races++
+      if (r.position === 1) t.wins++
+      if (r.position !== null && r.position <= 3) t.podiums++
+      t.points += r.points
+    }
+    for (const q of teamQualiStats ?? []) {
+      const cid = q.constructors.constructor_id
+      if (teams.has(cid) && q.position === 1) teams.get(cid)!.poles++
+    }
+    return [...teams.values()].sort((a, b) => b.wins - a.wins)
+  })()
+
+  const { data: teamSeasons } = useQuery({
+    queryKey: ["driver-team-seasons", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return []
+      const { data } = await supabase
+        .from("race_results")
+        .select("constructors!inner(name, constructor_id), races!inner(season_year)")
+        .eq("driver_id", driverUuid)
+      if (!data) return []
+      const seen = new Set<string>()
+      const out: { constructor_id: string; constructor_name: string; season_year: number }[] = []
+      for (const r of data as unknown as { constructors: { name: string; constructor_id: string }; races: { season_year: number } }[]) {
+        const key = `${r.constructors.constructor_id}|${r.races.season_year}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push({
+          constructor_id: r.constructors.constructor_id,
+          constructor_name: r.constructors.name,
+          season_year: r.races.season_year,
+        })
+      }
+      return out.sort((a, b) => b.season_year - a.season_year)
     },
     enabled: !!driverUuid,
   })
@@ -99,11 +155,11 @@ export default function DriverDetailPage() {
   ) ?? []
 
   const teamBySeason = new Map<number, { name: string; constructor_id: string }>()
-  dch?.forEach((d) => {
-    if (!teamBySeason.has(d.season_year)) {
-      teamBySeason.set(d.season_year, {
-        name: d.constructors.name,
-        constructor_id: d.constructors.constructor_id,
+  teamSeasons?.forEach((ts) => {
+    if (!teamBySeason.has(ts.season_year)) {
+      teamBySeason.set(ts.season_year, {
+        name: ts.constructor_name,
+        constructor_id: ts.constructor_id,
       })
     }
   })
@@ -209,13 +265,17 @@ export default function DriverDetailPage() {
       )}
 
       <Tabs defaultValue="results">
-        <TabsList>
-          <TabsTrigger value="results">Race Results</TabsTrigger>
-          <TabsTrigger value="seasons">Season by Season</TabsTrigger>
-          <TabsTrigger value="teammates">Teammate Battle</TabsTrigger>
-          <TabsTrigger value="milestones">Milestones</TabsTrigger>
-          <TabsTrigger value="streaks">Streaks</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="results">Race Results</TabsTrigger>
+            <TabsTrigger value="seasons">Season by Season</TabsTrigger>
+            <TabsTrigger value="teams">Teams</TabsTrigger>
+            <TabsTrigger value="team-records">Team Records</TabsTrigger>
+            <TabsTrigger value="teammates">Teammate Battle</TabsTrigger>
+            <TabsTrigger value="milestones">Milestones</TabsTrigger>
+            <TabsTrigger value="streaks">Streaks</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="results">
           <Card>
@@ -273,19 +333,25 @@ export default function DriverDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Season</TableHead>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Races</TableHead>
-                    <TableHead>Wins</TableHead>
-                    <TableHead>Podiums</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Avg Finish</TableHead>
-                    <TableHead>Win Rate</TableHead>
+                      <TableHead>Season</TableHead>
+                      <TableHead>Team</TableHead>
+                      <TableHead>Races</TableHead>
+                      <TableHead>Wins</TableHead>
+                      <TableHead>Podiums</TableHead>
+                      <TableHead>Points</TableHead>
+                      <TableHead>Sprints</TableHead>
+                      <TableHead>SW</TableHead>
+                      <TableHead>SP</TableHead>
+                      <TableHead>SPts</TableHead>
+                      <TableHead>Avg Finish</TableHead>
+                      <TableHead>Win Rate</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {seasons.map((season) => {
-                    const seasonData = computeDriverSeasonStats(results as RaceResult[], season)
+                    const seasonResults = (results ?? []).filter((r) => r.races.season_year === season)
+                    const seasonSprints = (sprints ?? []).filter((s) => s.races.season_year === season)
+                    const seasonData = computeDriverSeasonStats(seasonResults, season, seasonSprints)
                     const team = teamBySeason.get(season)
                     return (
                       <TableRow key={season}>
@@ -301,6 +367,10 @@ export default function DriverDetailPage() {
                         <TableCell>{seasonData.wins}</TableCell>
                         <TableCell>{seasonData.podiums}</TableCell>
                         <TableCell className="font-bold">{seasonData.points}</TableCell>
+                        <TableCell>{seasonData.sprints}</TableCell>
+                        <TableCell>{seasonData.sprintWins}</TableCell>
+                        <TableCell>{seasonData.sprintPodiums}</TableCell>
+                        <TableCell>{seasonData.sprintPoints}</TableCell>
                         <TableCell>{seasonData.avgFinishingPosition?.toFixed(1) ?? "—"}</TableCell>
                         <TableCell>{(seasonData.winRate * 100).toFixed(0)}%</TableCell>
                       </TableRow>
@@ -308,8 +378,107 @@ export default function DriverDetailPage() {
                   })}
                   {seasons.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={12} className="text-center text-muted-foreground">
                         No season data available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="teams">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team History & Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {teamSeasons && teamSeasons.length > 0 ? (
+                <div className="space-y-6">
+                  {(() => {
+                    const latestSeason = teamSeasons[0].season_year
+                    const currentTeam = {
+                      name: teamSeasons[0].constructor_name,
+                      constructor_id: teamSeasons[0].constructor_id,
+                    }
+                    const seenCtors = new Set<string>()
+                    const priorTeams = teamSeasons.filter((ts) => {
+                      if (seenCtors.has(ts.constructor_id)) return false
+                      if (ts.season_year === latestSeason && ts.constructor_id === currentTeam.constructor_id) return false
+                      seenCtors.add(ts.constructor_id)
+                      return true
+                    })
+                    return (
+                      <>
+                        <Card className="border-primary/30 bg-primary/5">
+                          <CardContent className="p-4 flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Current Team</p>
+                              <Link
+                                to={`/constructors/${currentTeam.constructor_id}`}
+                                className="text-xl font-bold hover:underline"
+                              >
+                                {currentTeam.name}
+                              </Link>
+                              <p className="text-sm text-muted-foreground">since {latestSeason}</p>
+                            </div>
+                            <Badge variant="default" className="text-xs">{latestSeason}</Badge>
+                          </CardContent>
+                        </Card>
+                        {priorTeams.map((ts) => (
+                          <TeamHistoryCard key={ts.constructor_id} entry={ts} teamSeasons={teamSeasons} results={results ?? []} driverUuid={driverUuid!} />
+                        ))}
+                      </>
+                    )
+                  })()}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No team history data available.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="team-records">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Records</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Team</TableHead>
+                    <TableHead>Races</TableHead>
+                    <TableHead>Wins</TableHead>
+                    <TableHead>Win %</TableHead>
+                    <TableHead>Podiums</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Poles</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {driverTeamRecords.map((t) => (
+                    <TableRow key={t.constructor_id}>
+                      <TableCell>
+                        <Link to={`/constructors/${t.constructor_id}`} className="font-medium hover:underline">
+                          {t.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{t.races}</TableCell>
+                      <TableCell className="font-semibold">{t.wins}</TableCell>
+                      <TableCell>{t.races > 0 ? `${(t.wins / t.races * 100).toFixed(1)}%` : "—"}</TableCell>
+                      <TableCell>{t.podiums}</TableCell>
+                      <TableCell className="font-bold">{t.points}</TableCell>
+                      <TableCell>{t.poles}</TableCell>
+                    </TableRow>
+                  ))}
+                  {driverTeamRecords.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No team record data available.
                       </TableCell>
                     </TableRow>
                   )}
@@ -325,14 +494,14 @@ export default function DriverDetailPage() {
               <CardTitle>Teammate Comparisons</CardTitle>
             </CardHeader>
             <CardContent>
-              {dch && dch.length > 0 ? (
+              {teamSeasons && teamSeasons.length > 0 ? (
                 <div className="space-y-6">
-                  {dch.map((entry) => (
+                  {teamSeasons.map((ts) => (
                     <TeammateSection
-                      key={`${entry.season_year}-${entry.constructor_id}`}
+                      key={`${ts.season_year}-${ts.constructor_id}`}
                       driverUuid={driverUuid!}
-                      season={entry.season_year}
-                      constructorId={entry.constructor_id}
+                      season={ts.season_year}
+                      constructorId={ts.constructor_id}
                       driverId={driver.driver_id}
                     />
                   ))}
@@ -448,16 +617,16 @@ function TeammateSection({
 
       const { data: results } = await supabase
         .from("race_results")
-        .select("*, drivers!inner(driver_id, given_name, family_name)")
+        .select("*, constructors!inner(constructor_id), drivers!inner(driver_id, given_name, family_name)")
         .in("race_id", raceIds)
-        .eq("constructor_id", constructorId)
+        .eq("constructors.constructor_id", constructorId)
         .order("race_id", { ascending: true })
 
       const { data: quali } = await supabase
         .from("qualifying_results")
-        .select("*, drivers!inner(driver_id, given_name, family_name)")
+        .select("*, constructors!inner(constructor_id), drivers!inner(driver_id, given_name, family_name)")
         .in("race_id", raceIds)
-        .eq("constructor_id", constructorId)
+        .eq("constructors.constructor_id", constructorId)
 
       const allResults = (results ?? []) as (Record<string, unknown> & { driver_id: string; drivers: { driver_id: string; given_name: string; family_name: string } })[]
       const allQuali = (quali ?? []) as (Record<string, unknown> & { driver_id: string; drivers: { driver_id: string; given_name: string; family_name: string } })[]
@@ -538,6 +707,76 @@ function TeammateSection({
         <div className="border-t pt-2 text-xs text-muted-foreground">
           <p>Race H2H: {raceH2H.driverWins} - {raceH2H.teammateWins} {raceH2H.ties > 0 ? `(${raceH2H.ties} ties)` : ""}</p>
           <p>Qualifying H2H: {qualiH2H.driverWins} - {qualiH2H.teammateWins} {qualiH2H.ties > 0 ? `(${qualiH2H.ties} ties)` : ""}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function TeamHistoryCard({
+  entry,
+  teamSeasons,
+  results,
+  driverUuid,
+}: {
+  entry: { constructor_id: string; constructor_name: string; season_year: number }
+  teamSeasons: { constructor_id: string; constructor_name: string; season_year: number }[]
+  results: (RaceResult & { races: { season_year: number; round: number; name: string; date: string } })[]
+  driverUuid: string
+}) {
+  const teamResults = results.filter(
+    (r) => r.driver_id === driverUuid && r.constructor_id === entry.constructor_id
+  )
+  const seasons = [...new Set(
+    teamSeasons
+      .filter((ts) => ts.constructor_id === entry.constructor_id)
+      .map((ts) => ts.season_year)
+  )].sort((a, b) => b - a)
+
+  const wins = teamResults.filter((r) => r.position === 1).length
+  const podiums = teamResults.filter((r) => r.position !== null && r.position <= 3).length
+  const points = teamResults.reduce((s, r) => s + r.points, 0)
+  const finished = teamResults.filter((r) => r.position !== null)
+  const avgFinish = finished.length > 0
+    ? finished.reduce((s, r) => s + r.position!, 0) / finished.length
+    : null
+
+  return (
+    <Card className="bg-muted/30">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <Link to={`/constructors/${entry.constructor_id}`} className="text-lg font-semibold hover:underline">{entry.constructor_name}</Link>
+            <p className="text-sm text-muted-foreground">{seasons.join(", ")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5">
+              {teamResults.length} races
+            </span>
+            {wins > 0 && (
+              <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full px-2 py-0.5">
+                {wins} {wins === 1 ? "win" : "wins"}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          <div>
+            <span className="text-muted-foreground">Wins</span>
+            <p className="font-semibold">{wins}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Podiums</span>
+            <p className="font-semibold">{podiums}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Points</span>
+            <p className="font-semibold">{points}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Avg Finish</span>
+            <p className="font-semibold">{avgFinish?.toFixed(1) ?? "—"}</p>
+          </div>
         </div>
       </CardContent>
     </Card>

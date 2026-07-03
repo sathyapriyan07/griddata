@@ -7,6 +7,7 @@ import {
   importFullSeason, importSeasonResults,
   importAllQualifying, importAllSprintResults, importAllPitStops,
   importDriverStandings, importConstructorStandings, importPerRoundStandings,
+  importDriverConstructorHistory, importDriverConstructorHistoryAll,
 } from "@/lib/import/jolpica"
 import { syncOpenF1Season } from "@/lib/import/openf1"
 import { useAuth, getProfile } from "@/stores/auth"
@@ -149,16 +150,26 @@ function SeasonImportForm({
         </Button>
       </div>
 
-      <Button
-        variant="default"
-        size="sm"
-        disabled={importing || !season}
-        onClick={() =>
-          runImport(`Full Season ${season}`, () => importFullSeason(Number(season)), `full_${season}`)
-        }
-      >
-        Full Season Import (all data types)
-      </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season}
+          onClick={() =>
+            runImport(`Driver-Team Links ${season}`, () => importDriverConstructorHistory(Number(season)), `dch_${season}`)
+          }
+        >
+          Driver-Team Links
+        </Button>
+        <Button
+          variant="default"
+          size="sm"
+          disabled={importing || !season}
+          onClick={() =>
+            runImport(`Full Season ${season}`, () => importFullSeason(Number(season)), `full_${season}`)
+          }
+        >
+          Full Season Import (all data types)
+        </Button>
     </div>
   )
 }
@@ -324,6 +335,39 @@ export default function AdminPage() {
   const [adminRoleUserId, setAdminRoleUserId] = useState("")
   const [adminRoleStatus, setAdminRoleStatus] = useState<string | null>(null)
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [uploadType, setUploadType] = useState<"driver" | "constructor" | "circuit">("driver")
+  const [uploadEntityId, setUploadEntityId] = useState("")
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const { data: driversList } = useQuery({
+    queryKey: ["all-drivers-upload"],
+    queryFn: async () => {
+      const { data } = await supabase.from("drivers").select("id, driver_id, given_name, family_name").order("family_name")
+      return (data ?? []) as { id: string; driver_id: string; given_name: string; family_name: string }[]
+    },
+    enabled: uploadType === "driver",
+  })
+
+  const { data: constructorsList } = useQuery({
+    queryKey: ["all-constructors-upload"],
+    queryFn: async () => {
+      const { data } = await supabase.from("constructors").select("id, constructor_id, name").order("name")
+      return (data ?? []) as { id: string; constructor_id: string; name: string }[]
+    },
+    enabled: uploadType === "constructor",
+  })
+
+  const { data: circuitsList } = useQuery({
+    queryKey: ["all-circuits-upload"],
+    queryFn: async () => {
+      const { data } = await supabase.from("circuits").select("id, circuit_id, name, country").order("name")
+      return (data ?? []) as { id: string; circuit_id: string; name: string; country: string | null }[]
+    },
+    enabled: uploadType === "circuit",
+  })
 
   const { data: userProfile } = useQuery({
     queryKey: ["user-profile", user?.id],
@@ -567,6 +611,16 @@ export default function AdminPage() {
                 Import Drivers
               </Button>
             </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={importing}
+                onClick={() => runImport("All Driver-Team Links", importDriverConstructorHistoryAll, "dch_all")}
+              >
+                All Driver-Team Links
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -670,14 +724,102 @@ export default function AdminPage() {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Image Upload
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">Upload driver photo, team logo, or circuit image.</p>
+            <div className="flex gap-2">
+              <select
+                value={uploadType}
+                onChange={(e) => { setUploadType(e.target.value as typeof uploadType); setUploadEntityId(""); setUploadStatus(null); setUploadError(null) }}
+                className="rounded-md border px-2 py-1 text-sm bg-background flex-1"
+              >
+                <option value="driver">Driver</option>
+                <option value="constructor">Team</option>
+                <option value="circuit">Circuit</option>
+              </select>
+            </div>
+            <select
+              value={uploadEntityId}
+              onChange={(e) => setUploadEntityId(e.target.value)}
+              className="rounded-md border px-2 py-1 text-sm bg-background w-full"
+            >
+              <option value="">Select {uploadType}...</option>
+              {uploadType === "driver" && driversList?.map((d) => (
+                <option key={d.id} value={d.id}>{d.given_name} {d.family_name}</option>
+              ))}
+              {uploadType === "constructor" && constructorsList?.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              {uploadType === "circuit" && circuitsList?.map((c) => (
+                <option key={c.id} value={c.id}>{c.name} {c.country ? `(${c.country})` : ""}</option>
+              ))}
+            </select>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+              className="text-sm"
+            />
+            <Button
+              variant="default"
+              size="sm"
+              disabled={uploading || !uploadEntityId || !uploadFile}
+              onClick={async () => {
+                if (!uploadFile || !uploadEntityId) return
+                setUploading(true)
+                setUploadStatus(null)
+                setUploadError(null)
+                try {
+                  const ext = uploadFile.name.split(".").pop() || "png"
+                  const filePath = `${uploadType}s/${uploadEntityId}.${ext}`
+                  const { error: uploadErr } = await supabase.storage
+                    .from("images")
+                    .upload(filePath, uploadFile, { upsert: true })
+                  if (uploadErr) throw uploadErr
+                  const { data: urlData } = supabase.storage
+                    .from("images")
+                    .getPublicUrl(filePath)
+                  const publicUrl = urlData.publicUrl
+
+                  const column = uploadType === "driver" ? "photo_url" : uploadType === "constructor" ? "logo_url" : "image_url"
+                  const table = uploadType === "driver" ? "drivers" : uploadType === "constructor" ? "constructors" : "circuits"
+                  const idColumn = "id"
+                  const { error: updateErr } = await supabase
+                    .from(table)
+                    .update({ [column]: publicUrl })
+                    .eq(idColumn, uploadEntityId)
+                  if (updateErr) throw updateErr
+                  setUploadStatus("Uploaded and linked successfully.")
+                  setUploadFile(null)
+                } catch (err) {
+                  setUploadError(extractErrorMessage(err))
+                } finally {
+                  setUploading(false)
+                }
+              }}
+            >
+              {uploading ? "Uploading..." : "Upload Image"}
+            </Button>
+            {uploadStatus && <p className="text-xs text-green-600">{uploadStatus}</p>}
+            {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="sync">
-        <TabsList>
-          <TabsTrigger value="sync">Sync Jobs</TabsTrigger>
-          <TabsTrigger value="crud">CRUD Tables</TabsTrigger>
-          <TabsTrigger value="schema">Schema Info</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-max min-w-full">
+            <TabsTrigger value="sync">Sync Jobs</TabsTrigger>
+            <TabsTrigger value="crud">CRUD Tables</TabsTrigger>
+            <TabsTrigger value="schema">Schema Info</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="sync">
           <Card>
@@ -728,12 +870,14 @@ export default function AdminPage() {
 
         <TabsContent value="crud">
           <Tabs defaultValue="drivers">
-            <TabsList>
-              <TabsTrigger value="drivers">Drivers</TabsTrigger>
-              <TabsTrigger value="constructors">Teams</TabsTrigger>
-              <TabsTrigger value="circuits">Circuits</TabsTrigger>
-              <TabsTrigger value="races">Races</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex w-max min-w-full">
+                <TabsTrigger value="drivers">Drivers</TabsTrigger>
+                <TabsTrigger value="constructors">Teams</TabsTrigger>
+                <TabsTrigger value="circuits">Circuits</TabsTrigger>
+                <TabsTrigger value="races">Races</TabsTrigger>
+              </TabsList>
+            </div>
             <TabsContent value="drivers">
               <Card>
                 <CardHeader>

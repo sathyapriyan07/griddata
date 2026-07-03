@@ -166,11 +166,9 @@ function SeasonImportForm({
 function CrudTable({
   entityType,
   columns,
-  title,
 }: {
   entityType: string
   columns: { key: string; label: string }[]
-  title?: string
 }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [edits, setEdits] = useState<Record<string, string>>({})
@@ -797,7 +795,6 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <CrudTable
-                    title="Races"
                     entityType="races"
                     columns={[
                       { key: "season_year", label: "Season" },

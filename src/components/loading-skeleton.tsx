@@ -53,7 +53,7 @@ export function StatsGridSkeleton({ count = 6 }: { count?: number }) {
   )
 }
 
-export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
+export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-2">
       <Skeleton className="h-10 w-full" />

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Circuit, Race } from "@/types/database"
+import type { Circuit, Race, RaceResult } from "@/types/database"
 
 export default function CircuitDetailPage() {
   const { circuitId } = useParams()
@@ -102,6 +102,95 @@ export default function CircuitDetailPage() {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
 
+  const { data: raceResults } = useQuery({
+    queryKey: ["circuit-race-results", raceIds],
+    queryFn: async () => {
+      if (raceIds.length === 0) return []
+      const { data } = await supabase
+        .from("race_results")
+        .select("position, points, grid, status, driver:drivers(given_name, family_name, driver_id), constructor:constructors(name, constructor_id)")
+        .in("race_id", raceIds)
+        .limit(1000)
+      return (data ?? []) as ({ position: number | null; points: number; grid: number | null; status: string | null; driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string } | null })[]
+    },
+    enabled: raceIds.length > 0,
+  })
+
+  const driverStats = (raceResults ?? []).reduce((acc, r) => {
+    const id = `${r.driver.driver_id}|${r.driver.given_name} ${r.driver.family_name}`
+    if (!acc[id]) {
+      acc[id] = {
+        driverId: r.driver.driver_id,
+        name: `${r.driver.given_name} ${r.driver.family_name}`,
+        races: 0,
+        points: 0,
+        wins: 0,
+        podiums: 0,
+        p2: 0,
+        p3: 0,
+        poles: 0,
+        dnfs: 0,
+        dns: 0,
+      }
+    }
+    const s = acc[id]
+    s.races += 1
+    s.points += r.points ?? 0
+    if (r.position !== null) {
+      if (r.position === 1) s.wins += 1
+      if (r.position <= 3) s.podiums += 1
+      if (r.position === 2) s.p2 += 1
+      if (r.position === 3) s.p3 += 1
+    }
+    if (r.grid === 1) s.poles += 1
+    const status = (r.status || "").toLowerCase()
+    if (status.includes("dnf")) s.dnfs += 1
+    if (status.includes("dns")) s.dns += 1
+    return acc
+  }, {} as Record<string, { driverId: string; name: string; races: number; points: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }>)
+
+  type DriverStat = { driverId: string; name: string; races: number; points: number; wins: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }
+
+  const statsToTop = (key: keyof DriverStat) =>
+    Object.values(driverStats as Record<string, DriverStat>)
+      .sort((a, b) => (b[key] as number) - (a[key] as number))
+      .slice(0, 5)
+
+  const teamStats = (raceResults ?? []).reduce((acc, r) => {
+    const ctor = r.constructor
+    if (!ctor) return acc
+    const id = `${ctor.constructor_id}|${ctor.name}`
+    if (!acc[id]) {
+      acc[id] = {
+        constructorId: ctor.constructor_id,
+        name: ctor.name,
+        races: 0,
+        points: 0,
+        wins: 0,
+        podiums: 0,
+        p2: 0,
+        p3: 0,
+        poles: 0,
+        dnfs: 0,
+        dns: 0,
+      }
+    }
+    const s = acc[id]
+    s.races += 1
+    s.points += r.points ?? 0
+    if (r.position !== null) {
+      if (r.position === 1) s.wins += 1
+      if (r.position <= 3) s.podiums += 1
+      if (r.position === 2) s.p2 += 1
+      if (r.position === 3) s.p3 += 1
+    }
+    if (r.grid === 1) s.poles += 1
+    const status = (r.status || "").toLowerCase()
+    if (status.includes("dnf")) s.dnfs += 1
+    if (status.includes("dns")) s.dns += 1
+    return acc
+  }, {} as Record<string, { constructorId: string; name: string; races: number; points: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }>)
+
   if (!circuit) {
     return <PageSkeleton />
   }
@@ -163,6 +252,8 @@ export default function CircuitDetailPage() {
             <TabsTrigger value="races">Grands Prix</TabsTrigger>
             <TabsTrigger value="winners">Winners</TabsTrigger>
             <TabsTrigger value="fastest-laps">Fastest Laps</TabsTrigger>
+            <TabsTrigger value="records">Records</TabsTrigger>
+            <TabsTrigger value="team-records">Team Records</TabsTrigger>
           </TabsList>
         </div>
 
@@ -198,6 +289,62 @@ export default function CircuitDetailPage() {
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No race data available yet.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="team-records">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team Records at {circuit.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Team</TableHead>
+                    <TableHead className="text-right">Races</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right">Wins</TableHead>
+                    <TableHead className="text-right">Podiums</TableHead>
+                    <TableHead className="text-right">P2</TableHead>
+                    <TableHead className="text-right">P3</TableHead>
+                    <TableHead className="text-right">Poles</TableHead>
+                    <TableHead className="text-right">DNFs</TableHead>
+                    <TableHead className="text-right">DNS</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.values(teamStats)
+                    .sort((a, b) => b.points - a.points)
+                    .slice(0, 50)
+                    .map((s) => (
+                      <TableRow key={s.constructorId}>
+                        <TableCell>
+                          <Link to={`/constructors/${s.constructorId}`} className="hover:underline">
+                            {s.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right">{s.races}</TableCell>
+                        <TableCell className="text-right">{s.points}</TableCell>
+                        <TableCell className="text-right">{s.wins}</TableCell>
+                        <TableCell className="text-right">{s.podiums}</TableCell>
+                        <TableCell className="text-right">{s.p2}</TableCell>
+                        <TableCell className="text-right">{s.p3}</TableCell>
+                        <TableCell className="text-right">{s.poles}</TableCell>
+                        <TableCell className="text-right">{s.dnfs}</TableCell>
+                        <TableCell className="text-right">{s.dns}</TableCell>
+                      </TableRow>
+                    ))}
+                  {Object.values(teamStats).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
+                        No team records available yet.
                       </TableCell>
                     </TableRow>
                   )}
@@ -305,6 +452,62 @@ export default function CircuitDetailPage() {
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-muted-foreground">
                         No fastest lap data available.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="records">
+          <Card>
+            <CardHeader>
+              <CardTitle>Records at {circuit.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Driver</TableHead>
+                    <TableHead className="text-right">Races</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right">Wins</TableHead>
+                    <TableHead className="text-right">Podiums</TableHead>
+                    <TableHead className="text-right">P2</TableHead>
+                    <TableHead className="text-right">P3</TableHead>
+                    <TableHead className="text-right">Poles</TableHead>
+                    <TableHead className="text-right">DNFs</TableHead>
+                    <TableHead className="text-right">DNS</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.values(driverStats as Record<string, DriverStat>)
+                    .sort((a, b) => b.points - a.points)
+                    .slice(0, 50)
+                    .map((s) => (
+                      <TableRow key={s.driverId}>
+                        <TableCell>
+                          <Link to={`/drivers/${s.driverId}`} className="hover:underline">
+                            {s.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right">{s.races}</TableCell>
+                        <TableCell className="text-right">{s.points}</TableCell>
+                        <TableCell className="text-right">{s.wins}</TableCell>
+                        <TableCell className="text-right">{s.podiums}</TableCell>
+                        <TableCell className="text-right">{s.p2}</TableCell>
+                        <TableCell className="text-right">{s.p3}</TableCell>
+                        <TableCell className="text-right">{s.poles}</TableCell>
+                        <TableCell className="text-right">{s.dnfs}</TableCell>
+                        <TableCell className="text-right">{s.dns}</TableCell>
+                      </TableRow>
+                    ))}
+                  {Object.values(driverStats).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
+                        No records available yet.
                       </TableCell>
                     </TableRow>
                   )}

@@ -395,7 +395,7 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {qualifying?.map((q) => (
-                      <TableRow key={q.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}66, transparent 200px)` }}>
+                      <TableRow key={q.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(q.constructor).primary}66, transparent 200px)` }}>
                           <TableCell className="text-center font-medium">{q.position}</TableCell>
                       <TableCell>
                         <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline">
@@ -499,7 +499,7 @@ export default function RaceDetailPage() {
                       [...sprints]
                         .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                         .map((s) => (
-                          <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}66, transparent 200px)` }}>
+                          <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(s.constructor).primary}66, transparent 200px)` }}>
                             <TableCell className="text-center font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
@@ -615,7 +615,7 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {sprints?.map((s) => (
-                      <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}66, transparent 200px)` }}>
+                      <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(s.constructor).primary}66, transparent 200px)` }}>
                           <TableCell className="text-center font-medium">{s.position ?? "DNF"}</TableCell>
                           <TableCell>
                             <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">

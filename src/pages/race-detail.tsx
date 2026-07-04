@@ -261,34 +261,36 @@ export default function RaceDetailPage() {
                       <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
                         <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
                         <div className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg shrink-0">
-                              {r.position ?? r.position_text ?? "DNF"}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <Link to={`/drivers/${r.driver.driver_id}`} className="text-sm font-medium hover:underline">
-                                {r.driver.given_name} {r.driver.family_name}
-                              </Link>
-                              <div className="text-xs text-muted-foreground truncate">
-                                <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
-                                  {r.constructor.name}
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                                {r.position ?? r.position_text ?? "DNF"}
+                              </div>
+                              <div>
+                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
+                                  {r.driver.given_name} {r.driver.family_name}
                                 </Link>
+                                <div className="text-sm text-muted-foreground">
+                                  <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
+                                    {r.constructor.name}
+                                  </Link>
+                                </div>
                               </div>
                             </div>
-                            {carImageMap.get(r.constructor_id) && (
-                              <div className="shrink-0">
-                                <img
-                                  src={carImageMap.get(r.constructor_id)!}
-                                  alt={`${r.constructor.name} car`}
-                                  className="w-16 h-10 object-contain rounded"
-                                />
-                              </div>
-                            )}
-                            <div className="text-right shrink-0">
+                            <div className="text-right">
                               <div className="text-lg font-bold">{r.points}</div>
                               <div className="text-xs text-muted-foreground">pts</div>
                             </div>
                           </div>
+                          {carImageMap.get(r.constructor_id) && (
+                            <div className="mt-3 bg-muted/20 rounded-md px-4 py-2">
+                              <img
+                                src={carImageMap.get(r.constructor_id)!}
+                                alt={`${r.constructor.name} car`}
+                                className="w-full h-16 object-contain"
+                              />
+                            </div>
+                          )}
                           {showAllStats && (
                             <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
                               <div>

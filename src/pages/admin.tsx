@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { SyncJob, Profile } from "@/types/database"
+import type { SyncJob, Profile, NationalityFlag } from "@/types/database"
 
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
   try {
@@ -928,6 +928,17 @@ export default function AdminPage() {
             <ConstructorColorPanel />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Nationality Flags
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NationalityFlagPanel />
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="crud">
@@ -1493,6 +1504,155 @@ function ConstructorColorPanel() {
             </Button>
           </div>
 
+          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NationalityFlagPanel() {
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selected, setSelected] = useState<string | null>(null)
+  const [flagUrl, setFlagUrl] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient()
+
+  const { data: flags } = useQuery({
+    queryKey: ["nationality-flags"],
+    queryFn: async () => {
+      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
+      return (data ?? []) as NationalityFlag[]
+    },
+  })
+
+  const { data: allNationalities } = useQuery({
+    queryKey: ["all-nationalities"],
+    queryFn: async () => {
+      const [driversRes, constructorsRes, circuitsRes] = await Promise.all([
+        supabase.from("drivers").select("nationality"),
+        supabase.from("constructors").select("nationality"),
+        supabase.from("circuits").select("country"),
+      ])
+      const set = new Set<string>()
+      driversRes.data?.forEach((d) => d.nationality && set.add(d.nationality))
+      constructorsRes.data?.forEach((c) => c.nationality && set.add(c.nationality))
+      circuitsRes.data?.forEach((c) => c.country && set.add(c.country))
+      return [...set].sort()
+    },
+  })
+
+  const validFlags = new Set(flags?.map((f) => f.nationality) ?? [])
+  const filtered = (allNationalities ?? []).filter((n) =>
+    n.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const selectNationality = (nationality: string) => {
+    setSelected(nationality)
+    setSearchQuery(nationality)
+    const existing = flags?.find((f) => f.nationality === nationality)
+    setFlagUrl(existing?.flag_url ?? "")
+  }
+
+  const uploadFlag = async (f: File) => {
+    if (!selected) return
+    setUploading(true)
+    setStatus(null)
+    try {
+      const ext = f.name.split(".").pop() || "png"
+      const path = `nationality-flags/${selected}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from("images").upload(path, f, { upsert: true })
+      if (uploadErr) throw uploadErr
+      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+      setFlagUrl(publicUrl)
+      const { error: dbErr } = await supabase.from("nationality_flags").upsert(
+        { nationality: selected, flag_url: publicUrl },
+        { onConflict: "nationality" }
+      )
+      if (dbErr) throw dbErr
+      setStatus("Flag uploaded.")
+      queryClient.invalidateQueries({ queryKey: ["nationality-flags"] })
+    } catch (err) {
+      setStatus(extractErrorMessage(err))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const deleteFlag = async () => {
+    if (!selected) return
+    setStatus(null)
+    try {
+      const { error } = await supabase.from("nationality_flags").delete().eq("nationality", selected)
+      if (error) throw error
+      setFlagUrl("")
+      setStatus("Flag removed.")
+      queryClient.invalidateQueries({ queryKey: ["nationality-flags"] })
+    } catch (err) {
+      setStatus(extractErrorMessage(err))
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search nationality..."
+        className="w-full rounded border px-3 py-2 text-sm bg-background"
+      />
+      {searchQuery && filtered.length > 0 && (
+        <div className="max-h-40 overflow-y-auto rounded border">
+          {filtered.map((n) => (
+            <button
+              key={n}
+              onClick={() => selectNationality(n)}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 ${selected === n ? "bg-muted font-medium" : ""}`}
+            >
+              {validFlags.has(n) ? (
+                <img src={flags?.find((f) => f.nationality === n)?.flag_url} alt={n} className="w-5 h-3.5 object-cover rounded" />
+              ) : (
+                <span className="w-5 h-3.5 rounded bg-muted" />
+              )}
+              <span>{n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {searchQuery && filtered.length === 0 && (
+        <p className="text-xs text-muted-foreground px-1">No nationalities found.</p>
+      )}
+
+      {selected && (
+        <div className="space-y-3 pt-2">
+          {flagUrl && (
+            <div className="flex items-center gap-3">
+              <img src={flagUrl} alt={selected} className="w-12 h-8 object-cover rounded border" />
+              <span className="text-sm font-medium">{selected}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              {uploading ? "Uploading..." : "Upload Flag"}
+            </Button>
+            {flagUrl && (
+              <Button variant="destructive" size="sm" onClick={deleteFlag}>Remove</Button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) uploadFlag(f)
+            }}
+          />
           {status && <p className="text-xs text-muted-foreground">{status}</p>}
         </div>
       )}

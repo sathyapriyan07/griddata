@@ -48,7 +48,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
+      return (data ?? []) as (RaceResult & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string | null }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null; nationality: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -72,23 +72,6 @@ export default function RaceDetailPage() {
 
   const carImageMap = new Map((teamCarImages ?? []).map((img) => [img.constructor_id, img.image_url]))
 
-  const driverIds = [...new Set((results ?? []).map((r) => r.driver_id).filter(Boolean))]
-  const { data: driverPoleImages } = useQuery({
-    queryKey: ["race-driver-pole-images", raceId],
-    queryFn: async () => {
-      if (driverIds.length === 0) return []
-      const { data } = await supabase
-        .from("driver_images")
-        .select("driver_id, image_url")
-        .in("driver_id", driverIds)
-        .eq("type", "pole")
-      return (data ?? []) as { driver_id: string; image_url: string }[]
-    },
-    enabled: driverIds.length > 0,
-  })
-
-  const driverPoleImageMap = new Map((driverPoleImages ?? []).map((img) => [img.driver_id, img.image_url]))
-
   const { data: qualifying } = useQuery({
     queryKey: ["race-qualifying", raceId],
     queryFn: async () => {
@@ -98,7 +81,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (QualifyingResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
+      return (data ?? []) as (QualifyingResult & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string | null }; constructor: { name: string; constructor_id: string; logo_url: string | null; nationality: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -112,7 +95,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (SprintResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
+      return (data ?? []) as (SprintResult & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string | null }; constructor: { name: string; constructor_id: string; logo_url: string | null; nationality: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -123,10 +106,10 @@ export default function RaceDetailPage() {
       if (!raceId) return []
       const { data } = await supabase
         .from("pit_stops")
-        .select("*, driver:drivers(given_name, family_name, driver_id)")
+        .select("*, driver:drivers(given_name, family_name, driver_id, nationality)")
         .eq("race_id", raceId)
         .order("lap", { ascending: true })
-      return (data ?? []) as (PitStop & { driver: { given_name: string; family_name: string; driver_id: string } })[]
+      return (data ?? []) as (PitStop & { driver: { given_name: string; family_name: string; driver_id: string; nationality: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -156,6 +139,14 @@ export default function RaceDetailPage() {
       return (data ?? []) as RaceSession[]
     },
     enabled: !!raceId,
+  })
+
+  const { data: nationalityFlags } = useQuery({
+    queryKey: ["nationality-flags"],
+    queryFn: async () => {
+      const { data } = await supabase.from("nationality_flags").select("nationality, flag_url")
+      return new Map<string, string>((data ?? []).map((f: Record<string, string>) => [f.nationality, f.flag_url]))
+    },
   })
 
   const [showAllStats, setShowAllStats] = useState(false)
@@ -273,7 +264,7 @@ export default function RaceDetailPage() {
               {results?.map((r) => {
                 const colors = getConstructorColors(r.constructor.name || "")
                 return (
-                  <div key={r.id} className="rounded-lg border bg-card overflow-hidden relative">
+                  <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
                     <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
                     <div className="p-4">
                       <div className="flex items-start justify-between">
@@ -305,13 +296,6 @@ export default function RaceDetailPage() {
                           src={carImageMap.get(r.constructor_id)!}
                           alt={`${r.constructor.name} car`}
                           className="w-full h-16 object-contain mt-3"
-                        />
-                      )}
-                      {!showAllStats && driverPoleImageMap.get(r.driver_id) && (
-                        <img
-                          src={driverPoleImageMap.get(r.driver_id)!}
-                          alt={`${r.driver.given_name} ${r.driver.family_name}`}
-                          className="absolute bottom-2 right-2 w-16 h-16 object-contain rounded opacity-80"
                         />
                       )}
                       {showAllStats && (
@@ -358,12 +342,18 @@ export default function RaceDetailPage() {
                   <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(r.constructor).primary}66, transparent 200px)` }}>
                     <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
                     <TableCell>
-                      <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                      <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                        {nationalityFlags?.get(r.driver.nationality ?? "") && (
+                          <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                        )}
                         {r.driver.given_name} {r.driver.family_name}
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
+                      <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                        {nationalityFlags?.get(r.constructor.nationality ?? "") && (
+                          <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                        )}
                         <span>{r.constructor.name}</span>
                       </Link>
                     </TableCell>
@@ -422,12 +412,18 @@ export default function RaceDetailPage() {
                       <TableRow key={q.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(q.constructor).primary}66, transparent 200px)` }}>
                           <TableCell className="text-center font-medium">{q.position}</TableCell>
                       <TableCell>
-                        <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline">
+                        <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                          {nationalityFlags?.get(q.driver.nationality ?? "") && (
+                            <img src={nationalityFlags.get(q.driver.nationality ?? "")!} alt={q.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                          )}
                           {q.driver.given_name} {q.driver.family_name}
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline">
+                        <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                          {nationalityFlags?.get(q.constructor.nationality ?? "") && (
+                            <img src={nationalityFlags.get(q.constructor.nationality ?? "")!} alt={q.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                          )}
                           <span>{q.constructor.name}</span>
                         </Link>
                       </TableCell>
@@ -526,12 +522,18 @@ export default function RaceDetailPage() {
                           <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(s.constructor).primary}66, transparent 200px)` }}>
                             <TableCell className="text-center font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
-                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
+                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                {nationalityFlags?.get(s.driver.nationality ?? "") && (
+                                  <img src={nationalityFlags.get(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                )}
                                 {s.driver.given_name} {s.driver.family_name}
                               </Link>
                             </TableCell>
                             <TableCell>
                               <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                {nationalityFlags?.get(s.constructor.nationality ?? "") && (
+                                  <img src={nationalityFlags.get(s.constructor.nationality ?? "")!} alt={s.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                )}
                                 {s.constructor.logo_url && (
                                   <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
                                 )}
@@ -750,12 +752,18 @@ export default function RaceDetailPage() {
                           <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(r.constructor).primary}66, transparent 200px)` }}>
                             <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
                             <TableCell>
-                              <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                              <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                {nationalityFlags?.get(r.driver.nationality ?? "") && (
+                                  <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                )}
                                 {r.driver.given_name} {r.driver.family_name}
                               </Link>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline flex items-center gap-2">
+                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                              {nationalityFlags?.get(r.constructor.nationality ?? "") && (
+                                <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                              )}
                               {r.constructor.logo_url && (
                                 <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
                               )}
@@ -796,8 +804,11 @@ export default function RaceDetailPage() {
                       <TableRow key={ps.id}>
                         <TableCell className="text-center">{ps.stop_number}</TableCell>
                         <TableCell>
-                          <Link to={`/drivers/${ps.driver.driver_id}`} className="hover:underline">
-                            {ps.driver.given_name} {ps.driver.family_name}
+                        <Link to={`/drivers/${ps.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                          {nationalityFlags?.get(ps.driver.nationality ?? "") && (
+                            <img src={nationalityFlags.get(ps.driver.nationality ?? "")!} alt={ps.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                          )}
+                          {ps.driver.given_name} {ps.driver.family_name}
                           </Link>
                         </TableCell>
                         <TableCell className="text-right">{ps.lap}</TableCell>

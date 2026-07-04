@@ -170,6 +170,14 @@ export interface DriverImage {
   updated_at: string
 }
 
+export interface NationalityFlag {
+  id: string
+  nationality: string
+  flag_url: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Driver {
   id: string
   driver_id: string

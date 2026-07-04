@@ -380,18 +380,18 @@ export default function ConstructorDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Season</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Wins</TableHead>
+                    <TableHead className="text-center">Position</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right">Wins</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {standings?.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell>{s.season_year}</TableCell>
-                      <TableCell>{s.position ? `P${s.position}` : "—"}</TableCell>
-                      <TableCell>{s.points}</TableCell>
-                      <TableCell>{s.wins}</TableCell>
+                      <TableCell className="text-center">{s.position ? `P${s.position}` : "—"}</TableCell>
+                      <TableCell className="text-right">{s.points}</TableCell>
+                      <TableCell className="text-right">{s.wins}</TableCell>
                     </TableRow>
                   ))}
                   {(!standings || standings.length === 0) && (

@@ -215,20 +215,20 @@ export default function RaceDetailPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Pos</TableHead>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Team</TableHead>
-                    {showAllStats && <TableHead>Grid</TableHead>}
-                    <TableHead>Points</TableHead>
-                    {showAllStats && <TableHead>Status</TableHead>}
-                    {showAllStats && <TableHead>Fastest Lap</TableHead>}
-                  </TableRow>
+                    <TableRow>
+                      <TableHead className="text-center w-10">Pos</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead>Team</TableHead>
+                      {showAllStats && <TableHead className="text-center">Grid</TableHead>}
+                      <TableHead className="text-right">Points</TableHead>
+                      {showAllStats && <TableHead>Status</TableHead>}
+                      {showAllStats && <TableHead className="text-right">Fastest Lap</TableHead>}
+                    </TableRow>
                 </TableHeader>
                 <TableBody>
                   {results?.map((r) => (
                     <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                      <TableCell className="font-medium">
+                      <TableCell className="text-center font-medium">
                         {r.position ?? r.position_text ?? "DNF"}
                       </TableCell>
                       <TableCell>
@@ -241,10 +241,10 @@ export default function RaceDetailPage() {
                           <span>{r.constructor.name}</span>
                         </Link>
                       </TableCell>
-                      {showAllStats && <TableCell>{r.grid ?? "—"}</TableCell>}
-                      <TableCell>{r.points}</TableCell>
+                      {showAllStats && <TableCell className="text-center">{r.grid ?? "—"}</TableCell>}
+                      <TableCell className="text-right">{r.points}</TableCell>
                       {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
-                      {showAllStats && <TableCell>{r.fastest_lap_time ?? "—"}</TableCell>}
+                      {showAllStats && <TableCell className="text-right font-mono">{r.fastest_lap_time ?? "—"}</TableCell>}
                     </TableRow>
                   ))}
                   {(!results || results.length === 0) && (
@@ -286,19 +286,19 @@ export default function RaceDetailPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Pos</TableHead>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Team</TableHead>
-                    {showQ1Q2 && <TableHead>Q1</TableHead>}
-                    {showQ1Q2 && <TableHead>Q2</TableHead>}
-                    <TableHead>Q3</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {qualifying?.map((q) => (
-                    <TableRow key={q.id} style={{ borderLeft: `4px solid ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                      <TableCell className="font-medium">{q.position}</TableCell>
+                    <TableRow>
+                      <TableHead className="text-center w-10">Pos</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead>Team</TableHead>
+                      {showQ1Q2 && <TableHead className="text-right font-mono">Q1</TableHead>}
+                      {showQ1Q2 && <TableHead className="text-right font-mono">Q2</TableHead>}
+                      <TableHead className="text-right font-mono">Q3</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {qualifying?.map((q) => (
+                      <TableRow key={q.id} style={{ borderLeft: `4px solid ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                          <TableCell className="text-center font-medium">{q.position}</TableCell>
                       <TableCell>
                         <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline">
                           {q.driver.given_name} {q.driver.family_name}
@@ -309,9 +309,9 @@ export default function RaceDetailPage() {
                           <span>{q.constructor.name}</span>
                         </Link>
                       </TableCell>
-                      {showQ1Q2 && <TableCell className="font-mono text-xs">{q.q1 ?? "—"}</TableCell>}
-                      {showQ1Q2 && <TableCell className="font-mono text-xs">{q.q2 ?? "—"}</TableCell>}
-                      <TableCell className="font-mono text-xs">{q.q3 ?? "—"}</TableCell>
+                      {showQ1Q2 && <TableCell className="text-right font-mono text-xs">{q.q1 ?? "—"}</TableCell>}
+                      {showQ1Q2 && <TableCell className="text-right font-mono text-xs">{q.q2 ?? "—"}</TableCell>}
+                      <TableCell className="text-right font-mono text-xs">{q.q3 ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                   {(!qualifying || qualifying.length === 0) && (
@@ -338,7 +338,7 @@ export default function RaceDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Grid</TableHead>
+                      <TableHead className="text-center w-10">Grid</TableHead>
                       <TableHead>Driver</TableHead>
                       <TableHead>Team</TableHead>
                     </TableRow>
@@ -349,7 +349,7 @@ export default function RaceDetailPage() {
                         .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                         .map((s) => (
                           <TableRow key={s.id} style={{ borderLeft: `4px solid ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                            <TableCell className="font-medium">{s.grid ?? "—"}</TableCell>
+                            <TableCell className="text-center font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
                                 {s.driver.given_name} {s.driver.family_name}
@@ -378,18 +378,18 @@ export default function RaceDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Pos</TableHead>
+                      <TableHead className="text-center w-10">Pos</TableHead>
                       <TableHead>Driver</TableHead>
                       <TableHead>Team</TableHead>
-                      <TableHead>Points</TableHead>
-                      <TableHead>Laps</TableHead>
+                      <TableHead className="text-right">Points</TableHead>
+                      <TableHead className="text-right">Laps</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sprints?.map((s) => (
                       <TableRow key={s.id} style={{ borderLeft: `4px solid ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                          <TableCell className="font-medium">{s.position ?? "DNF"}</TableCell>
+                          <TableCell className="text-center font-medium">{s.position ?? "DNF"}</TableCell>
                           <TableCell>
                             <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
                               {s.driver.given_name} {s.driver.family_name}
@@ -400,8 +400,8 @@ export default function RaceDetailPage() {
                               <span>{s.constructor.name}</span>
                             </Link>
                           </TableCell>
-                        <TableCell>{s.points}</TableCell>
-                        <TableCell>{s.laps ?? "—"}</TableCell>
+                        <TableCell className="text-right">{s.points}</TableCell>
+                        <TableCell className="text-right">{s.laps ?? "—"}</TableCell>
                         <TableCell>{s.status ?? "—"}</TableCell>
                       </TableRow>
                     ))}
@@ -427,19 +427,19 @@ export default function RaceDetailPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Grid</TableHead>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Team</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results?.length ? (
-                    [...results]
-                      .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
+                    <TableRow>
+                      <TableHead className="text-center w-10">Grid</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead>Team</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results?.length ? (
+                      [...results]
+                        .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                         .map((r) => (
                         <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                          <TableCell className="font-medium">{r.grid ?? "—"}</TableCell>
+                          <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
                           <TableCell>
                             <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
                               {r.driver.given_name} {r.driver.family_name}
@@ -476,26 +476,26 @@ export default function RaceDetailPage() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Stop</TableHead>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Lap</TableHead>
-                    <TableHead>Duration</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pitStops?.map((ps) => (
-                    <TableRow key={ps.id}>
-                      <TableCell>{ps.stop_number}</TableCell>
-                      <TableCell>
-                        <Link to={`/drivers/${ps.driver.driver_id}`} className="hover:underline">
-                          {ps.driver.given_name} {ps.driver.family_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{ps.lap}</TableCell>
-                      <TableCell className="font-mono">
-                        {ps.duration_ms != null ? `${(ps.duration_ms / 1000).toFixed(2)}s` : "—"}
-                      </TableCell>
+                    <TableRow>
+                      <TableHead className="text-center w-10">Stop</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead className="text-right">Lap</TableHead>
+                      <TableHead className="text-right">Duration</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pitStops?.map((ps) => (
+                      <TableRow key={ps.id}>
+                        <TableCell className="text-center">{ps.stop_number}</TableCell>
+                        <TableCell>
+                          <Link to={`/drivers/${ps.driver.driver_id}`} className="hover:underline">
+                            {ps.driver.given_name} {ps.driver.family_name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right">{ps.lap}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          {ps.duration_ms != null ? `${(ps.duration_ms / 1000).toFixed(2)}s` : "—"}
+                        </TableCell>
                     </TableRow>
                   ))}
                   {(!pitStops || pitStops.length === 0) && (
@@ -521,21 +521,21 @@ export default function RaceDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Air Temp</TableHead>
-                      <TableHead>Track Temp</TableHead>
-                      <TableHead>Rainfall</TableHead>
-                      <TableHead>Wind Speed</TableHead>
-                      <TableHead>Humidity</TableHead>
+                      <TableHead className="text-right">Air Temp</TableHead>
+                      <TableHead className="text-right">Track Temp</TableHead>
+                      <TableHead className="text-center">Rainfall</TableHead>
+                      <TableHead className="text-right">Wind Speed</TableHead>
+                      <TableHead className="text-right">Humidity</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {weatherData.map((w) => (
                       <TableRow key={w.id}>
-                        <TableCell>{w.air_temp != null ? `${w.air_temp}°C` : "—"}</TableCell>
-                        <TableCell>{w.track_temp != null ? `${w.track_temp}°C` : "—"}</TableCell>
-                        <TableCell>{w.rainfall ? "Yes" : w.rainfall === false ? "No" : "—"}</TableCell>
-                        <TableCell>{w.wind_speed != null ? `${w.wind_speed} m/s` : "—"}</TableCell>
-                        <TableCell>{w.humidity != null ? `${w.humidity}%` : "—"}</TableCell>
+                        <TableCell className="text-right">{w.air_temp != null ? `${w.air_temp}°C` : "—"}</TableCell>
+                        <TableCell className="text-right">{w.track_temp != null ? `${w.track_temp}°C` : "—"}</TableCell>
+                        <TableCell className="text-center">{w.rainfall ? "Yes" : w.rainfall === false ? "No" : "—"}</TableCell>
+                        <TableCell className="text-right">{w.wind_speed != null ? `${w.wind_speed} m/s` : "—"}</TableCell>
+                        <TableCell className="text-right">{w.humidity != null ? `${w.humidity}%` : "—"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -559,8 +559,8 @@ export default function RaceDetailPage() {
                     <TableRow>
                       <TableHead>Session</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>End</TableHead>
+                      <TableHead className="text-right">Start</TableHead>
+                      <TableHead className="text-right">End</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -568,8 +568,8 @@ export default function RaceDetailPage() {
                       <TableRow key={s.id}>
                         <TableCell className="font-medium">{sessionLabels[s.type] || s.type}</TableCell>
                         <TableCell>{formatDate(s.start_time)}</TableCell>
-                        <TableCell>{formatTime(s.start_time)}</TableCell>
-                        <TableCell>{formatTime(s.end_time)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatTime(s.start_time)}</TableCell>
+                        <TableCell className="text-right font-mono">{formatTime(s.end_time)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

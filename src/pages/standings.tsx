@@ -63,7 +63,7 @@ export default function StandingsPage() {
         const existing = grouped.get(s.constructor_id)
         if (!existing || s.points > existing.points) grouped.set(s.constructor_id, s)
       }
-      return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99)).slice(0, 25)
+      return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
     },
   })
 
@@ -92,7 +92,7 @@ export default function StandingsPage() {
     if (pos === 1) return <Badge className="bg-yellow-500 text-yellow-950">P1</Badge>
     if (pos === 2) return <Badge className="bg-gray-300 text-gray-800">P2</Badge>
     if (pos === 3) return <Badge className="bg-amber-700 text-amber-100">P3</Badge>
-    return <span className="text-sm font-medium">P{pos}</span>
+    return <span className="text-xs font-semibold">P{pos}</span>
   }
 
   const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: { payload: { fullName: string; points: number } }[] }) => {
@@ -166,17 +166,17 @@ export default function StandingsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Pos</TableHead>
+                    <TableHead className="text-center">Pos</TableHead>
                     <TableHead>Driver</TableHead>
                     <TableHead>Nationality</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Wins</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right">Wins</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {driverStandings?.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell>{getPositionBadge(s.position)}</TableCell>
+                      <TableCell className="text-center">{getPositionBadge(s.position)}</TableCell>
                       <TableCell>
                         <Link
                           to={`/drivers/${s.driver.driver_id}`}
@@ -186,8 +186,8 @@ export default function StandingsPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{s.driver.nationality}</TableCell>
-                      <TableCell className="font-bold">{s.points}</TableCell>
-                      <TableCell>{s.wins}</TableCell>
+                      <TableCell className="text-right font-bold">{s.points}</TableCell>
+                      <TableCell className="text-right">{s.wins}</TableCell>
                     </TableRow>
                   ))}
                   {(!driverStandings || driverStandings.length === 0) && (
@@ -233,17 +233,17 @@ export default function StandingsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Pos</TableHead>
+                    <TableHead className="text-center">Pos</TableHead>
                     <TableHead>Constructor</TableHead>
                     <TableHead>Nationality</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Wins</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right">Wins</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {constructorStandings?.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell>{getPositionBadge(s.position)}</TableCell>
+                      <TableCell className="text-center">{getPositionBadge(s.position)}</TableCell>
                       <TableCell>
                         <Link
                           to={`/constructors/${s.constructor.constructor_id}`}
@@ -253,8 +253,8 @@ export default function StandingsPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{s.constructor.nationality}</TableCell>
-                      <TableCell className="font-bold">{s.points}</TableCell>
-                      <TableCell>{s.wins}</TableCell>
+                      <TableCell className="text-right font-bold">{s.points}</TableCell>
+                      <TableCell className="text-right">{s.wins}</TableCell>
                     </TableRow>
                   ))}
                   {(!constructorStandings || constructorStandings.length === 0) && (

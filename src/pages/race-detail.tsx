@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom"
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { getConstructorColors } from "@/lib/constructorColors"
+import { getConstructorColors, getConstructorColorsFromRecord } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -48,7 +48,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null } })[]
+      return (data ?? []) as (RaceResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -81,7 +81,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (QualifyingResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string } })[]
+      return (data ?? []) as (QualifyingResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -95,7 +95,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (SprintResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string; logo_url: string | null } })[]
+      return (data ?? []) as (SprintResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -331,7 +331,7 @@ export default function RaceDetailPage() {
               </TableHeader>
               <TableBody>
                 {results?.map((r) => (
-                  <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}FF, transparent 200px)` }}>
+                  <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(r.constructor).primary}66, transparent 200px)` }}>
                     <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
                     <TableCell>
                       <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
@@ -395,7 +395,7 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {qualifying?.map((q) => (
-                      <TableRow key={q.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}FF, transparent 200px)` }}>
+                      <TableRow key={q.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}66, transparent 200px)` }}>
                           <TableCell className="text-center font-medium">{q.position}</TableCell>
                       <TableCell>
                         <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline">
@@ -499,7 +499,7 @@ export default function RaceDetailPage() {
                       [...sprints]
                         .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                         .map((s) => (
-                          <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}FF, transparent 200px)` }}>
+                          <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}66, transparent 200px)` }}>
                             <TableCell className="text-center font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
@@ -615,7 +615,7 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {sprints?.map((s) => (
-                      <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}FF, transparent 200px)` }}>
+                      <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}66, transparent 200px)` }}>
                           <TableCell className="text-center font-medium">{s.position ?? "DNF"}</TableCell>
                           <TableCell>
                             <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
@@ -723,7 +723,7 @@ export default function RaceDetailPage() {
                         [...results]
                           .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                           .map((r) => (
-                          <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}FF, transparent 200px)` }}>
+                          <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColorsFromRecord(r.constructor).primary}66, transparent 200px)` }}>
                             <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">

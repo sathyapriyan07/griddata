@@ -72,6 +72,23 @@ export default function RaceDetailPage() {
 
   const carImageMap = new Map((teamCarImages ?? []).map((img) => [img.constructor_id, img.image_url]))
 
+  const driverIds = [...new Set((results ?? []).map((r) => r.driver_id).filter(Boolean))]
+  const { data: driverPoleImages } = useQuery({
+    queryKey: ["race-driver-pole-images", raceId],
+    queryFn: async () => {
+      if (driverIds.length === 0) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("driver_id, image_url")
+        .in("driver_id", driverIds)
+        .eq("type", "pole")
+      return (data ?? []) as { driver_id: string; image_url: string }[]
+    },
+    enabled: driverIds.length > 0,
+  })
+
+  const driverPoleImageMap = new Map((driverPoleImages ?? []).map((img) => [img.driver_id, img.image_url]))
+
   const { data: qualifying } = useQuery({
     queryKey: ["race-qualifying", raceId],
     queryFn: async () => {
@@ -256,7 +273,7 @@ export default function RaceDetailPage() {
               {results?.map((r) => {
                 const colors = getConstructorColors(r.constructor.name || "")
                 return (
-                  <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
+                  <div key={r.id} className="rounded-lg border bg-card overflow-hidden relative">
                     <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
                     <div className="p-4">
                       <div className="flex items-start justify-between">
@@ -288,6 +305,13 @@ export default function RaceDetailPage() {
                           src={carImageMap.get(r.constructor_id)!}
                           alt={`${r.constructor.name} car`}
                           className="w-full h-16 object-contain mt-3"
+                        />
+                      )}
+                      {!showAllStats && driverPoleImageMap.get(r.driver_id) && (
+                        <img
+                          src={driverPoleImageMap.get(r.driver_id)!}
+                          alt={`${r.driver.given_name} ${r.driver.family_name}`}
+                          className="absolute bottom-2 right-2 w-16 h-16 object-contain rounded opacity-80"
                         />
                       )}
                       {showAllStats && (

@@ -17,8 +17,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop, convertToPixelCrop } from "react-image-crop"
-import "react-image-crop/dist/ReactCrop.css"
 import type { SyncJob, Profile } from "@/types/database"
 
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
@@ -1198,10 +1196,6 @@ function DriverImagePanel() {
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [cropFile, setCropFile] = useState<File | null>(null)
-  const [cropUrl, setCropUrl] = useState<string | null>(null)
-  const [crop, setCrop] = useState<Crop>()
-  const imgRef = useRef<HTMLImageElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: drivers } = useQuery({
@@ -1325,11 +1319,7 @@ function DriverImagePanel() {
               ref={fileInputRef}
               onChange={(e) => {
                 const f = e.target.files?.[0]
-                if (f) {
-                  setCropFile(f)
-                  setCropUrl(URL.createObjectURL(f))
-                  setCrop(undefined)
-                }
+                if (f) uploadImage(f)
                 e.target.value = ""
               }}
               className="hidden"
@@ -1359,91 +1349,6 @@ function DriverImagePanel() {
             <p className="text-xs text-muted-foreground">No images uploaded for this driver yet.</p>
           )}
         </>
-      )}
-
-      {cropUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-card rounded-lg shadow-lg max-w-lg w-full mx-4 overflow-hidden">
-            <div className="p-4">
-              <h3 className="text-sm font-semibold mb-3">Crop Image</h3>
-              <div className="max-h-80 overflow-auto">
-                <ReactCrop
-                  crop={crop}
-                  onChange={(c) => setCrop(c)}
-                  onComplete={(c) => setCrop(c)}
-                  aspect={undefined}
-                >
-                  <img
-                    ref={imgRef}
-                    src={cropUrl}
-                    alt="Crop preview"
-                    onLoad={() => {
-                      if (imgRef.current) {
-                        setCrop(
-                          centerCrop(
-                            makeAspectCrop(16 / 9, imgRef.current.naturalWidth / imgRef.current.naturalHeight, imgRef.current.naturalWidth, imgRef.current.naturalHeight),
-                            imgRef.current.naturalWidth,
-                            imgRef.current.naturalHeight
-                          )
-                        )
-                      }
-                    }}
-                  />
-                </ReactCrop>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 px-4 pb-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (cropUrl) URL.revokeObjectURL(cropUrl)
-                  setCropUrl(null)
-                  setCropFile(null)
-                  setCrop(undefined)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                disabled={uploading || !cropFile}
-                onClick={async () => {
-                  if (!cropFile || !imgRef.current || !crop) return
-                  setUploading(true)
-                  setStatus("Cropping...")
-                  try {
-                    const pixelCrop = convertToPixelCrop(crop, imgRef.current.naturalWidth, imgRef.current.naturalHeight)
-                    const canvas = document.createElement("canvas")
-                    const ctx = canvas.getContext("2d")
-                    if (!ctx) throw new Error("No canvas context")
-                    canvas.width = pixelCrop.width
-                    canvas.height = pixelCrop.height
-                    ctx.drawImage(
-                      imgRef.current,
-                      pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
-                      0, 0, pixelCrop.width, pixelCrop.height
-                    )
-                    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, cropFile.type))
-                    if (!blob) throw new Error("Failed to create blob")
-                    const croppedFile = new File([blob], cropFile.name, { type: cropFile.type })
-                    if (cropUrl) URL.revokeObjectURL(cropUrl)
-                    setCropUrl(null)
-                    setCropFile(null)
-                    setCrop(undefined)
-                    await uploadImage(croppedFile)
-                  } catch (err) {
-                    setStatus(extractErrorMessage(err))
-                    setUploading(false)
-                  }
-                }}
-              >
-                {uploading ? "Uploading..." : "Crop & Upload"}
-              </Button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )

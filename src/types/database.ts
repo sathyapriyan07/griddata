@@ -21,6 +21,11 @@ export interface Database {
         Insert: Omit<TeamCarImage, "id" | "created_at" | "updated_at">
         Update: Partial<Omit<TeamCarImage, "id">>
       }
+      driver_images: {
+        Row: DriverImage
+        Insert: Omit<DriverImage, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<DriverImage, "id">>
+      }
       drivers: {
         Row: Driver
         Insert: Omit<Driver, "id">
@@ -146,6 +151,17 @@ export interface TeamCarImage {
   constructor_id: string
   year: number
   image_url: string
+  caption: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DriverImage {
+  id: string
+  driver_id: string
+  image_url: string
+  type: string
+  year: number | null
   caption: string | null
   created_at: string
   updated_at: string

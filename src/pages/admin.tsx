@@ -905,63 +905,25 @@ export default function AdminPage() {
             <TeamCarImagePanel />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Driver Images
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DriverImagePanel />
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs defaultValue="sync">
+      <Tabs defaultValue="crud">
         <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
-            <TabsTrigger value="sync">Sync Jobs</TabsTrigger>
             <TabsTrigger value="crud">CRUD Tables</TabsTrigger>
-            <TabsTrigger value="schema">Schema Info</TabsTrigger>
           </TabsList>
         </div>
-
-        <TabsContent value="sync">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Job History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead>Finished</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {syncJobs?.map((job) => (
-                    <TableRow key={job.id}>
-                      <TableCell className="font-medium">{job.source}</TableCell>
-                      <TableCell>{job.entity_type}</TableCell>
-                      <TableCell>{statusBadge(job.status)}</TableCell>
-                      <TableCell>
-                        {job.started_at
-                          ? new Date(job.started_at).toLocaleString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        {job.finished_at
-                          ? new Date(job.finished_at).toLocaleString()
-                          : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!syncJobs || syncJobs.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        No sync jobs have been run yet.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="crud">
           <Tabs defaultValue="drivers">
@@ -1077,6 +1039,7 @@ function TeamCarImagePanel() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: constructors } = useQuery({
@@ -1086,6 +1049,10 @@ function TeamCarImagePanel() {
       return (data ?? []) as { id: string; constructor_id: string; name: string }[]
     },
   })
+
+  const filteredConstructors = (constructors ?? []).filter(
+    (c) => c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   const { data: images, refetch: refetchImages } = useQuery({
     queryKey: ["team-car-images", selectedConstructorId],
@@ -1139,16 +1106,29 @@ function TeamCarImagePanel() {
 
   return (
     <div className="space-y-3">
-      <select
-        value={selectedConstructorId ?? ""}
-        onChange={(e) => setSelectedConstructorId(e.target.value || null)}
+      <input
+        type="search"
+        placeholder="Search teams..."
+        value={searchQuery}
+        onChange={(e) => { setSearchQuery(e.target.value); setSelectedConstructorId(null) }}
         className="rounded border px-2 py-1 text-sm bg-background w-full"
-      >
-        <option value="">Select a team...</option>
-        {(constructors ?? []).map((c) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
+      />
+      {searchQuery && filteredConstructors.length > 0 && (
+        <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+          {filteredConstructors.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setSelectedConstructorId(c.id); setSearchQuery(c.name) }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedConstructorId === c.id ? "bg-muted font-medium" : ""}`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {searchQuery && filteredConstructors.length === 0 && (
+        <p className="text-xs text-muted-foreground px-1">No teams found.</p>
+      )}
 
       {selectedConstructorId && (
         <>
@@ -1197,3 +1177,167 @@ function TeamCarImagePanel() {
   )
 }
 
+function DriverImagePanel() {
+  const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null)
+  const [imageType, setImageType] = useState<string>("card")
+  const [year, setYear] = useState<number | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { data: drivers } = useQuery({
+    queryKey: ["all-drivers-driver-image"],
+    queryFn: async () => {
+      const { data } = await supabase.from("drivers").select("id, driver_id, given_name, family_name").order("family_name")
+      return (data ?? []) as { id: string; driver_id: string; given_name: string; family_name: string }[]
+    },
+  })
+
+  const filteredDrivers = (drivers ?? []).filter(
+    (d) => `${d.given_name} ${d.family_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const { data: images, refetch: refetchImages } = useQuery({
+    queryKey: ["driver-images", selectedDriverId],
+    queryFn: async () => {
+      if (!selectedDriverId) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .eq("driver_id", selectedDriverId)
+        .order("created_at", { ascending: false })
+      return (data ?? []) as { id: string; image_url: string; type: string; year: number | null; caption: string | null }[]
+    },
+    enabled: !!selectedDriverId,
+  })
+
+  const uploadImage = async (f: File) => {
+    if (!selectedDriverId) return
+    setUploading(true)
+    setStatus(null)
+    try {
+      const ext = f.name.split(".").pop() || "png"
+      const path = `driver-images/${selectedDriverId}/${imageType}-${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from("images").upload(path, f, { upsert: true })
+      if (uploadErr) throw uploadErr
+      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+      const { error: dbErr } = await supabase.from("driver_images").insert({
+        driver_id: selectedDriverId,
+        image_url: publicUrl,
+        type: imageType,
+        year: year,
+      })
+      if (dbErr) throw dbErr
+      setStatus("Image uploaded successfully.")
+      refetchImages()
+    } catch (err) {
+      setStatus(extractErrorMessage(err))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const deleteImage = async (id: string) => {
+    if (!confirm("Delete this image?")) return
+    setStatus("Deleting...")
+    const { error } = await supabase.from("driver_images").delete().eq("id", id)
+    if (error) setStatus(`Delete failed: ${error.message}`)
+    else {
+      setStatus("Deleted.")
+      refetchImages()
+    }
+  }
+
+  const typeOptions = [
+    { value: "card", label: "Card" },
+    { value: "pole", label: "Pole Position" },
+    { value: "event", label: "Event" },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <input
+        type="search"
+        placeholder="Search drivers..."
+        value={searchQuery}
+        onChange={(e) => { setSearchQuery(e.target.value); setSelectedDriverId(null) }}
+        className="rounded border px-2 py-1 text-sm bg-background w-full"
+      />
+      {searchQuery && filteredDrivers.length > 0 && (
+        <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+          {filteredDrivers.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => { setSelectedDriverId(d.id); setSearchQuery(`${d.given_name} ${d.family_name}`) }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedDriverId === d.id ? "bg-muted font-medium" : ""}`}
+            >
+              {d.given_name} {d.family_name}
+            </button>
+          ))}
+        </div>
+      )}
+      {searchQuery && filteredDrivers.length === 0 && (
+        <p className="text-xs text-muted-foreground px-1">No drivers found.</p>
+      )}
+
+      {selectedDriverId && (
+        <>
+          <div className="flex gap-2 items-center">
+            <select
+              value={imageType}
+              onChange={(e) => setImageType(e.target.value)}
+              className="rounded border px-2 py-1 text-sm bg-background"
+            >
+              {typeOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={year ?? ""}
+              onChange={(e) => setYear(e.target.value ? Number(e.target.value) : null)}
+              placeholder="Year"
+              className="w-20 rounded border px-2 py-1 text-sm bg-background"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) uploadImage(f)
+                e.target.value = ""
+              }}
+              className="hidden"
+            />
+            <Button variant="default" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+              {uploading ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+
+          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+
+          {images && images.length > 0 && (
+            <div className="grid gap-2 mt-2">
+              {images.map((img) => (
+                <div key={img.id} className="flex items-center gap-2">
+                  <img src={img.image_url} alt={`${img.type}`} className="w-24 h-12 object-contain rounded" />
+                  <div className="flex-1 text-sm">
+                    <span className="font-medium capitalize">{img.type}</span>
+                    {img.year && <span className="text-muted-foreground ml-2">({img.year})</span>}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => deleteImage(img.id)}>Delete</Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {images && images.length === 0 && (
+            <p className="text-xs text-muted-foreground">No images uploaded for this driver yet.</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}

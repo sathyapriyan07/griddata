@@ -9,7 +9,7 @@ import { Avatar } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Driver, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
 
 export default function DriverDetailPage() {
   const { driverId } = useParams()
@@ -119,6 +119,20 @@ export default function DriverDetailPage() {
         .select("position, points, constructors!inner(constructor_id, name)")
         .eq("driver_id", driverUuid)
       return (data ?? []) as { position: number | null; points: number; constructors: { constructor_id: string; name: string } }[]
+    },
+    enabled: !!driverUuid,
+  })
+
+  const { data: driverImages } = useQuery({
+    queryKey: ["driver-images-gallery", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .eq("driver_id", driverUuid)
+        .order("created_at", { ascending: false })
+      return (data ?? []) as DriverImage[]
     },
     enabled: !!driverUuid,
   })
@@ -449,6 +463,39 @@ export default function DriverDetailPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {driverImages && driverImages.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Driver Images</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(["card", "pole", "event"] as const).map((type) => {
+              const filtered = driverImages.filter((img) => img.type === type)
+              if (filtered.length === 0) return null
+              const typeLabel = type === "card" ? "Card" : type === "pole" ? "Pole Position" : "Event"
+              return (
+                <div key={type} className="mb-4 last:mb-0">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">{typeLabel}</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {filtered.map((img) => (
+                      <div key={img.id} className="space-y-1">
+                        <img
+                          src={img.image_url}
+                          alt={`${driver.given_name} ${driver.family_name} ${typeLabel}`}
+                          className="w-full h-32 object-contain rounded-md border bg-muted/30"
+                        />
+                        {img.year && <p className="text-sm text-center font-medium">{img.year}</p>}
+                        {img.caption && <p className="text-xs text-center text-muted-foreground">{img.caption}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
       )}
 
       <Tabs defaultValue="results">

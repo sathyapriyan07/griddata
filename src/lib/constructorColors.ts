@@ -27,3 +27,12 @@ export function getConstructorColors(name: string): ConstructorColors | null {
     accent: "#111827",
   }
 }
+
+export function getConstructorColorsFromRecord(constructor: { name: string; color_primary: string | null; color_secondary: string | null; color_accent: string | null }): ConstructorColors {
+  const fallback = getConstructorColors(constructor.name)
+  return {
+    primary: constructor.color_primary ?? fallback?.primary ?? "#6b7280",
+    secondary: constructor.color_secondary ?? fallback?.secondary ?? "#d1d5db",
+    accent: constructor.color_accent ?? fallback?.accent ?? "#111827",
+  }
+}

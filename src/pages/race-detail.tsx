@@ -284,13 +284,11 @@ export default function RaceDetailPage() {
                         </div>
                       </div>
                       {carImageMap.get(r.constructor_id) && (
-                        <div className="mt-3 bg-muted/20 rounded-md px-4 py-2">
-                          <img
-                            src={carImageMap.get(r.constructor_id)!}
-                            alt={`${r.constructor.name} car`}
-                            className="w-full h-16 object-contain"
-                          />
-                        </div>
+                        <img
+                          src={carImageMap.get(r.constructor_id)!}
+                          alt={`${r.constructor.name} car`}
+                          className="w-full h-16 object-contain mt-3"
+                        />
                       )}
                       {showAllStats && (
                         <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
@@ -333,7 +331,7 @@ export default function RaceDetailPage() {
               </TableHeader>
               <TableBody>
                 {results?.map((r) => (
-                  <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                  <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}99, transparent 50px)` }}>
                     <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
                     <TableCell>
                       <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
@@ -397,7 +395,7 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {qualifying?.map((q) => (
-                      <TableRow key={q.id} style={{ borderLeft: `4px solid ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                      <TableRow key={q.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(q.constructor.name || "")?.primary ?? "#6b7280"}99, transparent 50px)` }}>
                           <TableCell className="text-center font-medium">{q.position}</TableCell>
                       <TableCell>
                         <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline">
@@ -501,7 +499,7 @@ export default function RaceDetailPage() {
                       [...sprints]
                         .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                         .map((s) => (
-                          <TableRow key={s.id} style={{ borderLeft: `4px solid ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                          <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}99, transparent 50px)` }}>
                             <TableCell className="text-center font-medium">{s.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
@@ -617,7 +615,7 @@ export default function RaceDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {sprints?.map((s) => (
-                      <TableRow key={s.id} style={{ borderLeft: `4px solid ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                      <TableRow key={s.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(s.constructor.name || "")?.primary ?? "#6b7280"}99, transparent 50px)` }}>
                           <TableCell className="text-center font-medium">{s.position ?? "DNF"}</TableCell>
                           <TableCell>
                             <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline">
@@ -725,7 +723,7 @@ export default function RaceDetailPage() {
                         [...results]
                           .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
                           .map((r) => (
-                          <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                          <TableRow key={r.id} style={{ background: `linear-gradient(90deg, ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}99, transparent 50px)` }}>
                             <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">

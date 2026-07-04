@@ -10,6 +10,7 @@ import {
   importDriverConstructorHistory, importDriverConstructorHistoryAll,
 } from "@/lib/import/jolpica"
 import { syncOpenF1Season } from "@/lib/import/openf1"
+import { getConstructorColors } from "@/lib/constructorColors"
 import { useAuth, getProfile } from "@/stores/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -916,6 +917,17 @@ export default function AdminPage() {
             <DriverImagePanel />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Constructor Colors
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ConstructorColorPanel />
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="crud">
@@ -1337,6 +1349,152 @@ function DriverImagePanel() {
             <p className="text-xs text-muted-foreground">No images uploaded for this driver yet.</p>
           )}
         </>
+      )}
+    </div>
+  )
+}
+
+function ConstructorColorPanel() {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [primary, setPrimary] = useState("#6b7280")
+  const [secondary, setSecondary] = useState("#d1d5db")
+  const [accent, setAccent] = useState("#111827")
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const { data: constructors } = useQuery({
+    queryKey: ["all-constructors-colors"],
+    queryFn: async () => {
+      const { data } = await supabase.from("constructors").select("id, constructor_id, name, color_primary, color_secondary, color_accent").order("name")
+      return (data ?? []) as { id: string; constructor_id: string; name: string; color_primary: string | null; color_secondary: string | null; color_accent: string | null }[]
+    },
+  })
+
+  const filteredConstructors = (constructors ?? []).filter(
+    (c) => c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const selectConstructor = (id: string) => {
+    const c = constructors?.find((x) => x.id === id)
+    if (c) {
+      setSelectedId(id)
+      setSearchQuery(c.name)
+      setPrimary(c.color_primary ?? "#6b7280")
+      setSecondary(c.color_secondary ?? "#d1d5db")
+      setAccent(c.color_accent ?? "#111827")
+    }
+  }
+
+  const save = async () => {
+    if (!selectedId) return
+    setSaving(true)
+    setStatus(null)
+    try {
+      const { error } = await supabase
+        .from("constructors")
+        .update({ color_primary: primary, color_secondary: secondary, color_accent: accent })
+        .eq("id", selectedId)
+      if (error) throw error
+      setStatus("Colors saved.")
+      queryClient.invalidateQueries({ queryKey: ["all-constructors-colors"] })
+    } catch (err) {
+      setStatus(extractErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const resetToDefaults = async () => {
+    if (!selectedId) return
+    setSaving(true)
+    setStatus(null)
+    try {
+      const { error } = await supabase
+        .from("constructors")
+        .update({ color_primary: null, color_secondary: null, color_accent: null })
+        .eq("id", selectedId)
+      if (error) throw error
+      setPrimary("#6b7280")
+      setSecondary("#d1d5db")
+      setAccent("#111827")
+      setStatus("Reset to defaults.")
+      queryClient.invalidateQueries({ queryKey: ["all-constructors-colors"] })
+    } catch (err) {
+      setStatus(extractErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search constructors..."
+        className="w-full rounded border px-3 py-2 text-sm bg-background"
+      />
+      {searchQuery && filteredConstructors.length > 0 && (
+        <div className="max-h-40 overflow-y-auto rounded border">
+          {filteredConstructors.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => selectConstructor(c.id)}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedId === c.id ? "bg-muted font-medium" : ""}`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color_primary ?? getConstructorColors(c.name)?.primary ?? "#6b7280" }} />
+                {c.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      {searchQuery && filteredConstructors.length === 0 && (
+        <p className="text-xs text-muted-foreground px-1">No constructors found.</p>
+      )}
+
+      {selectedId && (
+        <div className="space-y-3 pt-2">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium">Primary</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="w-10 h-8 rounded cursor-pointer" />
+              <input type="text" value={primary} onChange={(e) => setPrimary(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm font-mono bg-background" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium">Secondary</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="w-10 h-8 rounded cursor-pointer" />
+              <input type="text" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm font-mono bg-background" />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-medium">Accent</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="w-10 h-8 rounded cursor-pointer" />
+              <input type="text" value={accent} onChange={(e) => setAccent(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm font-mono bg-background" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <div className="flex-1 h-8 rounded border flex items-center justify-center text-xs font-medium" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})`, color: accent }}>
+              Preview
+            </div>
+            <Button variant="default" size="sm" disabled={saving} onClick={save}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+            <Button variant="outline" size="sm" disabled={saving} onClick={resetToDefaults}>
+              Reset
+            </Button>
+          </div>
+
+          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+        </div>
       )}
     </div>
   )

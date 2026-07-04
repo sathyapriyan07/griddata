@@ -140,6 +140,9 @@ export interface Constructor {
   engine_supplier: string | null
   logo_url: string | null
   car_image_url: string | null
+  color_primary: string | null
+  color_secondary: string | null
+  color_accent: string | null
   source: string
   is_manually_edited: boolean
   created_at: string

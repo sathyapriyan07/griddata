@@ -16,20 +16,10 @@ export interface Database {
         Insert: Omit<Constructor, "id">
         Update: Partial<Omit<Constructor, "id">>
       }
-      cars: {
-        Row: Car
-        Insert: Omit<Car, "id">
-        Update: Partial<Omit<Car, "id">>
-      }
-      car_images: {
-        Row: CarImage
-        Insert: Omit<CarImage, "id">
-        Update: Partial<Omit<CarImage, "id">>
-      }
-      car_teams: {
-        Row: CarTeam
-        Insert: Omit<CarTeam, "id">
-        Update: Partial<Omit<CarTeam, "id">>
+      team_car_images: {
+        Row: TeamCarImage
+        Insert: Omit<TeamCarImage, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<TeamCarImage, "id">>
       }
       drivers: {
         Row: Driver
@@ -151,35 +141,12 @@ export interface Constructor {
   updated_at: string
 }
 
-export interface Car {
+export interface TeamCarImage {
   id: string
-  car_id: string
-  name: string
-  engine_name: string | null
-  power_unit_name: string | null
-  chassis_name: string | null
-  source: string
-  is_manually_edited: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface CarImage {
-  id: string
-  car_id: string
+  constructor_id: string
   year: number
   image_url: string
   caption: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface CarTeam {
-  id: string
-  car_id: string
-  constructor_id: string
-  assigned_from_year: number | null
-  assigned_to_year: number | null
   created_at: string
   updated_at: string
 }

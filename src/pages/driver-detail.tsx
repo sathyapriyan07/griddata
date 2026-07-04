@@ -274,6 +274,7 @@ export default function DriverDetailPage() {
   const averageGrid = stats?.avgGridPosition ?? null
 
   const [circuitSort, setCircuitSort] = useState<"wins" | "podiums" | "avgFinish">("wins")
+  const [showAllStats, setShowAllStats] = useState(false)
 
   const circuitPerformance = (() => {
     const map = new Map<string, {
@@ -468,20 +469,38 @@ export default function DriverDetailPage() {
 
         <TabsContent value="results">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex items-center justify-between">
               <CardTitle>Race Results</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">All Stats</span>
+                <button
+                  onClick={() => setShowAllStats(!showAllStats)}
+                  aria-pressed={showAllStats}
+                  className={
+                    `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
+                    (showAllStats ? "bg-primary" : "bg-muted")
+                  }
+                >
+                  <span
+                    className={
+                      `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
+                      (showAllStats ? "translate-x-5" : "translate-x-1")
+                    }
+                  />
+                </button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Season</TableHead>
-                    <TableHead>Race</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Grid</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Fastest Lap</TableHead>
+                    <TableHead><div>Season</div></TableHead>
+                    <TableHead><div>Race</div></TableHead>
+                    <TableHead><div className="text-center">Position</div></TableHead>
+                    <TableHead><div className="text-center">Grid</div></TableHead>
+                    <TableHead><div className="text-end">Points</div></TableHead>
+                    {showAllStats && <TableHead><div>Status</div></TableHead>}
+                    {showAllStats && <TableHead><div className="text-end">Fastest Lap</div></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -493,16 +512,16 @@ export default function DriverDetailPage() {
                           {r.races.name}
                         </Link>
                       </TableCell>
-                      <TableCell>{r.position ?? r.position_text ?? "DNF"}</TableCell>
-                      <TableCell>{r.grid ?? "—"}</TableCell>
-                      <TableCell>{r.points}</TableCell>
-                      <TableCell>{r.status ?? "—"}</TableCell>
-                      <TableCell>{r.fastest_lap_time ?? "—"}</TableCell>
+                      <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
+                      <TableCell><div className="text-center">{r.grid ?? "—"}</div></TableCell>
+                      <TableCell><div className="text-end">{r.points}</div></TableCell>
+                      {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
+                      {showAllStats && <TableCell><div className="text-end font-mono">{r.fastest_lap_time ?? "—"}</div></TableCell>}
                     </TableRow>
                   ))}
                   {(!results || results.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={showAllStats ? 7 : 5} className="text-center text-muted-foreground">
                         No results available yet.
                       </TableCell>
                     </TableRow>
@@ -721,7 +740,6 @@ export default function DriverDetailPage() {
                       driverUuid={driverUuid!}
                       season={ts.season_year}
                       constructorId={ts.constructor_id}
-                      driverId={driver.driver_id}
                     />
                   ))}
                 </div>
@@ -851,27 +869,27 @@ export default function DriverDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Circuit</TableHead>
-                    <TableHead>Races</TableHead>
-                    <TableHead>Wins</TableHead>
-                    <TableHead>Podiums</TableHead>
-                    <TableHead>Poles</TableHead>
-                    <TableHead>Fastest Laps</TableHead>
-                    <TableHead>Average Finish</TableHead>
-                    <TableHead>Points</TableHead>
+                    <TableHead><div>Circuit</div></TableHead>
+                    <TableHead><div className="text-end">Races</div></TableHead>
+                    <TableHead><div className="text-end">Wins</div></TableHead>
+                    <TableHead><div className="text-end">Podiums</div></TableHead>
+                    <TableHead><div className="text-end">Poles</div></TableHead>
+                    <TableHead><div className="text-end">Fastest Laps</div></TableHead>
+                    <TableHead><div className="text-end">Average Finish</div></TableHead>
+                    <TableHead><div className="text-end">Points</div></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {circuitPerformance.map((row) => (
                     <TableRow key={row.circuitId}>
                       <TableCell>{row.circuitName}</TableCell>
-                      <TableCell>{row.races}</TableCell>
-                      <TableCell>{row.wins}</TableCell>
-                      <TableCell>{row.podiums}</TableCell>
-                      <TableCell>{row.poles}</TableCell>
-                      <TableCell>{row.fastestLaps}</TableCell>
-                      <TableCell>{row.averageFinish ? row.averageFinish.toFixed(2) : "—"}</TableCell>
-                      <TableCell>{row.points}</TableCell>
+                      <TableCell><div className="text-end">{row.races}</div></TableCell>
+                      <TableCell><div className="text-end">{row.wins}</div></TableCell>
+                      <TableCell><div className="text-end">{row.podiums}</div></TableCell>
+                      <TableCell><div className="text-end">{row.poles}</div></TableCell>
+                      <TableCell><div className="text-end">{row.fastestLaps}</div></TableCell>
+                      <TableCell><div className="text-end">{row.averageFinish ? row.averageFinish.toFixed(2) : "—"}</div></TableCell>
+                      <TableCell><div className="text-end">{row.points}</div></TableCell>
                     </TableRow>
                   ))}
                   {circuitPerformance.length === 0 && (
@@ -1031,12 +1049,10 @@ function TeammateSection({
   driverUuid,
   season,
   constructorId,
-  driverId,
 }: {
   driverUuid: string
   season: number
   constructorId: string
-  driverId: string
 }) {
   const { data: teamResults } = useQuery({
     queryKey: ["team-results", constructorId, season],
@@ -1115,9 +1131,6 @@ function TeammateSection({
     }
   }
 
-  const driverPoints = driverRaceResults.reduce((s, r) => s + r.points, 0)
-  const teammatePoints = teammateRaceResults.reduce((s, r) => s + r.points, 0)
-
   return (
     <Card className="bg-muted/30">
       <CardContent className="p-4 space-y-3">
@@ -1127,17 +1140,8 @@ function TeammateSection({
             {commonRaceIds.length} races together
           </Badge>
         </div>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="font-semibold">{driverId}</p>
-            <p>Points: {driverPoints}</p>
-            <p>Wins: {driverRaceResults.filter((r) => r.position === 1).length}</p>
-          </div>
-          <div className="text-right">
-            <p className="font-semibold">{teamResults.teammateName}</p>
-            <p>Points: {teammatePoints}</p>
-            <p>Wins: {teammateRaceResults.filter((r) => r.position === 1).length}</p>
-          </div>
+        <div className="text-right text-sm">
+          <p className="font-semibold">{teamResults.teammateName}</p>
         </div>
         <div className="border-t pt-2 text-xs text-muted-foreground">
           <p>Race H2H: {raceH2H.driverWins} - {raceH2H.teammateWins} {raceH2H.ties > 0 ? `(${raceH2H.ties} ties)` : ""}</p>

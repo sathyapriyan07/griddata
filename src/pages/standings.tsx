@@ -3,7 +3,6 @@ import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
@@ -88,10 +87,7 @@ export default function StandingsPage() {
 
 
   const getPositionBadge = (pos: number | null) => {
-    if (!pos) return <Badge variant="outline">—</Badge>
-    if (pos === 1) return <Badge className="bg-yellow-500 text-yellow-950">P1</Badge>
-    if (pos === 2) return <Badge className="bg-gray-300 text-gray-800">P2</Badge>
-    if (pos === 3) return <Badge className="bg-amber-700 text-amber-100">P3</Badge>
+    if (!pos) return <span className="text-xs font-semibold">—</span>
     return <span className="text-xs font-semibold">P{pos}</span>
   }
 
@@ -109,23 +105,32 @@ export default function StandingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold">Championship Standings</h1>
           <p className="text-muted-foreground">Drivers' and Constructors' standings.</p>
         </div>
-        <select
-          value={selectedSeason}
-          onChange={(e) => setSelectedSeason(Number(e.target.value))}
-          className="rounded-md border px-3 py-1.5 text-sm bg-background"
-        >
-          {seasons?.map((s) => (
-            <option key={s.year} value={s.year}>{s.year}</option>
-          ))}
-          {(!seasons || seasons.length === 0) && (
-            <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-          )}
-        </select>
+        <div className="overflow-x-auto hide-scrollbar">
+          <div className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+            {seasons?.map((s) => (
+              <button
+                key={s.year}
+                onClick={() => setSelectedSeason(s.year)}
+                className={
+                  `inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ` +
+                  (selectedSeason === s.year
+                    ? "bg-background text-foreground shadow"
+                    : "hover:bg-background/50")
+                }
+              >
+                {s.year}
+              </button>
+            ))}
+            {(!seasons || seasons.length === 0) && (
+              <div className="px-3 py-1 text-sm">No seasons</div>
+            )}
+          </div>
+        </div>
       </div>
 
       <Tabs defaultValue="drivers">
@@ -166,17 +171,17 @@ export default function StandingsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">Pos</TableHead>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Nationality</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                    <TableHead className="text-right">Wins</TableHead>
+                    <TableHead><div className="text-center">Pos</div></TableHead>
+                    <TableHead><div>Driver</div></TableHead>
+                    <TableHead><div>Nationality</div></TableHead>
+                    <TableHead><div className="text-end">Points</div></TableHead>
+                    <TableHead><div className="text-end">Wins</div></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {driverStandings?.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell className="text-center">{getPositionBadge(s.position)}</TableCell>
+                      <TableCell><div className="text-center">{getPositionBadge(s.position)}</div></TableCell>
                       <TableCell>
                         <Link
                           to={`/drivers/${s.driver.driver_id}`}
@@ -186,8 +191,8 @@ export default function StandingsPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{s.driver.nationality}</TableCell>
-                      <TableCell className="text-right font-bold">{s.points}</TableCell>
-                      <TableCell className="text-right">{s.wins}</TableCell>
+                      <TableCell><div className="text-end font-bold">{s.points}</div></TableCell>
+                      <TableCell><div className="text-end">{s.wins}</div></TableCell>
                     </TableRow>
                   ))}
                   {(!driverStandings || driverStandings.length === 0) && (
@@ -233,17 +238,17 @@ export default function StandingsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center">Pos</TableHead>
-                    <TableHead>Constructor</TableHead>
-                    <TableHead>Nationality</TableHead>
-                    <TableHead className="text-right">Points</TableHead>
-                    <TableHead className="text-right">Wins</TableHead>
+                    <TableHead><div className="text-center">Pos</div></TableHead>
+                    <TableHead><div>Constructor</div></TableHead>
+                    <TableHead><div>Nationality</div></TableHead>
+                    <TableHead><div className="text-end">Points</div></TableHead>
+                    <TableHead><div className="text-end">Wins</div></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {constructorStandings?.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell className="text-center">{getPositionBadge(s.position)}</TableCell>
+                      <TableCell><div className="text-center">{getPositionBadge(s.position)}</div></TableCell>
                       <TableCell>
                         <Link
                           to={`/constructors/${s.constructor.constructor_id}`}
@@ -253,8 +258,8 @@ export default function StandingsPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{s.constructor.nationality}</TableCell>
-                      <TableCell className="text-right font-bold">{s.points}</TableCell>
-                      <TableCell className="text-right">{s.wins}</TableCell>
+                      <TableCell><div className="text-end font-bold">{s.points}</div></TableCell>
+                      <TableCell><div className="text-end">{s.wins}</div></TableCell>
                     </TableRow>
                   ))}
                   {(!constructorStandings || constructorStandings.length === 0) && (

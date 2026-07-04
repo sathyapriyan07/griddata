@@ -104,6 +104,20 @@ export default function ConstructorDetailPage() {
     enabled: !!teamUuid,
   })
 
+  const { data: teamCarImages } = useQuery({
+    queryKey: ["team-car-images", teamUuid],
+    queryFn: async () => {
+      if (!teamUuid) return []
+      const { data } = await supabase
+        .from("team_car_images")
+        .select("*")
+        .eq("constructor_id", teamUuid)
+        .order("year", { ascending: false })
+      return (data ?? []) as { id: string; year: number; image_url: string; caption: string | null }[]
+    },
+    enabled: !!teamUuid,
+  })
+
   const { data: qualiResults } = useQuery({
     queryKey: ["constructor-quali", teamUuid],
     queryFn: async () => {
@@ -348,14 +362,25 @@ export default function ConstructorDetailPage() {
         </div>
       )}
 
-      {team.car_image_url && (
+      {teamCarImages && teamCarImages.length > 0 && (
         <Card>
-          <CardContent className="p-4">
-            <img
-              src={team.car_image_url}
-              alt={`${team.name} car`}
-              className="w-full max-h-64 object-contain rounded-md"
-            />
+          <CardHeader>
+            <CardTitle>Car Images</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {teamCarImages.map((img) => (
+                <div key={img.id} className="space-y-1">
+                  <img
+                    src={img.image_url}
+                    alt={`${team.name} ${img.year} car`}
+                    className="w-full h-32 object-contain rounded-md border bg-muted/30"
+                  />
+                  <p className="text-sm text-center font-medium">{img.year}</p>
+                  {img.caption && <p className="text-xs text-center text-muted-foreground">{img.caption}</p>}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

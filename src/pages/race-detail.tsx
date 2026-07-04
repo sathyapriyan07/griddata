@@ -48,7 +48,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { id: string; name: string; constructor_id: string } })[]
+      return (data ?? []) as (RaceResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -95,7 +95,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (SprintResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string } })[]
+      return (data ?? []) as (SprintResult & { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string; logo_url: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -144,6 +144,9 @@ export default function RaceDetailPage() {
   const [showAllStats, setShowAllStats] = useState(false)
   const [showQ1Q2, setShowQ1Q2] = useState(false)
   const [cardView, setCardView] = useState(false)
+  const [gridTabCardView, setGridTabCardView] = useState(false)
+  const [sprintGridCardView, setSprintGridCardView] = useState(false)
+  const [sprintRaceCardView, setSprintRaceCardView] = useState(false)
 
   if (!race) {
     return <PageSkeleton />
@@ -210,187 +213,178 @@ export default function RaceDetailPage() {
         </div>
 
         <TabsContent value="results">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Race Results</CardTitle>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Cards</span>
-                  <button
-                    onClick={() => setCardView(!cardView)}
-                    aria-pressed={cardView}
-                    className={
-                      `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
-                      (cardView ? "bg-primary" : "bg-muted")
-                    }
-                  >
-                    <span
-                      className={
-                        `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
-                        (cardView ? "translate-x-5" : "translate-x-1")
-                      }
-                    />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">All Stats</span>
-                  <button
-                    onClick={() => setShowAllStats(!showAllStats)}
-                    aria-pressed={showAllStats}
-                    className={
-                      `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
-                      (showAllStats ? "bg-primary" : "bg-muted")
-                    }
-                  >
-                    <span
-                      className={
-                        `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
-                        (showAllStats ? "translate-x-5" : "translate-x-1")
-                      }
-                    />
-                  </button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {cardView ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {results?.map((r) => {
-                    const colors = getConstructorColors(r.constructor.name || "")
-                    return (
-                      <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
-                        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                        <div className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                                {r.position ?? r.position_text ?? "DNF"}
-                              </div>
-                              <div>
-                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
-                                  {r.driver.given_name} {r.driver.family_name}
-                                </Link>
-                                <div className="text-sm text-muted-foreground">
-                                  <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
-                                    {r.constructor.name}
-                                  </Link>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold">{r.points}</div>
-                              <div className="text-xs text-muted-foreground">pts</div>
+          <div className="flex items-center justify-end mb-3 gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Cards</span>
+              <button
+                onClick={() => setCardView(!cardView)}
+                aria-pressed={cardView}
+                className={
+                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
+                  (cardView ? "bg-primary" : "bg-muted")
+                }
+              >
+                <span
+                  className={
+                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
+                    (cardView ? "translate-x-4.5" : "translate-x-0.5")
+                  }
+                />
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">All Stats</span>
+              <button
+                onClick={() => setShowAllStats(!showAllStats)}
+                aria-pressed={showAllStats}
+                className={
+                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
+                  (showAllStats ? "bg-primary" : "bg-muted")
+                }
+              >
+                <span
+                  className={
+                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
+                    (showAllStats ? "translate-x-4.5" : "translate-x-0.5")
+                  }
+                />
+              </button>
+            </div>
+          </div>
+          {cardView ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {results?.map((r) => {
+                const colors = getConstructorColors(r.constructor.name || "")
+                return (
+                  <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
+                    <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                    <div className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                            {r.position ?? r.position_text ?? "DNF"}
+                          </div>
+                          <div>
+                            <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
+                              {r.driver.given_name} {r.driver.family_name}
+                            </Link>
+                            <div className="text-sm text-muted-foreground">
+                              <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                {r.constructor.logo_url && (
+                                  <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                )}
+                                {r.constructor.name}
+                              </Link>
                             </div>
                           </div>
-                          {carImageMap.get(r.constructor_id) && (
-                            <div className="mt-3 bg-muted/20 rounded-md px-4 py-2">
-                              <img
-                                src={carImageMap.get(r.constructor_id)!}
-                                alt={`${r.constructor.name} car`}
-                                className="w-full h-16 object-contain"
-                              />
-                            </div>
-                          )}
-                          {showAllStats && (
-                            <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                              <div>
-                                <span className="block font-medium text-foreground">Grid</span>
-                                {r.grid ?? "—"}
-                              </div>
-                              <div>
-                                <span className="block font-medium text-foreground">Status</span>
-                                {r.status ?? "—"}
-                              </div>
-                              <div>
-                                <span className="block font-medium text-foreground">Fastest Lap</span>
-                                <span className="font-mono">{r.fastest_lap_time ?? "—"}</span>
-                              </div>
-                            </div>
-                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold">{r.points}</div>
+                          <div className="text-xs text-muted-foreground">pts</div>
                         </div>
                       </div>
-                    )
-                  })}
-                  {(!results || results.length === 0) && (
-                    <div className="col-span-full text-center text-muted-foreground py-8">
-                      No results available yet.
+                      {carImageMap.get(r.constructor_id) && (
+                        <div className="mt-3 bg-muted/20 rounded-md px-4 py-2">
+                          <img
+                            src={carImageMap.get(r.constructor_id)!}
+                            alt={`${r.constructor.name} car`}
+                            className="w-full h-16 object-contain"
+                          />
+                        </div>
+                      )}
+                      {showAllStats && (
+                        <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                          <div>
+                            <span className="block font-medium text-foreground">Grid</span>
+                            {r.grid ?? "—"}
+                          </div>
+                          <div>
+                            <span className="block font-medium text-foreground">Status</span>
+                            {r.status ?? "—"}
+                          </div>
+                          <div>
+                            <span className="block font-medium text-foreground">Fastest Lap</span>
+                            <span className="font-mono">{r.fastest_lap_time ?? "—"}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-center w-10">Pos</TableHead>
-                        <TableHead>Driver</TableHead>
-                        <TableHead>Team</TableHead>
-                        {showAllStats && <TableHead className="text-center">Grid</TableHead>}
-                        <TableHead className="text-right">Points</TableHead>
-                        {showAllStats && <TableHead>Status</TableHead>}
-                        {showAllStats && <TableHead className="text-right">Fastest Lap</TableHead>}
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results?.map((r) => (
-                      <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                        <TableCell className="text-center font-medium">
-                          {r.position ?? r.position_text ?? "DNF"}
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
-                            {r.driver.given_name} {r.driver.family_name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
-                            <span>{r.constructor.name}</span>
-                          </Link>
-                        </TableCell>
-                        {showAllStats && <TableCell className="text-center">{r.grid ?? "—"}</TableCell>}
-                        <TableCell className="text-right">{r.points}</TableCell>
-                        {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
-                        {showAllStats && <TableCell className="text-right font-mono">{r.fastest_lap_time ?? "—"}</TableCell>}
-                      </TableRow>
-                    ))}
-                    {(!results || results.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={showAllStats ? 7 : 4} className="text-center text-muted-foreground">
-                          No results available yet.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                  </div>
+                )
+              })}
+              {(!results || results.length === 0) && (
+                <p className="col-span-full text-center text-muted-foreground py-8">
+                  No results available yet.
+                </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead><div className="text-center">Pos</div></TableHead>
+                  <TableHead><div>Driver</div></TableHead>
+                  <TableHead><div>Team</div></TableHead>
+                  {showAllStats && <TableHead><div className="text-center">Grid</div></TableHead>}
+                  <TableHead><div className="text-end">Points</div></TableHead>
+                  {showAllStats && <TableHead><div>Status</div></TableHead>}
+                  {showAllStats && <TableHead><div className="text-end">Fastest Lap</div></TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {results?.map((r) => (
+                  <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                    <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
+                    <TableCell>
+                      <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                        {r.driver.given_name} {r.driver.family_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
+                        <span>{r.constructor.name}</span>
+                      </Link>
+                    </TableCell>
+                    {showAllStats && <TableCell><div className="text-center">{r.grid ?? "—"}</div></TableCell>}
+                    <TableCell><div className="text-end">{r.points}</div></TableCell>
+                    {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
+                    {showAllStats && <TableCell><div className="text-end font-mono">{r.fastest_lap_time ?? "—"}</div></TableCell>}
+                  </TableRow>
+                ))}
+                {(!results || results.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={showAllStats ? 7 : 4} className="text-center text-muted-foreground">
+                      No results available yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </TabsContent>
 
         <TabsContent value="qualifying">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Qualifying Results</CardTitle>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">Show Q1/Q2</span>
-                <button
-                  onClick={() => setShowQ1Q2(!showQ1Q2)}
-                  aria-pressed={showQ1Q2}
+          <div className="flex items-center justify-end mb-3 gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Show Q1/Q2</span>
+              <button
+                onClick={() => setShowQ1Q2(!showQ1Q2)}
+                aria-pressed={showQ1Q2}
+                className={
+                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
+                  (showQ1Q2 ? "bg-primary" : "bg-muted")
+                }
+              >
+                <span
                   className={
-                    `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
-                    (showQ1Q2 ? "bg-primary" : "bg-muted")
+                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
+                    (showQ1Q2 ? "translate-x-4.5" : "translate-x-0.5")
                   }
-                >
-                  <span
-                    className={
-                      `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
-                      (showQ1Q2 ? "translate-x-5" : "translate-x-1")
-                    }
-                  />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
+                />
+              </button>
+            </div>
+          </div>
+          <Table>
                 <TableHeader>
                     <TableRow>
                       <TableHead className="text-center w-10">Pos</TableHead>
@@ -429,18 +423,71 @@ export default function RaceDetailPage() {
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="sprint">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sprint Weekend</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Sprint Qualifying (Grid)</h3>
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center justify-end mb-3 gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Cards</span>
+                  <button
+                    onClick={() => setSprintGridCardView(!sprintGridCardView)}
+                    aria-pressed={sprintGridCardView}
+                    className={
+                      `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
+                      (sprintGridCardView ? "bg-primary" : "bg-muted")
+                    }
+                  >
+                    <span
+                      className={
+                        `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
+                        (sprintGridCardView ? "translate-x-4.5" : "translate-x-0.5")
+                      }
+                    />
+                  </button>
+                </div>
+              </div>
+              {sprintGridCardView ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {sprints?.length ? (
+                    [...sprints]
+                      .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
+                      .map((s) => {
+                        const colors = getConstructorColors(s.constructor.name || "")
+                        return (
+                          <div key={s.id} className="rounded-lg border bg-card overflow-hidden">
+                            <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                            <div className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                                    {s.grid ?? "—"}
+                                  </div>
+                                  <div>
+                                    <Link to={`/drivers/${s.driver.driver_id}`} className="font-medium hover:underline">
+                                      {s.driver.given_name} {s.driver.family_name}
+                                    </Link>
+                                    <div className="text-sm text-muted-foreground">
+                                      <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                        {s.constructor.logo_url && (
+                                          <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                        )}
+                                        {s.constructor.name}
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                  ) : (
+                    <p className="col-span-full text-center text-muted-foreground py-8">No sprint qualifying data available.</p>
+                  )}
+                </div>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -462,8 +509,11 @@ export default function RaceDetailPage() {
                               </Link>
                             </TableCell>
                             <TableCell>
-                              <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                                <span>{s.constructor.name}</span>
+                              <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                {s.constructor.logo_url && (
+                                  <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                )}
+                                {s.constructor.name}
                               </Link>
                             </TableCell>
                           </TableRow>
@@ -477,10 +527,83 @@ export default function RaceDetailPage() {
                     )}
                   </TableBody>
                 </Table>
-              </div>
+              )}
+            </div>
 
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Sprint Race Results</h3>
+            <div>
+              <div className="flex items-center justify-end mb-3 gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">Cards</span>
+                  <button
+                    onClick={() => setSprintRaceCardView(!sprintRaceCardView)}
+                    aria-pressed={sprintRaceCardView}
+                    className={
+                      `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
+                      (sprintRaceCardView ? "bg-primary" : "bg-muted")
+                    }
+                  >
+                    <span
+                      className={
+                        `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
+                        (sprintRaceCardView ? "translate-x-4.5" : "translate-x-0.5")
+                      }
+                    />
+                  </button>
+                </div>
+              </div>
+              {sprintRaceCardView ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {sprints?.map((s) => {
+                    const colors = getConstructorColors(s.constructor.name || "")
+                    return (
+                      <div key={s.id} className="rounded-lg border bg-card overflow-hidden">
+                        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                        <div className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                                {s.position ?? "DNF"}
+                              </div>
+                              <div>
+                                <Link to={`/drivers/${s.driver.driver_id}`} className="font-medium hover:underline">
+                                  {s.driver.given_name} {s.driver.family_name}
+                                </Link>
+                                <div className="text-sm text-muted-foreground">
+                                  <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                    {s.constructor.logo_url && (
+                                      <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                    )}
+                                    {s.constructor.name}
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold">{s.points}</div>
+                              <div className="text-xs text-muted-foreground">pts</div>
+                            </div>
+                          </div>
+                          <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <div>
+                              <span className="block font-medium text-foreground">Laps</span>
+                              {s.laps ?? "—"}
+                            </div>
+                            <div>
+                              <span className="block font-medium text-foreground">Status</span>
+                              {s.status ?? "—"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {(!sprints || sprints.length === 0) && (
+                    <p className="col-span-full text-center text-muted-foreground py-8">
+                      No sprint race data available. This race may not have had a sprint.
+                    </p>
+                  )}
+                </div>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -502,8 +625,11 @@ export default function RaceDetailPage() {
                             </Link>
                           </TableCell>
                           <TableCell>
-                            <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline">
-                              <span>{s.constructor.name}</span>
+                            <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                              {s.constructor.logo_url && (
+                                <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                              )}
+                              {s.constructor.name}
                             </Link>
                           </TableCell>
                         <TableCell className="text-right">{s.points}</TableCell>
@@ -520,58 +646,112 @@ export default function RaceDetailPage() {
                     )}
                   </TableBody>
                 </Table>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="grid">
-          <Card>
-            <CardHeader>
-              <CardTitle>Starting Grid</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center w-10">Grid</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Team</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results?.length ? (
-                      [...results]
-                        .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                        .map((r) => (
-                        <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                          <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
-                          <TableCell>
-                            <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
-                              {r.driver.given_name} {r.driver.family_name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline flex items-center gap-2">
+          <div className="flex items-center justify-end mb-3 gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Cards</span>
+              <button
+                onClick={() => setGridTabCardView(!gridTabCardView)}
+                aria-pressed={gridTabCardView}
+                className={
+                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
+                  (gridTabCardView ? "bg-primary" : "bg-muted")
+                }
+              >
+                <span
+                  className={
+                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
+                    (gridTabCardView ? "translate-x-4.5" : "translate-x-0.5")
+                  }
+                />
+              </button>
+            </div>
+          </div>
+          {gridTabCardView ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {results?.length ? (
+                    [...results]
+                      .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
+                      .map((r) => {
+                        const colors = getConstructorColors(r.constructor.name || "")
+                        return (
+                          <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
+                            <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                            <div className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                                    {r.grid ?? "—"}
+                                  </div>
+                                  <div>
+                                    <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
+                                      {r.driver.given_name} {r.driver.family_name}
+                                    </Link>
+                                    <div className="text-sm text-muted-foreground">
+                                      <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                        {r.constructor.logo_url && (
+                                          <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                        )}
+                                        {r.constructor.name}
+                                      </Link>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                  ) : (
+                    <p className="col-span-full text-center text-muted-foreground py-8">No grid data available.</p>
+                  )}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-center w-10">Grid</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Team</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results?.length ? (
+                        [...results]
+                          .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
+                          .map((r) => (
+                          <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                            <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
+                            <TableCell>
+                              <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                                {r.driver.given_name} {r.driver.family_name}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline flex items-center gap-2">
                               {r.constructor.logo_url && (
-                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-6 h-6 object-contain rounded" />
+                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
                               )}
                               <span>{r.constructor.name}</span>
-                            </Link>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        No grid data available.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                              </Link>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                          No grid data available.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
         </TabsContent>
 
         <TabsContent value="pitstops">

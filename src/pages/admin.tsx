@@ -1075,9 +1075,9 @@ export default function AdminPage() {
 function TeamCarImagePanel() {
   const [selectedConstructorId, setSelectedConstructorId] = useState<string | null>(null)
   const [year, setYear] = useState(new Date().getFullYear())
-  const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: constructors } = useQuery({
     queryKey: ["all-constructors-car-image"],
@@ -1101,14 +1101,14 @@ function TeamCarImagePanel() {
     enabled: !!selectedConstructorId,
   })
 
-  const uploadImage = async () => {
-    if (!selectedConstructorId || !file) return
+  const uploadImage = async (f: File) => {
+    if (!selectedConstructorId) return
     setUploading(true)
     setStatus(null)
     try {
-      const ext = file.name.split(".").pop() || "png"
+      const ext = f.name.split(".").pop() || "png"
       const path = `team-car-images/${selectedConstructorId}/${year}.${ext}`
-      const { error: uploadErr } = await supabase.storage.from("images").upload(path, file, { upsert: true })
+      const { error: uploadErr } = await supabase.storage.from("images").upload(path, f, { upsert: true })
       if (uploadErr) throw uploadErr
       const { data: urlData } = supabase.storage.from("images").getPublicUrl(path)
       const publicUrl = urlData.publicUrl
@@ -1118,7 +1118,6 @@ function TeamCarImagePanel() {
       )
       if (dbErr) throw dbErr
       setStatus("Image uploaded successfully.")
-      setFile(null)
       refetchImages()
     } catch (err) {
       setStatus(extractErrorMessage(err))
@@ -1163,10 +1162,15 @@ function TeamCarImagePanel() {
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-sm flex-1"
+              ref={fileInputRef}
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) uploadImage(f)
+                e.target.value = ""
+              }}
+              className="hidden"
             />
-            <Button variant="default" size="sm" disabled={uploading || !file} onClick={uploadImage}>
+            <Button variant="default" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
               {uploading ? "Uploading..." : "Upload"}
             </Button>
           </div>

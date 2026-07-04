@@ -53,6 +53,25 @@ export default function RaceDetailPage() {
     enabled: !!raceId,
   })
 
+  const constructorIds = [...new Set((results ?? []).map((r) => r.constructor.constructor_id))]
+  const raceYear = race?.season_year
+
+  const { data: teamCarImages } = useQuery({
+    queryKey: ["race-team-car-images", raceId, raceYear],
+    queryFn: async () => {
+      if (constructorIds.length === 0 || !raceYear) return []
+      const { data } = await supabase
+        .from("team_car_images")
+        .select("constructor_id, image_url")
+        .in("constructor_id", constructorIds)
+        .eq("year", raceYear)
+      return (data ?? []) as { constructor_id: string; image_url: string }[]
+    },
+    enabled: constructorIds.length > 0 && !!raceYear,
+  })
+
+  const carImageMap = new Map((teamCarImages ?? []).map((img) => [img.constructor_id, img.image_url]))
+
   const { data: qualifying } = useQuery({
     queryKey: ["race-qualifying", raceId],
     queryFn: async () => {
@@ -124,6 +143,7 @@ export default function RaceDetailPage() {
 
   const [showAllStats, setShowAllStats] = useState(false)
   const [showQ1Q2, setShowQ1Q2] = useState(false)
+  const [cardView, setCardView] = useState(false)
 
   if (!race) {
     return <PageSkeleton />
@@ -193,69 +213,155 @@ export default function RaceDetailPage() {
           <Card>
             <CardHeader className="flex items-center justify-between">
               <CardTitle>Race Results</CardTitle>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">All Stats</span>
-                <button
-                  onClick={() => setShowAllStats(!showAllStats)}
-                  aria-pressed={showAllStats}
-                  className={
-                    `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
-                    (showAllStats ? "bg-primary" : "bg-muted")
-                  }
-                >
-                  <span
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Cards</span>
+                  <button
+                    onClick={() => setCardView(!cardView)}
+                    aria-pressed={cardView}
                     className={
-                      `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
-                      (showAllStats ? "translate-x-5" : "translate-x-1")
+                      `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
+                      (cardView ? "bg-primary" : "bg-muted")
                     }
-                  />
-                </button>
+                  >
+                    <span
+                      className={
+                        `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
+                        (cardView ? "translate-x-5" : "translate-x-1")
+                      }
+                    />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">All Stats</span>
+                  <button
+                    onClick={() => setShowAllStats(!showAllStats)}
+                    aria-pressed={showAllStats}
+                    className={
+                      `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
+                      (showAllStats ? "bg-primary" : "bg-muted")
+                    }
+                  >
+                    <span
+                      className={
+                        `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
+                        (showAllStats ? "translate-x-5" : "translate-x-1")
+                      }
+                    />
+                  </button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center w-10">Pos</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Team</TableHead>
-                      {showAllStats && <TableHead className="text-center">Grid</TableHead>}
-                      <TableHead className="text-right">Points</TableHead>
-                      {showAllStats && <TableHead>Status</TableHead>}
-                      {showAllStats && <TableHead className="text-right">Fastest Lap</TableHead>}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results?.map((r) => (
-                    <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
-                      <TableCell className="text-center font-medium">
-                        {r.position ?? r.position_text ?? "DNF"}
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
-                          {r.driver.given_name} {r.driver.family_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
-                          <span>{r.constructor.name}</span>
-                        </Link>
-                      </TableCell>
-                      {showAllStats && <TableCell className="text-center">{r.grid ?? "—"}</TableCell>}
-                      <TableCell className="text-right">{r.points}</TableCell>
-                      {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
-                      {showAllStats && <TableCell className="text-right font-mono">{r.fastest_lap_time ?? "—"}</TableCell>}
-                    </TableRow>
-                  ))}
+              {cardView ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {results?.map((r) => {
+                    const colors = getConstructorColors(r.constructor.name || "")
+                    return (
+                      <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
+                        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                        {carImageMap.get(r.constructor.constructor_id) && (
+                          <div className="bg-muted/20 px-4 py-2">
+                            <img
+                              src={carImageMap.get(r.constructor.constructor_id)!}
+                              alt={`${r.constructor.name} car`}
+                              className="w-full h-16 object-contain"
+                            />
+                          </div>
+                        )}
+                        <div className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                                {r.position ?? r.position_text ?? "DNF"}
+                              </div>
+                              <div>
+                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
+                                  {r.driver.given_name} {r.driver.family_name}
+                                </Link>
+                                <div className="text-sm text-muted-foreground">
+                                  <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
+                                    {r.constructor.name}
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold">{r.points}</div>
+                              <div className="text-xs text-muted-foreground">pts</div>
+                            </div>
+                          </div>
+                          {showAllStats && (
+                            <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                              <div>
+                                <span className="block font-medium text-foreground">Grid</span>
+                                {r.grid ?? "—"}
+                              </div>
+                              <div>
+                                <span className="block font-medium text-foreground">Status</span>
+                                {r.status ?? "—"}
+                              </div>
+                              <div>
+                                <span className="block font-medium text-foreground">Fastest Lap</span>
+                                <span className="font-mono">{r.fastest_lap_time ?? "—"}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                   {(!results || results.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={showAllStats ? 7 : 4} className="text-center text-muted-foreground">
-                        No results available yet.
-                      </TableCell>
-                    </TableRow>
+                    <div className="col-span-full text-center text-muted-foreground py-8">
+                      No results available yet.
+                    </div>
                   )}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-center w-10">Pos</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Team</TableHead>
+                        {showAllStats && <TableHead className="text-center">Grid</TableHead>}
+                        <TableHead className="text-right">Points</TableHead>
+                        {showAllStats && <TableHead>Status</TableHead>}
+                        {showAllStats && <TableHead className="text-right">Fastest Lap</TableHead>}
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results?.map((r) => (
+                      <TableRow key={r.id} style={{ borderLeft: `4px solid ${getConstructorColors(r.constructor.name || "")?.primary ?? "#6b7280"}` }}>
+                        <TableCell className="text-center font-medium">
+                          {r.position ?? r.position_text ?? "DNF"}
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                            {r.driver.given_name} {r.driver.family_name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline">
+                            <span>{r.constructor.name}</span>
+                          </Link>
+                        </TableCell>
+                        {showAllStats && <TableCell className="text-center">{r.grid ?? "—"}</TableCell>}
+                        <TableCell className="text-right">{r.points}</TableCell>
+                        {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
+                        {showAllStats && <TableCell className="text-right font-mono">{r.fastest_lap_time ?? "—"}</TableCell>}
+                      </TableRow>
+                    ))}
+                    {(!results || results.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={showAllStats ? 7 : 4} className="text-center text-muted-foreground">
+                          No results available yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

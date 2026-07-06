@@ -126,9 +126,7 @@ export default function StandingsPage() {
                 {s.year}
               </button>
             ))}
-            {(!seasons || seasons.length === 0) && (
-              <div className="px-3 py-1 text-sm">No seasons</div>
-            )}
+
           </div>
         </div>
       </div>
@@ -195,13 +193,7 @@ export default function StandingsPage() {
                       <TableCell><div className="text-end">{s.wins}</div></TableCell>
                     </TableRow>
                   ))}
-                  {(!driverStandings || driverStandings.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        No standings data available for {selectedSeason}.
-                      </TableCell>
-                    </TableRow>
-                  )}
+
                 </TableBody>
               </Table>
             </CardContent>
@@ -262,13 +254,7 @@ export default function StandingsPage() {
                       <TableCell><div className="text-end">{s.wins}</div></TableCell>
                     </TableRow>
                   ))}
-                  {(!constructorStandings || constructorStandings.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        No standings data available for {selectedSeason}.
-                      </TableCell>
-                    </TableRow>
-                  )}
+
                 </TableBody>
               </Table>
             </CardContent>

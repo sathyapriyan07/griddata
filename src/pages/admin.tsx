@@ -8,6 +8,10 @@ import {
   importAllQualifying, importAllSprintResults, importAllPitStops,
   importDriverStandings, importConstructorStandings, importPerRoundStandings,
   importDriverConstructorHistory, importDriverConstructorHistoryAll,
+  importRaceResults,
+  importQualifyingResults,
+  importSprintResults,
+  importPitStops,
 } from "@/lib/import/jolpica"
 import { syncOpenF1Season } from "@/lib/import/openf1"
 import { getConstructorColors } from "@/lib/constructorColors"
@@ -179,6 +183,84 @@ function SeasonImportForm({
         >
           Full Season Import (all data types)
         </Button>
+    </div>
+  )
+}
+
+function RaceImportForm({
+  importing,
+  runImport,
+}: {
+  importing: boolean
+  runImport: (name: string, fn: () => Promise<unknown>, entityType: string) => Promise<void>
+}) {
+  const [season, setSeason] = useState(new Date().getFullYear().toString())
+  const [round, setRound] = useState("1")
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-2 items-center">
+        <input
+          type="number"
+          value={season}
+          onChange={(e) => setSeason(e.target.value)}
+          min={1950}
+          max={new Date().getFullYear() + 1}
+          className="w-24 rounded-md border px-2 py-1 text-sm bg-background"
+          placeholder="Season"
+        />
+        <input
+          type="number"
+          value={round}
+          onChange={(e) => setRound(e.target.value)}
+          min={1}
+          max={30}
+          className="w-20 rounded-md border px-2 py-1 text-sm bg-background"
+          placeholder="Round"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season || !round}
+          onClick={() =>
+            runImport(`Race Results R${round} ${season}`, () => importRaceResults(Number(season), Number(round)), `race_results_${season}_r${round}`)
+          }
+        >
+          Race Results
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season || !round}
+          onClick={() =>
+            runImport(`Qualifying R${round} ${season}`, () => importQualifyingResults(Number(season), Number(round)), `quali_${season}_r${round}`)
+          }
+        >
+          Qualifying
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season || !round}
+          onClick={() =>
+            runImport(`Sprint R${round} ${season}`, () => importSprintResults(Number(season), Number(round)), `sprint_${season}_r${round}`)
+          }
+        >
+          Sprint
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season || !round}
+          onClick={() =>
+            runImport(`Pit Stops R${round} ${season}`, () => importPitStops(Number(season), Number(round)), `pitstops_${season}_r${round}`)
+          }
+        >
+          Pit Stops
+        </Button>
+      </div>
     </div>
   )
 }
@@ -707,6 +789,18 @@ export default function AdminPage() {
           <CardContent className="space-y-3">
             <p className="text-sm">Import races and results for a specific season.</p>
             <SeasonImportForm importing={importing} runImport={runImport} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Import Single Race
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm">Import results for a specific race by season and round.</p>
+            <RaceImportForm importing={importing} runImport={runImport} />
           </CardContent>
         </Card>
 

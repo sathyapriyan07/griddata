@@ -286,27 +286,12 @@ export default function RaceDetailPage() {
               )}
             </div>
           </div>
-          {circuit?.lat != null && circuit?.lng != null && (
-            <div className="lg:w-72 xl:w-80 shrink-0">
-              <div className="rounded-lg overflow-hidden border border-white/10 h-48 lg:h-full min-h-[180px]">
-                <iframe
-                  title="Circuit Location"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${circuit.lng - 0.15}%2C${circuit.lat - 0.1}%2C${circuit.lng + 0.15}%2C${circuit.lat + 0.1}&layer=mapnik&marker=${circuit.lat}%2C${circuit.lng}`}
-                />
-              </div>
-            </div>
-          )}
+
         </div>
         {winner && (
           <div className="relative border-t border-white/10 px-6 lg:px-8 py-3">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🏆</span>
                 <span className="text-sm font-medium text-white/70">Winner</span>
               </div>
               <div className="flex items-center gap-2">
@@ -425,31 +410,37 @@ export default function RaceDetailPage() {
                   <CardTitle>Podium</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-end justify-center gap-6 sm:gap-12">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {podium.map((r, i) => {
                       const colors = getConstructorColorsFromRecord(r.constructor)
-                      const heights = ["h-24", "h-20", "h-16"]
                       const medals = ["🥇", "🥈", "🥉"]
                       return (
-                        <div key={r.id} className="flex flex-col items-center gap-2 text-center">
-                          <div className="text-2xl">{medals[i]}</div>
-                          <div
-                            className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg`}
-                            style={{ backgroundColor: colors.primary + "33" }}
-                          >
-                            {r.position}
+                        <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
+                          <div className="p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xl">{medals[i]}</span>
+                              <span className="text-sm font-bold" style={{ color: colors.primary }}>P{r.position}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {r.driver.photo_url && (
+                                <img src={r.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                              )}
+                              <div className="min-w-0">
+                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline block truncate text-sm">
+                                  {`${r.driver.given_name} ${r.driver.family_name}`}
+                                </Link>
+                                <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                                  {r.constructor.logo_url && (
+                                    <img src={r.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
+                                  )}
+                                  <span>{r.constructor.name}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-2 text-xs font-mono text-muted-foreground">
+                              {r.time ?? `${r.laps ?? "—"} laps`}
+                            </div>
                           </div>
-                          <div className="text-sm max-w-[120px]">
-                            <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline block truncate">
-                              {`${r.driver.given_name} ${r.driver.family_name}`}
-                            </Link>
-                            <div className="text-xs text-muted-foreground truncate">{r.constructor.name}</div>
-                          </div>
-                          <div className="text-xs font-mono text-muted-foreground">{r.time ?? "—"}</div>
-                          <div
-                            className={`w-16 sm:w-24 rounded-t-lg ${heights[i]}`}
-                            style={{ backgroundColor: colors.primary + "44" }}
-                          />
                         </div>
                       )
                     })}

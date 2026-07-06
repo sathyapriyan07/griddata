@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { computeDriverCareerStats, computeDriverSeasonStats, detectMilestones, getStreaks } from "@/lib/stats"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar } from "@/components/ui/avatar"
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
@@ -373,12 +373,12 @@ export default function DriverDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-6 items-start">
-        <Avatar
-          src={driver.photo_url ?? undefined}
-          alt={`${driver.given_name} ${driver.family_name}`}
-          fallback={`${driver.given_name[0]}${driver.family_name[0]}`}
-          className="h-24 w-24 text-2xl"
-        />
+        {driver.photo_url && (
+          <div className="relative shrink-0 self-center">
+            <img src={driver.photo_url} alt={`${driver.given_name} ${driver.family_name}`} className="w-28 h-28 object-cover rounded-lg" />
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/40 to-transparent rounded-b-lg" />
+          </div>
+        )}
         <div className="flex-1">
           <h1 className="text-3xl font-bold">
             {driver.given_name} {driver.family_name}

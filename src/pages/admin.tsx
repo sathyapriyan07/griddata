@@ -717,9 +717,9 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm">
+            <div className="text-sm">
               Your role: <Badge variant={userProfile?.role === "admin" ? "default" : "secondary"}>{userProfile?.role ?? "public"}</Badge>
-            </p>
+            </div>
             <div className="flex gap-2 items-center">
               <input
                 type="text"
@@ -1556,18 +1556,29 @@ function NationalityFlagPanel() {
     setFlagUrl(existing?.flag_url ?? "")
   }
 
+  const deleteStorageFiles = async (nationality: string) => {
+    const { data: existing } = await supabase.storage.from("images").list("nationality-flags", {
+      search: nationality,
+    })
+    if (existing && existing.length > 0) {
+      const paths = existing.map((file) => `nationality-flags/${file.name}`)
+      await supabase.storage.from("images").remove(paths)
+    }
+  }
+
   const uploadFlag = async (f: File) => {
     if (!selected) return
     setUploading(true)
     setStatus(null)
     try {
+      await deleteStorageFiles(selected)
       const ext = f.name.split(".").pop() || "png"
       const path = `nationality-flags/${selected}.${ext}`
       const { error: uploadErr } = await supabase.storage.from("images").upload(path, f, { upsert: true })
       if (uploadErr) throw uploadErr
       const { data: urlData } = supabase.storage.from("images").getPublicUrl(path)
       const publicUrl = urlData.publicUrl
-      setFlagUrl(publicUrl)
+      setFlagUrl(`${publicUrl}?t=${Date.now()}`)
       const { error: dbErr } = await supabase.from("nationality_flags").upsert(
         { nationality: selected, flag_url: publicUrl },
         { onConflict: "nationality" }
@@ -1586,9 +1597,11 @@ function NationalityFlagPanel() {
     if (!selected) return
     setStatus(null)
     try {
+      await deleteStorageFiles(selected)
       const { error } = await supabase.from("nationality_flags").delete().eq("nationality", selected)
       if (error) throw error
       setFlagUrl("")
+      setSelected(null)
       setStatus("Flag removed.")
       queryClient.invalidateQueries({ queryKey: ["nationality-flags"] })
     } catch (err) {

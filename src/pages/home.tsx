@@ -48,7 +48,7 @@ export default function HomePage() {
   })
 
   const { data: driverLeaders } = useQuery({
-    queryKey: ["home-driver-leaders"],
+    queryKey: ["home-driver-leaders", currentSeason],
     queryFn: async () => {
       const { data } = await supabase
         .from("driver_standings")
@@ -63,10 +63,11 @@ export default function HomePage() {
       }
       return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
     },
+    enabled: !!latestSeason,
   })
 
   const { data: constructorLeaders } = useQuery({
-    queryKey: ["home-constructor-leaders"],
+    queryKey: ["home-constructor-leaders", currentSeason],
     queryFn: async () => {
       const { data } = await supabase
         .from("constructor_standings")
@@ -81,6 +82,7 @@ export default function HomePage() {
       }
       return [...grouped.values()].sort((a, b) => (a.position ?? 99) - (b.position ?? 99))
     },
+    enabled: !!latestSeason,
   })
 
   const { data: latestResult } = useQuery({

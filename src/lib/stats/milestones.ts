@@ -19,7 +19,12 @@ export interface Streak {
 
 export function detectMilestones(results: (RaceResult & { races?: { season_year?: number; round?: number; name?: string } })[]): Milestone[] {
   const milestones: Milestone[] = []
-  const sorted = [...results].sort((a, b) => (a.race_id < b.race_id ? -1 : 1))
+  const sorted = [...results].sort((a, b) => {
+    const aYear = a.races?.season_year ?? 0
+    const bYear = b.races?.season_year ?? 0
+    if (aYear !== bYear) return aYear - bYear
+    return (a.races?.round ?? 0) - (b.races?.round ?? 0)
+  })
 
   let winCount = 0
   let podiumCount = 0
@@ -74,10 +79,15 @@ export function detectMilestones(results: (RaceResult & { races?: { season_year?
 }
 
 export function getStreaks(
-  results: RaceResult[],
+  results: (RaceResult & { races?: { season_year?: number; round?: number; name?: string } })[],
   type: "wins" | "podiums" | "points"
 ): Streak[] {
-  const sorted = [...results].sort((a, b) => (a.race_id < b.race_id ? -1 : 1))
+  const sorted = [...results].sort((a, b) => {
+    const aYear = a.races?.season_year ?? 0
+    const bYear = b.races?.season_year ?? 0
+    if (aYear !== bYear) return aYear - bYear
+    return (a.races?.round ?? 0) - (b.races?.round ?? 0)
+  })
   const streaks: Streak[] = []
   let currentStreak = 0
   let currentStart: string | null = null

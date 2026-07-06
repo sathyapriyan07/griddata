@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Race, Season } from "@/types/database"
+import type { Race, Season, NationalityFlag } from "@/types/database"
 
 export default function RacesPage() {
   const { data: seasons } = useQuery({
@@ -27,15 +27,29 @@ export default function RacesPage() {
     }
   }, [seasons])
 
+  const { data: nationalityFlagsArray } = useQuery({
+    queryKey: ["nationality-flags"],
+    queryFn: async () => {
+      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
+      return (data ?? []) as NationalityFlag[]
+    },
+  })
+
+  const nationalityFlags = useMemo(() => {
+    const map = new Map<string, string>()
+    nationalityFlagsArray?.forEach((f) => map.set(f.nationality, f.flag_url))
+    return map
+  }, [nationalityFlagsArray])
+
   const { data: races, isLoading } = useQuery({
     queryKey: ["races", selectedSeason],
     queryFn: async () => {
       const { data } = await supabase
         .from("races")
-        .select("*")
+        .select("*, circuits!inner(country)")
         .eq("season_year", selectedSeason)
         .order("round", { ascending: true })
-      return (data ?? []) as Race[]
+      return (data ?? []) as (Race & { circuits: { country: string } })[]
     },
   })
 
@@ -81,7 +95,12 @@ export default function RacesPage() {
                 <Card className="h-full transition-colors hover:bg-muted/50">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{race.name}</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        {nationalityFlags?.get(race.circuits.country) && (
+                          <img src={nationalityFlags.get(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
+                        )}
+                        {race.name}
+                      </CardTitle>
                       <Badge>Round {race.round}</Badge>
                     </div>
                   </CardHeader>
@@ -113,7 +132,12 @@ export default function RacesPage() {
                 <Card className="h-full transition-colors hover:bg-muted/50">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{race.name}</CardTitle>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        {nationalityFlags?.get(race.circuits.country) && (
+                          <img src={nationalityFlags.get(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
+                        )}
+                        {race.name}
+                      </CardTitle>
                       <Badge variant="secondary">Round {race.round}</Badge>
                     </div>
                   </CardHeader>

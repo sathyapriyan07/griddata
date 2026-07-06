@@ -201,7 +201,8 @@ export default function DriverDetailPage() {
         .select("position, grid, races!inner(season_year, round, name, date, circuit_id)")
         .eq("driver_id", driverUuid)
         .eq("position", 1)
-        .order("race_id", { ascending: true })
+        .order("races(date)", { ascending: true })
+        .order("races(round)", { ascending: true })
       return (data ?? []) as { position: number | null; grid: number | null; races: { season_year: number; round: number; name: string; date: string; circuit_id: string } }[]
     },
     enabled: !!driverUuid,
@@ -650,6 +651,11 @@ export default function DriverDetailPage() {
                       name: teamSeasons[0].constructor_name,
                       constructor_id: teamSeasons[0].constructor_id,
                     }
+                    const currentTeamSince = Math.min(
+                      ...teamSeasons
+                        .filter((ts) => ts.constructor_id === currentTeam.constructor_id)
+                        .map((ts) => ts.season_year)
+                    )
                     const currentTeamRecord = driverTeamRecords.find((t) => t.constructor_id === currentTeam.constructor_id)
                     const seenCtors = new Set<string>()
                     const priorTeams = teamSeasons.filter((ts) => {
@@ -671,7 +677,7 @@ export default function DriverDetailPage() {
                                 >
                                   {currentTeam.name}
                                 </Link>
-                                <p className="text-sm text-muted-foreground">since {latestSeason}</p>
+                                <p className="text-sm text-muted-foreground">since {currentTeamSince}</p>
                               </div>
                               <Badge variant="default" className="text-xs">{latestSeason}</Badge>
                             </div>

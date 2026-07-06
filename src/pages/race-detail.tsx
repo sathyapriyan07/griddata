@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { getConstructorColors, getConstructorColorsFromRecord } from "@/lib/constructorColors"
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession } from "@/types/database"
+import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, NationalityFlag } from "@/types/database"
 
 export default function RaceDetailPage() {
   const { raceId } = useParams()
@@ -141,13 +141,19 @@ export default function RaceDetailPage() {
     enabled: !!raceId,
   })
 
-  const { data: nationalityFlags } = useQuery({
+  const { data: nationalityFlagsArray } = useQuery({
     queryKey: ["nationality-flags"],
     queryFn: async () => {
-      const { data } = await supabase.from("nationality_flags").select("nationality, flag_url")
-      return new Map<string, string>((data ?? []).map((f: Record<string, string>) => [f.nationality, f.flag_url]))
+      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
+      return (data ?? []) as NationalityFlag[]
     },
   })
+
+  const nationalityFlags = useMemo(() => {
+    const map = new Map<string, string>()
+    nationalityFlagsArray?.forEach((f) => map.set(f.nationality, f.flag_url))
+    return map
+  }, [nationalityFlagsArray])
 
   const [showAllStats, setShowAllStats] = useState(false)
   const [showQ1Q2, setShowQ1Q2] = useState(false)
@@ -344,7 +350,7 @@ export default function RaceDetailPage() {
                     <TableCell>
                       <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                         {nationalityFlags?.get(r.driver.nationality ?? "") && (
-                          <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                          <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
                         )}
                         {r.driver.given_name} {r.driver.family_name}
                       </Link>
@@ -352,7 +358,7 @@ export default function RaceDetailPage() {
                     <TableCell>
                       <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                         {nationalityFlags?.get(r.constructor.nationality ?? "") && (
-                          <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                          <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
                         )}
                         <span>{r.constructor.name}</span>
                       </Link>
@@ -414,7 +420,7 @@ export default function RaceDetailPage() {
                       <TableCell>
                         <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                           {nationalityFlags?.get(q.driver.nationality ?? "") && (
-                            <img src={nationalityFlags.get(q.driver.nationality ?? "")!} alt={q.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                            <img src={nationalityFlags.get(q.driver.nationality ?? "")!} alt={q.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
                           )}
                           {q.driver.given_name} {q.driver.family_name}
                         </Link>
@@ -422,7 +428,7 @@ export default function RaceDetailPage() {
                       <TableCell>
                         <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                           {nationalityFlags?.get(q.constructor.nationality ?? "") && (
-                            <img src={nationalityFlags.get(q.constructor.nationality ?? "")!} alt={q.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                            <img src={nationalityFlags.get(q.constructor.nationality ?? "")!} alt={q.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
                           )}
                           <span>{q.constructor.name}</span>
                         </Link>
@@ -524,7 +530,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {nationalityFlags?.get(s.driver.nationality ?? "") && (
-                                  <img src={nationalityFlags.get(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                  <img src={nationalityFlags.get(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
                                 )}
                                 {s.driver.given_name} {s.driver.family_name}
                               </Link>
@@ -532,7 +538,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {nationalityFlags?.get(s.constructor.nationality ?? "") && (
-                                  <img src={nationalityFlags.get(s.constructor.nationality ?? "")!} alt={s.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                  <img src={nationalityFlags.get(s.constructor.nationality ?? "")!} alt={s.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
                                 )}
                                 {s.constructor.logo_url && (
                                   <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
@@ -754,7 +760,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {nationalityFlags?.get(r.driver.nationality ?? "") && (
-                                  <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                  <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
                                 )}
                                 {r.driver.given_name} {r.driver.family_name}
                               </Link>
@@ -762,7 +768,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                             <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                               {nationalityFlags?.get(r.constructor.nationality ?? "") && (
-                                <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                                <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
                               )}
                               {r.constructor.logo_url && (
                                 <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
@@ -806,7 +812,7 @@ export default function RaceDetailPage() {
                         <TableCell>
                         <Link to={`/drivers/${ps.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                           {nationalityFlags?.get(ps.driver.nationality ?? "") && (
-                            <img src={nationalityFlags.get(ps.driver.nationality ?? "")!} alt={ps.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded" />
+                            <img src={nationalityFlags.get(ps.driver.nationality ?? "")!} alt={ps.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
                           )}
                           {ps.driver.given_name} {ps.driver.family_name}
                           </Link>

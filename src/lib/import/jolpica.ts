@@ -222,21 +222,23 @@ async function fetchAllPaginated<T>(
 
     total = parseInt(mrdata.total, 10)
 
+    let batch: T[] = []
     if (mrdata.RaceTable?.Races) {
-      allItems = allItems.concat(mrdata.RaceTable.Races as unknown as T[])
+      batch = mrdata.RaceTable.Races as unknown as T[]
     } else if (mrdata.StandingsTable?.StandingsLists) {
-      allItems = allItems.concat(mrdata.StandingsTable.StandingsLists as unknown as T[])
+      batch = mrdata.StandingsTable.StandingsLists as unknown as T[]
     } else if (mrdata.DriverTable?.Drivers) {
-      allItems = allItems.concat(mrdata.DriverTable.Drivers as unknown as T[])
+      batch = mrdata.DriverTable.Drivers as unknown as T[]
     } else if (mrdata.ConstructorTable?.Constructors) {
-      allItems = allItems.concat(mrdata.ConstructorTable.Constructors as unknown as T[])
+      batch = mrdata.ConstructorTable.Constructors as unknown as T[]
     } else if (mrdata.CircuitTable?.Circuits) {
-      allItems = allItems.concat(mrdata.CircuitTable.Circuits as unknown as T[])
+      batch = mrdata.CircuitTable.Circuits as unknown as T[]
     } else if (mrdata.SeasonTable?.Seasons) {
-      allItems = allItems.concat(mrdata.SeasonTable.Seasons as unknown as T[])
+      batch = mrdata.SeasonTable.Seasons as unknown as T[]
     }
 
-    offset += limit
+    allItems = allItems.concat(batch)
+    offset += batch.length
   } while (offset < total)
 
   return allItems
@@ -322,6 +324,7 @@ export async function importDrivers(): Promise<Driver[]> {
   const drivers = await fetchAllPaginated<JolpicaDriver>("/drivers.json?")
   const records: Omit<Driver, "id" | "created_at" | "updated_at">[] = drivers.map((d) => ({
     driver_id: d.driverId,
+    code: d.code || null,
     given_name: d.givenName,
     family_name: d.familyName,
     dob: d.dateOfBirth || null,

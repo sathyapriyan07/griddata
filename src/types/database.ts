@@ -181,6 +181,7 @@ export interface NationalityFlag {
 export interface Driver {
   id: string
   driver_id: string
+  code: string | null
   given_name: string
   family_name: string
   dob: string | null

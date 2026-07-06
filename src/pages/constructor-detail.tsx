@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
@@ -8,7 +9,16 @@ import { getConstructorColors } from "@/lib/constructorColors"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Constructor, RaceResult, ConstructorStanding } from "@/types/database"
+import type { Constructor, RaceResult, ConstructorStanding, DriverImage } from "@/types/database"
+
+function formatSeasonRange(seasons: number[]): string {
+  if (seasons.length === 0) return ""
+  if (seasons.length === 1) return String(seasons[0])
+  const sorted = [...seasons].sort((a, b) => a - b)
+  const consecutive = sorted.every((s, i) => i === 0 || s === sorted[i - 1] + 1)
+  if (consecutive) return `${sorted[0]}-${String(sorted[sorted.length - 1]).slice(2)}`
+  return sorted.join(", ")
+}
 
 export default function ConstructorDetailPage() {
   const { constructorId } = useParams()
@@ -85,14 +95,14 @@ export default function ConstructorDetailPage() {
       if (!teamUuid) return []
       const { data } = await supabase
         .from("race_results")
-        .select("drivers!inner(driver_id, given_name, family_name, nationality), races!inner(season_year)")
+        .select("drivers!inner(id, driver_id, given_name, family_name, nationality), races!inner(season_year)")
         .eq("constructor_id", teamUuid)
       if (!data) return []
-      const driverMap = new Map<string, { driver_id: string; given_name: string; family_name: string; nationality: string | null; seasons: number[] }>()
-      for (const r of data as unknown as { drivers: { driver_id: string; given_name: string; family_name: string; nationality: string | null }; races: { season_year: number } }[]) {
+      const driverMap = new Map<string, { id: string; driver_id: string; given_name: string; family_name: string; nationality: string | null; seasons: number[] }>()
+      for (const r of data as unknown as { drivers: { id: string; driver_id: string; given_name: string; family_name: string; nationality: string | null }; races: { season_year: number } }[]) {
         const did = r.drivers.driver_id
         if (!driverMap.has(did)) {
-          driverMap.set(did, { driver_id: did, given_name: r.drivers.given_name, family_name: r.drivers.family_name, nationality: r.drivers.nationality, seasons: [] })
+          driverMap.set(did, { id: r.drivers.id, driver_id: did, given_name: r.drivers.given_name, family_name: r.drivers.family_name, nationality: r.drivers.nationality, seasons: [] })
         }
         const entry = driverMap.get(did)!
         if (!entry.seasons.includes(r.races.season_year)) {
@@ -103,6 +113,30 @@ export default function ConstructorDetailPage() {
     },
     enabled: !!teamUuid,
   })
+
+  const driverUuids = drivers?.map((d) => d.id) ?? []
+
+  const { data: driverHeroImages } = useQuery({
+    queryKey: ["constructor-driver-hero-images", driverUuids.join(",")],
+    queryFn: async () => {
+      if (driverUuids.length === 0) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .in("driver_id", driverUuids)
+        .eq("type", "hero")
+      return (data ?? []) as DriverImage[]
+    },
+    enabled: driverUuids.length > 0,
+  })
+
+  const driverHeroMap = useMemo(() => {
+    const map = new Map<string, string>()
+    driverHeroImages?.forEach((img) => {
+      if (!map.has(img.driver_id)) map.set(img.driver_id, img.image_url)
+    })
+    return map
+  }, [driverHeroImages])
 
   const { data: teamCarImages } = useQuery({
     queryKey: ["team-car-images", teamUuid],
@@ -487,35 +521,32 @@ export default function ConstructorDetailPage() {
               <CardTitle>Drivers who drove for {team.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Driver</TableHead>
-                    <TableHead>Nationality</TableHead>
-                    <TableHead>Season</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {drivers?.map((d) => (
-                    <TableRow key={d.driver_id}>
-                      <TableCell>
-                        <Link to={`/drivers/${d.driver_id}`} className="hover:underline font-medium">
-                          {d.given_name} {d.family_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{d.nationality ?? "—"}</TableCell>
-                      <TableCell>{d.seasons.join(", ")}</TableCell>
-                    </TableRow>
-                  ))}
-                  {(!drivers || drivers.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        No driver data available.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {drivers?.map((d) => (
+                  <Link key={d.driver_id} to={`/drivers/${d.driver_id}`}>
+                    <Card className="relative overflow-hidden transition-colors cursor-pointer border hover:border-foreground/20">
+                      {driverHeroMap.get(d.id) && (
+                        <>
+                          <div className="absolute inset-0">
+                            <img src={driverHeroMap.get(d.id)!} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+                        </>
+                      )}
+                      <CardContent className="relative p-4">
+                        <div className="font-medium truncate text-white drop-shadow-sm">{d.given_name} {d.family_name}</div>
+                        <div className="text-xs text-white/70 drop-shadow-sm mt-1">{d.nationality ?? "—"}</div>
+                        <div className="text-xs text-white/50 drop-shadow-sm mt-0.5">{formatSeasonRange(d.seasons)}</div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+                {(!drivers || drivers.length === 0) && (
+                  <div className="col-span-full text-center text-muted-foreground py-8">
+                    No driver data available.
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

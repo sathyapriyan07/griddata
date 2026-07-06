@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useParams, Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
@@ -10,6 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+
+function formatSeasonRange(seasons: number[]): string {
+  if (seasons.length === 0) return ""
+  if (seasons.length === 1) return String(seasons[0])
+  const sorted = [...seasons].sort((a, b) => a - b)
+  const consecutive = sorted.every((s, i) => i === 0 || s === sorted[i - 1] + 1)
+  if (consecutive) return `${sorted[0]}-${String(sorted[sorted.length - 1]).slice(2)}`
+  return sorted.join(", ")
+}
 
 export default function DriverDetailPage() {
   const { driverId } = useParams()
@@ -123,20 +132,6 @@ export default function DriverDetailPage() {
     enabled: !!driverUuid,
   })
 
-  const { data: driverImages } = useQuery({
-    queryKey: ["driver-images-gallery", driverUuid],
-    queryFn: async () => {
-      if (!driverUuid) return []
-      const { data } = await supabase
-        .from("driver_images")
-        .select("*")
-        .eq("driver_id", driverUuid)
-        .order("created_at", { ascending: false })
-      return (data ?? []) as DriverImage[]
-    },
-    enabled: !!driverUuid,
-  })
-
   const driverTeamRecords = (() => {
     const teams = new Map<string, { constructor_id: string; name: string; races: number; wins: number; podiums: number; points: number; poles: number; sprints: number; sprintWins: number; sprintPodiums: number; sprintPoints: number }>()
     for (const r of teamRaceStats ?? []) {
@@ -171,18 +166,19 @@ export default function DriverDetailPage() {
       if (!driverUuid) return []
       const { data } = await supabase
         .from("race_results")
-        .select("constructors!inner(name, constructor_id), races!inner(season_year)")
+        .select("constructors!inner(id, name, constructor_id), races!inner(season_year)")
         .eq("driver_id", driverUuid)
       if (!data) return []
       const seen = new Set<string>()
-      const out: { constructor_id: string; constructor_name: string; season_year: number }[] = []
-      for (const r of data as unknown as { constructors: { name: string; constructor_id: string }; races: { season_year: number } }[]) {
+      const out: { constructor_id: string; constructor_name: string; constructor_uuid: string; season_year: number }[] = []
+      for (const r of data as unknown as { constructors: { id: string; name: string; constructor_id: string }; races: { season_year: number } }[]) {
         const key = `${r.constructors.constructor_id}|${r.races.season_year}`
         if (seen.has(key)) continue
         seen.add(key)
         out.push({
           constructor_id: r.constructors.constructor_id,
           constructor_name: r.constructors.name,
+          constructor_uuid: r.constructors.id,
           season_year: r.races.season_year,
         })
       }
@@ -190,6 +186,67 @@ export default function DriverDetailPage() {
     },
     enabled: !!driverUuid,
   })
+
+  const { data: teammates } = useQuery({
+    queryKey: ["driver-teammates", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid || !teamSeasons || teamSeasons.length === 0) return []
+      const constructorUuids = [...new Set(teamSeasons.map((ts) => ts.constructor_uuid))]
+      const seasonYears = [...new Set(teamSeasons.map((ts) => ts.season_year))]
+      const { data } = await supabase
+        .from("race_results")
+        .select("driver_id, constructor_id, races!inner(season_year), drivers!inner(id, driver_id, given_name, family_name, nationality)")
+        .in("constructor_id", constructorUuids)
+        .in("races.season_year", seasonYears)
+        .neq("driver_id", driverUuid)
+      if (!data) return []
+      const teammateMap = new Map<string, { id: string; uuid: string; given_name: string; family_name: string; nationality: string | null; seasons: { constructor_id: string; constructor_name: string; season_year: number }[] }>()
+      for (const r of data as unknown as { driver_id: string; constructor_id: string; races: { season_year: number }; drivers: { id: string; driver_id: string; given_name: string; family_name: string; nationality: string | null } }[]) {
+        const ts = teamSeasons.find((t) => t.constructor_uuid === r.constructor_id && t.season_year === r.races.season_year)
+        if (!ts) continue
+        if (!teammateMap.has(r.driver_id)) {
+          teammateMap.set(r.driver_id, {
+            id: r.drivers.driver_id,
+            uuid: r.drivers.id,
+            given_name: r.drivers.given_name,
+            family_name: r.drivers.family_name,
+            nationality: r.drivers.nationality,
+            seasons: [],
+          })
+        }
+        const entry = teammateMap.get(r.driver_id)!
+        if (!entry.seasons.some((s) => s.constructor_id === ts.constructor_id && s.season_year === ts.season_year)) {
+          entry.seasons.push({ constructor_id: ts.constructor_id, constructor_name: ts.constructor_name, season_year: ts.season_year })
+        }
+      }
+      return [...teammateMap.values()].sort((a, b) => b.seasons[0].season_year - a.seasons[0].season_year)
+    },
+    enabled: !!driverUuid && !!teamSeasons && teamSeasons.length > 0,
+  })
+
+  const teammateUuids = useMemo(() => teammates?.map((t) => t.uuid) ?? [], [teammates])
+
+  const { data: teammateHeroImages } = useQuery({
+    queryKey: ["teammate-hero-images", teammateUuids.join(",")],
+    queryFn: async () => {
+      if (teammateUuids.length === 0) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .in("driver_id", teammateUuids)
+        .eq("type", "hero")
+      return (data ?? []) as DriverImage[]
+    },
+    enabled: teammateUuids.length > 0,
+  })
+
+  const teammateHeroMap = useMemo(() => {
+    const map = new Map<string, string>()
+    teammateHeroImages?.forEach((img) => {
+      if (!map.has(img.driver_id)) map.set(img.driver_id, img.image_url)
+    })
+    return map
+  }, [teammateHeroImages])
 
   const stats = results ? computeDriverCareerStats(results as RaceResult[], sprints as SprintResult[]) : null
   const { data: winsWithCircuit } = useQuery({
@@ -373,12 +430,6 @@ export default function DriverDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-6 items-start">
-        {driver.photo_url && (
-          <div className="relative shrink-0 self-center">
-            <img src={driver.photo_url} alt={`${driver.given_name} ${driver.family_name}`} className="w-28 h-28 object-cover rounded-lg" />
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/40 to-transparent rounded-b-lg" />
-          </div>
-        )}
         <div className="flex-1">
           <h1 className="text-3xl font-bold">
             {driver.given_name} {driver.family_name}
@@ -466,39 +517,6 @@ export default function DriverDetailPage() {
         </div>
       )}
 
-      {driverImages && driverImages.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Driver Images</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {(["hero", "card", "pole", "event"] as const).map((type) => {
-              const filtered = driverImages.filter((img) => img.type === type)
-              if (filtered.length === 0) return null
-              const typeLabel = type === "hero" ? "Hero Banner" : type === "card" ? "Card" : type === "pole" ? "Pole Position" : "Event"
-              return (
-                <div key={type} className="mb-4 last:mb-0">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">{typeLabel}</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {filtered.map((img) => (
-                      <div key={img.id} className="space-y-1">
-                        <img
-                          src={img.image_url}
-                          alt={`${driver.given_name} ${driver.family_name} ${typeLabel}`}
-                          className="w-full h-32 object-contain rounded-md border bg-muted/30"
-                        />
-                        {img.year && <p className="text-sm text-center font-medium">{img.year}</p>}
-                        {img.caption && <p className="text-xs text-center text-muted-foreground">{img.caption}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-      )}
-
       <Tabs defaultValue="results">
         <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
@@ -506,6 +524,7 @@ export default function DriverDetailPage() {
             <TabsTrigger value="seasons">Season by Season</TabsTrigger>
             <TabsTrigger value="teams">Teams</TabsTrigger>
             <TabsTrigger value="team-records">Team Records</TabsTrigger>
+            <TabsTrigger value="team-mates">Teammates</TabsTrigger>
             <TabsTrigger value="teammates">Teammate Battle</TabsTrigger>
             <TabsTrigger value="milestones">Milestones</TabsTrigger>
             <TabsTrigger value="circuit-performance">Circuit Performance</TabsTrigger>
@@ -775,6 +794,44 @@ export default function DriverDetailPage() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="team-mates">
+          <Card>
+            <CardHeader>
+              <CardTitle>All Teammates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {teammates?.map((t) => (
+                  <Link key={t.id} to={`/drivers/${t.id}`}>
+                    <Card className="relative overflow-hidden transition-colors cursor-pointer border hover:border-foreground/20">
+                      {teammateHeroMap.get(t.uuid) && (
+                        <>
+                          <div className="absolute inset-0">
+                            <img src={teammateHeroMap.get(t.uuid)!} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+                        </>
+                      )}
+                      <CardContent className="relative p-4">
+                        <div className="font-medium truncate text-white drop-shadow-sm">{t.given_name} {t.family_name}</div>
+                        <div className="text-xs text-white/70 drop-shadow-sm mt-1">{t.nationality ?? "—"}</div>
+                        <div className="mt-2 text-xs text-white/50 drop-shadow-sm">
+                          {formatSeasonRange(t.seasons.map((s) => s.season_year))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+                {(!teammates || teammates.length === 0) && (
+                  <div className="col-span-full text-center text-muted-foreground py-8">
+                    No teammates found.
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

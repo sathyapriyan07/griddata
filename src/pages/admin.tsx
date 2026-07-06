@@ -1369,6 +1369,7 @@ function DriverImagePanel() {
 
   const typeOptions = [
     { value: "card", label: "Card" },
+    { value: "hero", label: "Hero Banner" },
     { value: "pole", label: "Pole Position" },
     { value: "event", label: "Event" },
   ]

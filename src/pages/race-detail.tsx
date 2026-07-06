@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, NationalityFlag, TireStint } from "@/types/database"
+import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, NationalityFlag, TireStint, DriverImage } from "@/types/database"
 
 export default function RaceDetailPage() {
   const { raceId } = useParams()
@@ -48,7 +48,7 @@ export default function RaceDetailPage() {
         .select("*, driver:drivers(*), constructor:constructors(*)")
         .eq("race_id", raceId)
         .order("position", { ascending: true, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { driver: { code: string | null; given_name: string; family_name: string; driver_id: string; nationality: string | null; photo_url: string | null }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null; nationality: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
+      return (data ?? []) as (RaceResult & { driver: { id: string; code: string | null; given_name: string; family_name: string; driver_id: string; nationality: string | null; photo_url: string | null }; constructor: { id: string; name: string; constructor_id: string; logo_url: string | null; nationality: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -106,10 +106,10 @@ export default function RaceDetailPage() {
       if (!raceId) return []
       const { data } = await supabase
         .from("pit_stops")
-        .select("*, driver:drivers(code, given_name, family_name, driver_id, nationality), constructor:constructors(logo_url, name)")
+        .select("*, driver:drivers(code, given_name, family_name, driver_id, nationality)")
         .eq("race_id", raceId)
         .order("lap", { ascending: true })
-      return (data ?? []) as (PitStop & { driver: { code: string | null; given_name: string; family_name: string; driver_id: string; nationality: string | null; photo_url: string | null }; constructor: { logo_url: string | null; name: string } })[]
+      return (data ?? []) as (PitStop & { driver: { code: string | null; given_name: string; family_name: string; driver_id: string; nationality: string | null; photo_url: string | null } })[]
     },
     enabled: !!raceId,
   })
@@ -168,6 +168,32 @@ export default function RaceDetailPage() {
     nationalityFlagsArray?.forEach((f) => map.set(f.nationality, f.flag_url))
     return map
   }, [nationalityFlagsArray])
+
+  const podiumDriverIds = useMemo(() => {
+    return (results ?? []).filter((r) => r.position != null && r.position >= 1 && r.position <= 3).map((r) => r.driver.id)
+  }, [results])
+
+  const { data: driverHeroImages } = useQuery({
+    queryKey: ["podium-hero-images", podiumDriverIds.join(",")],
+    queryFn: async () => {
+      if (podiumDriverIds.length === 0) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .in("driver_id", podiumDriverIds)
+        .eq("type", "hero")
+      return (data ?? []) as DriverImage[]
+    },
+    enabled: podiumDriverIds.length > 0,
+  })
+
+  const heroImageMap = useMemo(() => {
+    const map = new Map<string, string>()
+    driverHeroImages?.forEach((img) => {
+      if (!map.has(img.driver_id)) map.set(img.driver_id, img.image_url)
+    })
+    return map
+  }, [driverHeroImages])
 
   const [showAllStats, setShowAllStats] = useState(false)
   const [showQ1Q2, setShowQ1Q2] = useState(false)
@@ -415,21 +441,26 @@ export default function RaceDetailPage() {
                       const colors = getConstructorColorsFromRecord(r.constructor)
                       const medals = ["🥇", "🥈", "🥉"]
                       return (
-                        <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
-                          <div className="p-4">
+                        <div key={r.id} className="relative rounded-lg border overflow-hidden bg-card">
+                          {heroImageMap.get(r.driver.id) && (
+                            <>
+                              <div className="absolute inset-0">
+                                <img src={heroImageMap.get(r.driver.id)!} alt="" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+                            </>
+                          )}
+                          <div className="relative p-4">
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-xl">{medals[i]}</span>
-                              <span className="text-sm font-bold" style={{ color: colors.primary }}>P{r.position}</span>
+                              <span className="text-sm font-bold text-white drop-shadow-sm">P{r.position}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                              {r.driver.photo_url && (
-                                <img src={r.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                              )}
                               <div className="min-w-0">
-                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline block truncate text-sm">
+                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline block truncate text-sm text-white drop-shadow-sm">
                                   {`${r.driver.given_name} ${r.driver.family_name}`}
                                 </Link>
-                                <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                                <div className="text-xs text-white/70 drop-shadow-sm inline-flex items-center gap-1">
                                   {r.constructor.logo_url && (
                                     <img src={r.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
                                   )}
@@ -437,7 +468,7 @@ export default function RaceDetailPage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="mt-2 text-xs font-mono text-muted-foreground">
+                            <div className="mt-2 text-xs font-mono text-white/60 drop-shadow-sm">
                               {r.time ?? `${r.laps ?? "—"} laps`}
                             </div>
                           </div>

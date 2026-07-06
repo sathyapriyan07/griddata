@@ -472,10 +472,10 @@ export default function DriverDetailPage() {
             <CardTitle>Driver Images</CardTitle>
           </CardHeader>
           <CardContent>
-            {(["card", "pole", "event"] as const).map((type) => {
+            {(["hero", "card", "pole", "event"] as const).map((type) => {
               const filtered = driverImages.filter((img) => img.type === type)
               if (filtered.length === 0) return null
-              const typeLabel = type === "card" ? "Card" : type === "pole" ? "Pole Position" : "Event"
+              const typeLabel = type === "hero" ? "Hero Banner" : type === "card" ? "Card" : type === "pole" ? "Pole Position" : "Event"
               return (
                 <div key={type} className="mb-4 last:mb-0">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">{typeLabel}</h3>

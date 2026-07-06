@@ -1627,7 +1627,7 @@ function NationalityFlagPanel() {
               className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 ${selected === n ? "bg-muted font-medium" : ""}`}
             >
               {validFlags.has(n) ? (
-                <img src={flags?.find((f) => f.nationality === n)?.flag_url} alt={n} className="w-5 h-3.5 object-cover rounded" />
+                <img src={flags?.find((f) => f.nationality === n)?.flag_url} alt={n} className="w-5 h-3.5 object-cover" />
               ) : (
                 <span className="w-5 h-3.5 rounded bg-muted" />
               )}
@@ -1644,7 +1644,7 @@ function NationalityFlagPanel() {
         <div className="space-y-3 pt-2">
           {flagUrl && (
             <div className="flex items-center gap-3">
-              <img src={flagUrl} alt={selected} className="w-12 h-8 object-cover rounded border" />
+              <img src={flagUrl} alt={selected} className="w-12 h-8 object-cover border" />
               <span className="text-sm font-medium">{selected}</span>
             </div>
           )}

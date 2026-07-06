@@ -285,7 +285,7 @@ export default function RaceDetailPage() {
                             <div className="text-sm text-muted-foreground">
                               <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {r.constructor.logo_url && (
-                                  <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                  <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain" />
                                 )}
                                 {r.constructor.name}
                               </Link>
@@ -350,7 +350,7 @@ export default function RaceDetailPage() {
                     <TableCell>
                       <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                         {nationalityFlags?.get(r.driver.nationality ?? "") && (
-                          <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
+                          <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                         )}
                         {r.driver.code ?? `${r.driver.given_name} ${r.driver.family_name}`}
                       </Link>
@@ -358,7 +358,7 @@ export default function RaceDetailPage() {
                     <TableCell>
                       <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                         {nationalityFlags?.get(r.constructor.nationality ?? "") && (
-                          <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
+                          <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                         )}
                         <span>{r.constructor.name}</span>
                       </Link>
@@ -420,7 +420,7 @@ export default function RaceDetailPage() {
                       <TableCell>
                         <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                           {nationalityFlags?.get(q.driver.nationality ?? "") && (
-                            <img src={nationalityFlags.get(q.driver.nationality ?? "")!} alt={q.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
+                            <img src={nationalityFlags.get(q.driver.nationality ?? "")!} alt={q.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                           )}
                           {q.driver.code ?? `${q.driver.given_name} ${q.driver.family_name}`}
                         </Link>
@@ -428,7 +428,7 @@ export default function RaceDetailPage() {
                       <TableCell>
                         <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                           {nationalityFlags?.get(q.constructor.nationality ?? "") && (
-                            <img src={nationalityFlags.get(q.constructor.nationality ?? "")!} alt={q.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
+                            <img src={nationalityFlags.get(q.constructor.nationality ?? "")!} alt={q.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                           )}
                           <span>{q.constructor.name}</span>
                         </Link>
@@ -495,7 +495,7 @@ export default function RaceDetailPage() {
                                     <div className="text-sm text-muted-foreground">
                                       <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                         {s.constructor.logo_url && (
-                                          <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                          <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain" />
                                         )}
                                         {s.constructor.name}
                                       </Link>
@@ -530,7 +530,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {nationalityFlags?.get(s.driver.nationality ?? "") && (
-                                  <img src={nationalityFlags.get(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
+                                  <img src={nationalityFlags.get(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                                 )}
                                 {s.driver.code ?? `${s.driver.given_name} ${s.driver.family_name}`}
                               </Link>
@@ -538,10 +538,10 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {nationalityFlags?.get(s.constructor.nationality ?? "") && (
-                                  <img src={nationalityFlags.get(s.constructor.nationality ?? "")!} alt={s.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
+                                  <img src={nationalityFlags.get(s.constructor.nationality ?? "")!} alt={s.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                                 )}
                                 {s.constructor.logo_url && (
-                                  <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                  <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain" />
                                 )}
                                 {s.constructor.name}
                               </Link>
@@ -601,7 +601,7 @@ export default function RaceDetailPage() {
                                 <div className="text-sm text-muted-foreground">
                                   <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                     {s.constructor.logo_url && (
-                                      <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                      <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain" />
                                     )}
                                     {s.constructor.name}
                                   </Link>
@@ -657,7 +657,7 @@ export default function RaceDetailPage() {
                           <TableCell>
                             <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                               {s.constructor.logo_url && (
-                                <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-4 h-4 object-contain" />
                               )}
                               {s.constructor.name}
                             </Link>
@@ -725,7 +725,7 @@ export default function RaceDetailPage() {
                                     <div className="text-sm text-muted-foreground">
                                       <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                         {r.constructor.logo_url && (
-                                          <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                          <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain" />
                                         )}
                                         {r.constructor.name}
                                       </Link>
@@ -760,7 +760,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                                 {nationalityFlags?.get(r.driver.nationality ?? "") && (
-                                  <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
+                                  <img src={nationalityFlags.get(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                                 )}
                                 {r.driver.code ?? `${r.driver.given_name} ${r.driver.family_name}`}
                               </Link>
@@ -768,10 +768,10 @@ export default function RaceDetailPage() {
                             <TableCell>
                             <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
                               {nationalityFlags?.get(r.constructor.nationality ?? "") && (
-                                <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover" />
+                                <img src={nationalityFlags.get(r.constructor.nationality ?? "")!} alt={r.constructor.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                               )}
                               {r.constructor.logo_url && (
-                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain rounded" />
+                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-4 h-4 object-contain" />
                               )}
                               <span>{r.constructor.name}</span>
                               </Link>
@@ -812,7 +812,7 @@ export default function RaceDetailPage() {
                         <TableCell>
                         <Link to={`/drivers/${ps.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
                           {nationalityFlags?.get(ps.driver.nationality ?? "") && (
-                            <img src={nationalityFlags.get(ps.driver.nationality ?? "")!} alt={ps.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
+                            <img src={nationalityFlags.get(ps.driver.nationality ?? "")!} alt={ps.driver.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
                           )}
                           {ps.driver.code ?? `${ps.driver.given_name} ${ps.driver.family_name}`}
                           </Link>

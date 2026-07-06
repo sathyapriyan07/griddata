@@ -3,13 +3,14 @@ import { useParams, Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { computeDriverCareerStats, computeDriverSeasonStats, detectMilestones, getStreaks } from "@/lib/stats"
+import { getConstructorColorsFromRecord } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+import type { CircuitImage, Driver, DriverImage, NationalityFlag, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -57,10 +58,10 @@ export default function DriverDetailPage() {
       if (!driverUuid) return []
       const { data } = await supabase
         .from("race_results")
-        .select("*, races!inner(season_year, round, name, date, circuit_id, distance_km, circuits!inner(name))")
+        .select("*, races!inner(season_year, round, name, date, circuit_id, distance_km, circuits!inner(name)), constructor:constructors!inner(name, logo_url, color_primary, color_secondary, color_accent)")
         .eq("driver_id", driverUuid)
         .order("races(date)", { ascending: false, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string; circuit_id: string; distance_km: number | null; circuits: { name: string } } })[]
+      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string; circuit_id: string; distance_km: number | null; circuits: { name: string } }; constructor: { name: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!driverUuid,
   })
@@ -248,6 +249,78 @@ export default function DriverDetailPage() {
     return map
   }, [teammateHeroImages])
 
+  const { data: nationalityFlagsArray } = useQuery({
+    queryKey: ["nationality-flags"],
+    queryFn: async () => {
+      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
+      return (data ?? []) as NationalityFlag[]
+    },
+    staleTime: Infinity,
+  })
+
+  const nationalityFlags = useMemo(() => {
+    const map = new Map<string, string>()
+    nationalityFlagsArray?.forEach((f) => map.set(f.nationality, f.flag_url))
+    return map
+  }, [nationalityFlagsArray])
+
+  const { data: driverHeroImage } = useQuery({
+    queryKey: ["driver-hero-image", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return null
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .eq("driver_id", driverUuid)
+        .eq("type", "hero")
+        .maybeSingle()
+      return data as DriverImage | null
+    },
+    enabled: !!driverUuid,
+  })
+
+  const { data: circuitHeroImages } = useQuery({
+    queryKey: ["circuit-hero-images"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("circuit_images")
+        .select("*")
+        .eq("type", "hero")
+      return (data ?? []) as CircuitImage[]
+    },
+    staleTime: Infinity,
+  })
+
+  const circuitImageMap = useMemo(() => {
+    const map = new Map<string, string>()
+    circuitHeroImages?.forEach((img) => {
+      if (!map.has(img.circuit_id)) map.set(img.circuit_id, img.image_url)
+    })
+    return map
+  }, [circuitHeroImages])
+
+  const currentTeam = teamSeasons && teamSeasons.length > 0 ? teamSeasons[0] : null
+
+  const { data: currentConstructorData } = useQuery({
+    queryKey: ["current-constructor", currentTeam?.constructor_id],
+    queryFn: async () => {
+      if (!currentTeam?.constructor_id) return null
+      const { data } = await supabase
+        .from("constructors")
+        .select("*")
+        .eq("constructor_id", currentTeam.constructor_id)
+        .single()
+      return data as {
+        name: string
+        logo_url: string | null
+        color_primary: string | null
+        color_secondary: string | null
+        color_accent: string | null
+      } | null
+    },
+    enabled: !!currentTeam?.constructor_id,
+  })
+
   const stats = results ? computeDriverCareerStats(results as RaceResult[], sprints as SprintResult[]) : null
   const { data: winsWithCircuit } = useQuery({
     queryKey: ["driver-wins-circuit", driverUuid],
@@ -346,7 +419,7 @@ export default function DriverDetailPage() {
   const averageGrid = stats?.avgGridPosition ?? null
 
   const [circuitSort, setCircuitSort] = useState<"wins" | "podiums" | "avgFinish">("wins")
-  const [showAllStats, setShowAllStats] = useState(false)
+  const [expandedRaceId, setExpandedRaceId] = useState<string | null>(null)
 
   const circuitPerformance = (() => {
     const map = new Map<string, {
@@ -427,22 +500,74 @@ export default function DriverDetailPage() {
     return <PageSkeleton />
   }
 
+  const constructorColors = currentConstructorData ? getConstructorColorsFromRecord(currentConstructorData) : null
+  const heroBgColor = constructorColors?.primary ?? "#1e1e1e"
+  const careerYears = seasons.length > 0 ? `${Math.min(...seasons)}-${String(Math.max(...seasons)).slice(2)}` : ""
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-6 items-start">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">
-            {driver.given_name} {driver.family_name}
-          </h1>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {driver.nationality && <Badge>{driver.nationality}</Badge>}
-            {driver.dob && (
-              <Badge variant="secondary">
-                Born: {new Date(driver.dob).toLocaleDateString()}
-              </Badge>
+      <div className="relative overflow-hidden rounded-xl border" style={{ backgroundColor: heroBgColor }}>
+        {driverHeroImage?.image_url && (
+          <div className="absolute inset-0">
+            <img src={driverHeroImage.image_url} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+        <div className="relative p-6 sm:p-8">
+          <div className="flex items-start justify-between">
+            <div className="space-y-4">
+              <h1 className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
+                {driver.given_name} {driver.family_name}
+              </h1>
+              <div className="flex flex-wrap items-center gap-3">
+                {driver.nationality && (
+                  <div className="flex items-center gap-1.5">
+                    {nationalityFlags.get(driver.nationality) && (
+                      <img src={nationalityFlags.get(driver.nationality)!} alt="" className="w-5 h-4 object-cover rounded" />
+                    )}
+                    <span className="text-white/90 drop-shadow-sm">{driver.nationality}</span>
+                  </div>
+                )}
+                {driver.dob && (
+                  <span className="text-sm text-white/70 drop-shadow-sm">
+                    Born {new Date(driver.dob).toLocaleDateString()}
+                  </span>
+                )}
+                {careerYears && (
+                  <span className="text-sm text-white/70 drop-shadow-sm">{careerYears}</span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {currentConstructorData && (
+                  <Badge
+                    className="text-xs gap-1.5"
+                    style={{
+                      backgroundColor: constructorColors?.secondary ?? "#6b7280",
+                      color: constructorColors?.accent ?? "#fff",
+                    }}
+                  >
+                    {currentConstructorData.logo_url && (
+                      <img src={currentConstructorData.logo_url} alt="" className="w-3.5 h-3.5 object-contain brightness-0" style={{ filter: `brightness(0) invert(${constructorColors?.accent === "#000000" ? "0" : "1"})` }} />
+                    )}
+                    {currentConstructorData.name}
+                  </Badge>
+                )}
+                {driver.code && (
+                  <Badge variant="outline" className="text-xs border-white/30 text-white/80">
+                    #{driver.code}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            {currentConstructorData?.logo_url && (
+              <div className="shrink-0 opacity-80">
+                <img src={currentConstructorData.logo_url} alt="" className="w-16 h-16 sm:w-20 sm:h-20 object-contain brightness-0 invert" />
+              </div>
             )}
           </div>
-          {driver.bio && <p className="mt-4 text-muted-foreground">{driver.bio}</p>}
+          {driver.bio && (
+            <p className="mt-4 max-w-2xl text-sm text-white/60 drop-shadow-sm leading-relaxed">{driver.bio}</p>
+          )}
         </div>
       </div>
 
@@ -535,68 +660,107 @@ export default function DriverDetailPage() {
         </div>
 
         <TabsContent value="results">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Race Results</CardTitle>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">All Stats</span>
-                <button
-                  onClick={() => setShowAllStats(!showAllStats)}
-                  aria-pressed={showAllStats}
-                  className={
-                    `relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ` +
-                    (showAllStats ? "bg-primary" : "bg-muted")
-                  }
-                >
-                  <span
-                    className={
-                      `inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ` +
-                      (showAllStats ? "translate-x-5" : "translate-x-1")
-                    }
-                  />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead><div>Season</div></TableHead>
-                    <TableHead><div>Race</div></TableHead>
-                    <TableHead><div className="text-center">Position</div></TableHead>
-                    <TableHead><div className="text-center">Grid</div></TableHead>
-                    <TableHead><div className="text-end">Points</div></TableHead>
-                    {showAllStats && <TableHead><div>Status</div></TableHead>}
-                    {showAllStats && <TableHead><div className="text-end">Fastest Lap</div></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results?.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>{r.races.season_year}</TableCell>
-                      <TableCell>
-                        <Link to={`/races/${r.race_id}`} className="hover:underline text-sm">
-                          {r.races.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
-                      <TableCell><div className="text-center">{r.grid ?? "—"}</div></TableCell>
-                      <TableCell><div className="text-end">{r.points}</div></TableCell>
-                      {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
-                      {showAllStats && <TableCell><div className="text-end font-mono">{r.fastest_lap_time ?? "—"}</div></TableCell>}
-                    </TableRow>
-                  ))}
-                  {(!results || results.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={showAllStats ? 7 : 5} className="text-center text-muted-foreground">
-                        No results available yet.
-                      </TableCell>
-                    </TableRow>
+          <div className="space-y-3">
+            {results?.map((r) => {
+              const posColors = ["", "bg-yellow-500", "bg-gray-400", "bg-amber-700"]
+              const posColor = r.position !== null && r.position >= 1 && r.position <= 3 ? posColors[r.position] : "bg-muted"
+              const expanded = expandedRaceId === r.id
+              const circuitImageUrl = circuitImageMap.get(r.races.circuit_id)
+              return (
+                <Card key={r.id} className="overflow-hidden relative">
+                  {circuitImageUrl && (
+                    <>
+                      <div className="absolute inset-0">
+                        <img src={circuitImageUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/70 to-background/90" />
+                    </>
                   )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  <div className="flex items-stretch relative">
+                    <div className={`flex items-center justify-center w-16 shrink-0 text-white font-bold text-lg ${posColor}`}>
+                      {r.position ?? r.position_text ?? "DNF"}
+                    </div>
+                    <div className="flex-1 p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Link to={`/races/${r.race_id}`} className="font-semibold hover:underline truncate">
+                              {r.races.name}
+                            </Link>
+                            <span className="text-xs text-muted-foreground shrink-0">{r.races.season_year}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{r.races.circuits?.name ?? "—"}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {r.constructor?.logo_url && (
+                              <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                            )}
+                            <span className="text-xs text-muted-foreground">{r.constructor?.name ?? "—"}</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-lg font-bold">{r.points}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">points</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground border-t pt-2">
+                        <span>Grid P{r.grid ?? "—"}</span>
+                        {r.fastest_lap_rank === 1 && (
+                          <span className="text-purple-500 font-medium">⚡ Fastest Lap</span>
+                        )}
+                        <span>{r.laps ?? "—"} laps</span>
+                        <span>{r.status || (r.position ? "Finished" : "—")}</span>
+                        <button
+                          onClick={() => setExpandedRaceId(expanded ? null : r.id)}
+                          className="ml-auto text-xs hover:underline"
+                        >
+                          {expanded ? "Less" : "More"}
+                        </button>
+                      </div>
+                      {expanded && (
+                        <div className="mt-3 pt-3 border-t grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Date</span>
+                            <p className="font-medium">{r.races.date ? new Date(r.races.date).toLocaleDateString() : "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Round</span>
+                            <p className="font-medium">{r.races.round}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Grid</span>
+                            <p className="font-medium">P{r.grid ?? "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Time</span>
+                            <p className="font-medium font-mono">{r.time ?? "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Fastest Lap</span>
+                            <p className="font-medium font-mono">{r.fastest_lap_time ?? "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Fastest Lap Rank</span>
+                            <p className="font-medium">{r.fastest_lap_rank ?? "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Distance</span>
+                            <p className="font-medium">{r.races.distance_km ? `${r.races.distance_km} km` : "—"}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Status</span>
+                            <p className="font-medium">{r.status ?? (r.position ? "Finished" : "—")}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+            {(!results || results.length === 0) && (
+              <p className="text-center text-muted-foreground py-8">No results available yet.</p>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="seasons">

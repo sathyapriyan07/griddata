@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { SyncJob, Profile, NationalityFlag } from "@/types/database"
+import type { SyncJob, Profile, NationalityFlag, CircuitImage } from "@/types/database"
 
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
   try {
@@ -1033,6 +1033,17 @@ export default function AdminPage() {
             <NationalityFlagPanel />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Circuit Images
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CircuitImagePanel />
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="crud">
@@ -1453,6 +1464,183 @@ function DriverImagePanel() {
           )}
           {images && images.length === 0 && (
             <p className="text-xs text-muted-foreground">No images uploaded for this driver yet.</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function CircuitImagePanel() {
+  const [selectedCircuitId, setSelectedCircuitId] = useState<string | null>(null)
+  const [imageType, setImageType] = useState<string>("hero")
+  const [year, setYear] = useState<number | null>(null)
+  const [caption, setCaption] = useState("")
+  const [uploading, setUploading] = useState(false)
+  const [status, setStatus] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { data: circuits } = useQuery({
+    queryKey: ["all-circuits-image"],
+    queryFn: async () => {
+      const { data } = await supabase.from("circuits").select("id, circuit_id, name, country").order("name")
+      return (data ?? []) as { id: string; circuit_id: string; name: string; country: string | null }[]
+    },
+  })
+
+  const filteredCircuits = (circuits ?? []).filter(
+    (c) => c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const { data: images, refetch: refetchImages } = useQuery({
+    queryKey: ["circuit-images", selectedCircuitId],
+    queryFn: async () => {
+      if (!selectedCircuitId) return []
+      const { data } = await supabase
+        .from("circuit_images")
+        .select("*")
+        .eq("circuit_id", selectedCircuitId)
+        .order("created_at", { ascending: false })
+      return (data ?? []) as CircuitImage[]
+    },
+    enabled: !!selectedCircuitId,
+  })
+
+  const uploadImage = async (f: File) => {
+    if (!selectedCircuitId) return
+    setUploading(true)
+    setStatus(null)
+    try {
+      const ext = f.name.split(".").pop() || "png"
+      const path = `circuit-images/${selectedCircuitId}/${imageType}-${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from("images").upload(path, f, { upsert: true })
+      if (uploadErr) throw uploadErr
+      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+      const { error: dbErr } = await supabase.from("circuit_images").insert({
+        circuit_id: selectedCircuitId,
+        image_url: publicUrl,
+        type: imageType,
+        year: year,
+        caption: caption || null,
+      })
+      if (dbErr) throw dbErr
+      setStatus("Image uploaded successfully.")
+      setCaption("")
+      refetchImages()
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const deleteImage = async (id: string) => {
+    if (!confirm("Delete this image?")) return
+    setStatus("Deleting...")
+    const { error } = await supabase.from("circuit_images").delete().eq("id", id)
+    if (error) setStatus(`Delete failed: ${error.message}`)
+    else {
+      setStatus("Deleted.")
+      refetchImages()
+    }
+  }
+
+  const typeOptions = [
+    { value: "hero", label: "Hero Banner" },
+    { value: "circuit_map", label: "Circuit Map" },
+    { value: "aerial", label: "Aerial" },
+    { value: "pit", label: "Pit Lane" },
+  ]
+
+  return (
+    <div className="space-y-3">
+      <input
+        type="search"
+        placeholder="Search circuits..."
+        value={searchQuery}
+        onChange={(e) => { setSearchQuery(e.target.value); setSelectedCircuitId(null) }}
+        className="rounded border px-2 py-1 text-sm bg-background w-full"
+      />
+      {searchQuery && filteredCircuits.length > 0 && (
+        <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+          {filteredCircuits.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setSelectedCircuitId(c.id); setSearchQuery(c.name) }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedCircuitId === c.id ? "bg-muted font-medium" : ""}`}
+            >
+              {c.name} {c.country ? `(${c.country})` : ""}
+            </button>
+          ))}
+        </div>
+      )}
+      {searchQuery && filteredCircuits.length === 0 && (
+        <p className="text-xs text-muted-foreground px-1">No circuits found.</p>
+      )}
+
+      {selectedCircuitId && (
+        <>
+          <div className="flex flex-wrap gap-2 items-center">
+            <select
+              value={imageType}
+              onChange={(e) => setImageType(e.target.value)}
+              className="rounded border px-2 py-1 text-sm bg-background"
+            >
+              {typeOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={year ?? ""}
+              onChange={(e) => setYear(e.target.value ? Number(e.target.value) : null)}
+              placeholder="Year"
+              className="w-20 rounded border px-2 py-1 text-sm bg-background"
+            />
+            <input
+              type="text"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Caption"
+              className="flex-1 min-w-[120px] rounded border px-2 py-1 text-sm bg-background"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) uploadImage(f)
+                e.target.value = ""
+              }}
+              className="hidden"
+            />
+            <Button variant="default" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+              {uploading ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+
+          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+
+          {images && images.length > 0 && (
+            <div className="grid gap-2 mt-2">
+              {images.map((img) => (
+                <div key={img.id} className="flex items-center gap-2">
+                  <img src={img.image_url} alt={`${img.type}`} className="w-24 h-12 object-cover rounded" />
+                  <div className="flex-1 text-sm">
+                    <span className="font-medium capitalize">{img.type.replace("_", " ")}</span>
+                    {img.year && <span className="text-muted-foreground ml-2">({img.year})</span>}
+                    {img.caption && <span className="text-muted-foreground ml-2">— {img.caption}</span>}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => deleteImage(img.id)}>Delete</Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {images && images.length === 0 && (
+            <p className="text-xs text-muted-foreground">No images uploaded for this circuit yet.</p>
           )}
         </>
       )}

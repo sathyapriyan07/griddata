@@ -51,6 +51,11 @@ export interface Database {
         Insert: Omit<RaceResult, "id">
         Update: Partial<Omit<RaceResult, "id">>
       }
+      circuit_images: {
+        Row: CircuitImage
+        Insert: Omit<CircuitImage, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<CircuitImage, "id">>
+      }
       sprint_results: {
         Row: SprintResult
         Insert: Omit<SprintResult, "id">
@@ -162,6 +167,17 @@ export interface TeamCarImage {
 export interface DriverImage {
   id: string
   driver_id: string
+  image_url: string
+  type: string
+  year: number | null
+  caption: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CircuitImage {
+  id: string
+  circuit_id: string
   image_url: string
   type: string
   year: number | null

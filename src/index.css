@@ -2,22 +2,8 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@font-face {
-  font-family: "Formula1";
-  src: url("/Formula1-Regular_web_0.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "Formula1";
-  src: url("/Formula1-Bold_web_0.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-}
-
 @theme {
-  --font-sans: "Formula1", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));

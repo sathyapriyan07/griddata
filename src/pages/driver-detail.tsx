@@ -419,8 +419,6 @@ export default function DriverDetailPage() {
   const averageGrid = stats?.avgGridPosition ?? null
 
   const [circuitSort, setCircuitSort] = useState<"wins" | "podiums" | "avgFinish">("wins")
-  const [expandedRaceId, setExpandedRaceId] = useState<string | null>(null)
-
   const circuitPerformance = (() => {
     const map = new Map<string, {
       circuitId: string
@@ -662,9 +660,6 @@ export default function DriverDetailPage() {
         <TabsContent value="results">
           <div className="space-y-3">
             {results?.map((r) => {
-              const posColors = ["", "bg-yellow-500", "bg-gray-400", "bg-amber-700"]
-              const posColor = r.position !== null && r.position >= 1 && r.position <= 3 ? posColors[r.position] : "bg-muted"
-              const expanded = expandedRaceId === r.id
               const circuitImageUrl = circuitImageMap.get(r.races.circuit_id)
               return (
                 <Card key={r.id} className="overflow-hidden relative">
@@ -673,13 +668,10 @@ export default function DriverDetailPage() {
                       <div className="absolute inset-0">
                         <img src={circuitImageUrl} alt="" className="w-full h-full object-cover" />
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/70 to-background/90" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/50 to-transparent" />
                     </>
                   )}
                   <div className="flex items-stretch relative">
-                    <div className={`flex items-center justify-center w-16 shrink-0 text-white font-bold text-lg ${posColor}`}>
-                      {r.position ?? r.position_text ?? "DNF"}
-                    </div>
                     <div className="flex-1 p-3 sm:p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -689,69 +681,23 @@ export default function DriverDetailPage() {
                             </Link>
                             <span className="text-xs text-muted-foreground shrink-0">{r.races.season_year}</span>
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">{r.races.circuits?.name ?? "—"}</p>
-                          <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex items-center gap-1.5">
                             {r.constructor?.logo_url && (
                               <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
                             )}
                             <span className="text-xs text-muted-foreground">{r.constructor?.name ?? "—"}</span>
                           </div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-lg font-bold">{r.points}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">points</p>
-                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground border-t pt-2">
+                        <span className="font-semibold">{r.points} pts</span>
                         <span>Grid P{r.grid ?? "—"}</span>
                         {r.fastest_lap_rank === 1 && (
                           <span className="text-purple-500 font-medium">⚡ Fastest Lap</span>
                         )}
                         <span>{r.laps ?? "—"} laps</span>
                         <span>{r.status || (r.position ? "Finished" : "—")}</span>
-                        <button
-                          onClick={() => setExpandedRaceId(expanded ? null : r.id)}
-                          className="ml-auto text-xs hover:underline"
-                        >
-                          {expanded ? "Less" : "More"}
-                        </button>
                       </div>
-                      {expanded && (
-                        <div className="mt-3 pt-3 border-t grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                          <div>
-                            <span className="text-muted-foreground">Date</span>
-                            <p className="font-medium">{r.races.date ? new Date(r.races.date).toLocaleDateString() : "—"}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Round</span>
-                            <p className="font-medium">{r.races.round}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Grid</span>
-                            <p className="font-medium">P{r.grid ?? "—"}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Time</span>
-                            <p className="font-medium font-mono">{r.time ?? "—"}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Fastest Lap</span>
-                            <p className="font-medium font-mono">{r.fastest_lap_time ?? "—"}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Fastest Lap Rank</span>
-                            <p className="font-medium">{r.fastest_lap_rank ?? "—"}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Distance</span>
-                            <p className="font-medium">{r.races.distance_km ? `${r.races.distance_km} km` : "—"}</p>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Status</span>
-                            <p className="font-medium">{r.status ?? (r.position ? "Finished" : "—")}</p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </Card>
@@ -768,7 +714,7 @@ export default function DriverDetailPage() {
             <CardHeader>
               <CardTitle>Season Statistics</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto hide-scrollbar">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -971,16 +917,16 @@ export default function DriverDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {teammates?.map((t) => (
                   <Link key={t.id} to={`/drivers/${t.id}`}>
-                    <Card className="relative overflow-hidden transition-colors cursor-pointer border hover:border-foreground/20">
+                    <Card className="relative overflow-hidden transition-colors cursor-pointer border hover:border-foreground/20 aspect-square flex flex-col">
                       {teammateHeroMap.get(t.uuid) && (
                         <>
                           <div className="absolute inset-0">
                             <img src={teammateHeroMap.get(t.uuid)!} alt="" className="w-full h-full object-cover" />
                           </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
                         </>
                       )}
-                      <CardContent className="relative p-4">
+                      <CardContent className="relative p-4 mt-auto">
                         <div className="font-medium truncate text-white drop-shadow-sm">{t.given_name} {t.family_name}</div>
                         <div className="text-xs text-white/70 drop-shadow-sm mt-1">{t.nationality ?? "—"}</div>
                         <div className="mt-2 text-xs text-white/50 drop-shadow-sm">
@@ -1031,7 +977,7 @@ export default function DriverDetailPage() {
             </CardHeader>
             <CardContent>
               {milestones.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {milestones.slice(0, 20).map((m, i) => (
                     <Card key={i} className="bg-muted/50">
                       <CardContent className="p-3">

@@ -264,15 +264,15 @@ export default function DriverDetailPage() {
     return map
   }, [nationalityFlagsArray])
 
-  const { data: driverHeroImage } = useQuery({
-    queryKey: ["driver-hero-image", driverUuid],
+  const { data: driverPoleImage } = useQuery({
+    queryKey: ["driver-pole-image", driverUuid],
     queryFn: async () => {
       if (!driverUuid) return null
       const { data } = await supabase
         .from("driver_images")
         .select("*")
         .eq("driver_id", driverUuid)
-        .eq("type", "hero")
+        .eq("type", "pole")
         .maybeSingle()
       return data as DriverImage | null
     },
@@ -504,50 +504,50 @@ export default function DriverDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative min-h-[420px] rounded-xl border overflow-visible" style={{ backgroundColor: heroBgColor }}>
+      <div className="relative min-h-[220px] sm:min-h-[420px] rounded-xl border overflow-visible" style={{ backgroundColor: heroBgColor }}>
         <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
         </div>
-        {driver?.photo_url && (
+        {(driverPoleImage?.image_url || driver?.photo_url) && (
           <div className="absolute right-[-6%] bottom-0 h-[115%] w-[55%] sm:w-[50%] pointer-events-none z-0">
-            <img src={driver.photo_url} alt="" className="h-full w-full object-contain object-right-bottom" />
+            <img src={driverPoleImage?.image_url ?? driver?.photo_url!} alt="" className="h-full w-full object-contain object-right-bottom" />
           </div>
         )}
-        <div className="relative z-10 p-6 sm:p-8">
+        <div className="relative z-10 p-4 sm:p-6">
           <div className="flex items-start justify-between">
-            <div className="space-y-4">
-              <h1 className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">
+            <div className="space-y-2">
+              <h1 className="text-xl sm:text-3xl font-bold text-white drop-shadow-lg">
                 {driver.given_name} {driver.family_name}
               </h1>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {driver.nationality && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     {nationalityFlags.get(driver.nationality) && (
-                      <img src={nationalityFlags.get(driver.nationality)!} alt="" className="w-5 h-4 object-cover rounded" />
+                      <img src={nationalityFlags.get(driver.nationality)!} alt="" className="w-4 h-3 object-cover rounded" />
                     )}
-                    <span className="text-white/90 drop-shadow-sm">{driver.nationality}</span>
+                    <span className="text-xs text-white/90 drop-shadow-sm">{driver.nationality}</span>
                   </div>
                 )}
                 {driver.dob && (
-                  <span className="text-sm text-white/70 drop-shadow-sm">
+                  <span className="text-xs text-white/70 drop-shadow-sm">
                     Born {new Date(driver.dob).toLocaleDateString()}
                   </span>
                 )}
                 {careerYears && (
-                  <span className="text-sm text-white/70 drop-shadow-sm">{careerYears}</span>
+                  <span className="text-xs text-white/70 drop-shadow-sm">{careerYears}</span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {currentConstructorData && (
                   <Badge
-                    className="text-xs gap-1.5"
+                    className="text-xs gap-1"
                     style={{
                       backgroundColor: constructorColors?.secondary ?? "#6b7280",
                       color: constructorColors?.accent ?? "#fff",
                     }}
                   >
                     {currentConstructorData.logo_url && (
-                      <img src={currentConstructorData.logo_url} alt="" className="w-3.5 h-3.5 object-contain brightness-0" style={{ filter: `brightness(0) invert(${constructorColors?.accent === "#000000" ? "0" : "1"})` }} />
+                      <img src={currentConstructorData.logo_url} alt="" className="w-3 h-3 object-contain" />
                     )}
                     {currentConstructorData.name}
                   </Badge>
@@ -559,14 +559,9 @@ export default function DriverDetailPage() {
                 )}
               </div>
             </div>
-            {currentConstructorData?.logo_url && (
-              <div className="shrink-0 opacity-80">
-                <img src={currentConstructorData.logo_url} alt="" className="w-16 h-16 sm:w-20 sm:h-20 object-contain brightness-0 invert" />
-              </div>
-            )}
           </div>
           {driver.bio && (
-            <p className="mt-4 max-w-2xl text-sm text-white/60 drop-shadow-sm leading-relaxed">{driver.bio}</p>
+            <p className="mt-2 max-w-xl text-xs text-white/60 drop-shadow-sm leading-relaxed">{driver.bio}</p>
           )}
         </div>
       </div>

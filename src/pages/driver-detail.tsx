@@ -504,14 +504,16 @@ export default function DriverDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-xl border" style={{ backgroundColor: heroBgColor }}>
-        {driverHeroImage?.image_url && (
-          <div className="absolute inset-0">
-            <img src={driverHeroImage.image_url} alt="" className="w-full h-full object-cover" />
+      <div className="relative min-h-[420px] rounded-xl border overflow-visible" style={{ backgroundColor: heroBgColor }}>
+        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
+        </div>
+        {driver?.photo_url && (
+          <div className="absolute right-[-6%] bottom-0 h-[115%] w-[55%] sm:w-[50%] pointer-events-none z-0">
+            <img src={driver.photo_url} alt="" className="h-full w-full object-contain object-right-bottom" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-        <div className="relative p-6 sm:p-8">
+        <div className="relative z-10 p-6 sm:p-8">
           <div className="flex items-start justify-between">
             <div className="space-y-4">
               <h1 className="text-4xl sm:text-5xl font-bold text-white drop-shadow-lg">

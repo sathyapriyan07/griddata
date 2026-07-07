@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { SearchCommand } from "@/components/search-command"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { RaceWeekendBar } from "@/components/race-weekend-bar"
 import { useAuth, signOut } from "@/stores/auth"
 
 const navLinks = [
@@ -75,6 +76,7 @@ export function Layout() {
           </div>
         </div>
       </header>
+      <RaceWeekendBar />
       <main className="container mx-auto px-4 py-6">
         <Outlet />
       </main>

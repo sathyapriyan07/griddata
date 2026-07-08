@@ -44,29 +44,28 @@ export function RaceWeekendBar() {
   const isThisWeek = diffDays >= 0 && diffDays <= 7
 
   return (
-    <div className="border-b bg-accent/40">
-      <div className="container mx-auto flex items-center justify-between px-4 py-2 text-sm">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <Link
+      to={`/races/${nextRace.id}`}
+      className="block border-b bg-gradient-to-r from-f1-red/5 via-transparent to-transparent hover:from-f1-red/10 transition-colors"
+    >
+      <div className="mx-auto flex items-center justify-between px-3 sm:px-4 lg:px-6 py-2.5 max-w-7xl">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-widest text-f1-red shrink-0">
             {diffDays > 0 ? "Next Race" : "Race Weekend"}
           </span>
           {getFlagUrl(nextRace.circuits.country) && (
             <img
               src={getFlagUrl(nextRace.circuits.country)!}
               alt={nextRace.circuits.country}
-              className="w-5 h-4 object-cover rounded-sm"
+              className="w-5 h-4 object-cover rounded-sm shrink-0"
             />
           )}
-          <Link
-            to={`/races/${nextRace.id}`}
-            className="font-medium hover:underline font-heading uppercase tracking-wide"
-          >
+          <span className="font-heading uppercase tracking-wide text-sm sm:text-base truncate">
             {nextRace.name}
-          </Link>
-
+          </span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <span className="text-xs text-muted-foreground hidden xs:inline">
             {raceDate.toLocaleDateString(undefined, {
               weekday: "short",
               day: "numeric",
@@ -74,19 +73,16 @@ export function RaceWeekendBar() {
             })}
           </span>
           {isThisWeek && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-f1-red/10 px-2.5 py-1 text-[11px] font-medium text-f1-red whitespace-nowrap">
+              <span className="h-1.5 w-1.5 rounded-full bg-f1-red animate-pulse" />
               This weekend
             </span>
           )}
-          <Link
-            to={`/races/${nextRace.id}`}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <span className="text-xs text-f1-red font-semibold hidden sm:inline">
             Details →
-          </Link>
+          </span>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

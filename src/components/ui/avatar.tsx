@@ -5,15 +5,17 @@ interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string
   alt?: string
   fallback?: string
+  ringColor?: string
 }
 
-function Avatar({ className, src, alt, fallback, ...props }: AvatarProps) {
+function Avatar({ className, src, alt, fallback, ringColor, ...props }: AvatarProps) {
   const [error, setError] = React.useState(false)
 
   return (
     <div
       className={cn(
         "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+        ringColor && "ring-2 ring-offset-1 ring-offset-background",
         className
       )}
       {...props}
@@ -22,7 +24,7 @@ function Avatar({ className, src, alt, fallback, ...props }: AvatarProps) {
         <img
           src={src}
           alt={alt}
-          className="aspect-square h-full w-full"
+          className="aspect-square h-full w-full object-cover"
           onError={() => setError(true)}
         />
       ) : (

@@ -47,6 +47,32 @@ export default function StandingsPage() {
     },
   })
 
+  const { data: driverTeams } = useQuery({
+    queryKey: ["driver-teams-from-results", selectedSeason],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("race_results")
+        .select("driver_id, constructor:constructors!inner(name), races!inner(season_year, date)")
+        .eq("races.season_year", selectedSeason)
+        .order("races.date", { ascending: false })
+      if (!data) return []
+      const seen = new Set<string>()
+      const unique: { driver_id: string; constructor: { name: string } }[] = []
+      for (const r of data as unknown as { driver_id: string; constructor: { name: string } }[]) {
+        if (!seen.has(r.driver_id)) {
+          seen.add(r.driver_id)
+          unique.push(r)
+        }
+      }
+      return unique
+    },
+  })
+
+  const driverTeamMap = new Map<string, string>()
+  driverTeams?.forEach((dt) => {
+    if (!driverTeamMap.has(dt.driver_id)) driverTeamMap.set(dt.driver_id, dt.constructor.name)
+  })
+
   const { data: constructorStandings } = useQuery({
     queryKey: ["constructor-standings", selectedSeason],
     queryFn: async () => {
@@ -171,7 +197,6 @@ export default function StandingsPage() {
                   <TableRow>
                     <TableHead><div className="text-center">Pos</div></TableHead>
                     <TableHead><div>Driver</div></TableHead>
-                    <TableHead><div>Nationality</div></TableHead>
                     <TableHead><div className="text-end">Points</div></TableHead>
                     <TableHead><div className="text-end">Wins</div></TableHead>
                   </TableRow>
@@ -188,7 +213,6 @@ export default function StandingsPage() {
                           {s.driver.given_name} {s.driver.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{s.driver.nationality}</TableCell>
                       <TableCell><div className="text-end font-bold">{s.points}</div></TableCell>
                       <TableCell><div className="text-end">{s.wins}</div></TableCell>
                     </TableRow>

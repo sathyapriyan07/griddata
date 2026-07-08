@@ -75,9 +75,7 @@ export function RaceWeekendBar() {
           >
             {nextRace.name}
           </Link>
-          <span className="text-muted-foreground">
-            Round {nextRace.round} · {nextRace.circuits.country}
-          </span>
+
         </div>
         <div className="flex items-center gap-3">
           <span className="text-muted-foreground">

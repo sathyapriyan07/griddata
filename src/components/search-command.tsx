@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Search } from "lucide-react"
+import { Search, Users, Building2, MapPin, Flag, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { globalSearch, type SearchResult } from "@/lib/search"
 
@@ -67,12 +67,12 @@ export function SearchCommand({ className }: SearchCommandProps) {
     }
   }
 
-  const typeIcons: Record<string, string> = {
-    driver: "🏎️",
-    constructor: "🏭",
-    circuit: "🏁",
-    race: "🏆",
-    season: "📅",
+  const typeIcons: Record<string, React.ReactNode> = {
+    driver: <Users className="w-4 h-4" />,
+    constructor: <Building2 className="w-4 h-4" />,
+    circuit: <MapPin className="w-4 h-4" />,
+    race: <Flag className="w-4 h-4" />,
+    season: <CalendarDays className="w-4 h-4" />,
   }
 
   if (!open) {
@@ -135,8 +135,8 @@ export function SearchCommand({ className }: SearchCommandProps) {
                     : "hover:bg-muted"
                 )}
               >
-                <span className="text-base">
-                  {typeIcons[result.type] || "•"}
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/50">
+                  {typeIcons[result.type] || <Search className="w-4 h-4" />}
                 </span>
                 <div className="flex-1 text-left">
                   <div className="font-medium">{result.label}</div>

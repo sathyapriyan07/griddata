@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Race, Circuit } from "@/types/database"
+import { CalendarDays, ChevronRight } from "lucide-react"
 
 export function RaceWeekendBar() {
   const { data: latestSeason } = useQuery({
@@ -66,7 +67,8 @@ export function RaceWeekendBar() {
 
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground flex items-center gap-1">
+            <CalendarDays className="w-3.5 h-3.5" />
             {raceDate.toLocaleDateString(undefined, {
               weekday: "short",
               day: "numeric",
@@ -83,7 +85,8 @@ export function RaceWeekendBar() {
             to={`/races/${nextRace.id}`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Details →
+            Details
+            <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
           </Link>
         </div>
       </div>

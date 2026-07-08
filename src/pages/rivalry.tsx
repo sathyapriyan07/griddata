@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { compareDrivers } from "@/lib/stats"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Driver, RaceResult, QualifyingResult } from "@/types/database"
+import { Swords, Trophy, Flag, Users, Gauge, BarChart3 } from "lucide-react"
 
 export default function RivalryPage() {
   const [driver1Id, setDriver1Id] = useState("")
@@ -127,84 +127,101 @@ export default function RivalryPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Rivalry Analysis</h1>
+        <h1 className="text-3xl font-bold font-heading uppercase tracking-wide flex items-center gap-3">
+          <Swords className="w-7 h-7 text-primary" />
+          Rivalry Analysis
+        </h1>
         <p className="text-muted-foreground">Compare two drivers head-to-head across their careers.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Driver 1</label>
-          <select
-            value={driver1Id}
-            onChange={(e) => setDriver1Id(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm bg-background"
-          >
-            <option value="">Select driver...</option>
-            {drivers?.map((d) => (
-              <option key={d.driver_id} value={d.driver_id}>
-                {d.given_name} {d.family_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Driver 2</label>
-          <select
-            value={driver2Id}
-            onChange={(e) => setDriver2Id(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm bg-background"
-          >
-            <option value="">Select driver...</option>
-            {drivers?.map((d) => (
-              <option key={d.driver_id} value={d.driver_id}>
-                {d.given_name} {d.family_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              Driver 1
+            </label>
+            <select
+              value={driver1Id}
+              onChange={(e) => setDriver1Id(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm bg-background"
+            >
+              <option value="">Select driver...</option>
+              {drivers?.map((d) => (
+                <option key={d.driver_id} value={d.driver_id}>
+                  {d.given_name} {d.family_name}
+                </option>
+              ))}
+            </select>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              Driver 2
+            </label>
+            <select
+              value={driver2Id}
+              onChange={(e) => setDriver2Id(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm bg-background"
+            >
+              <option value="">Select driver...</option>
+              {drivers?.map((d) => (
+                <option key={d.driver_id} value={d.driver_id}>
+                  {d.given_name} {d.family_name}
+                </option>
+              ))}
+            </select>
+          </CardContent>
+        </Card>
       </div>
 
       {stats && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Races Together</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{stats.racesTogether}</p>
+              <CardContent className="p-4 flex items-center gap-3">
+                <Flag className="w-8 h-8 text-muted-foreground/40" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Races Together</p>
+                  <p className="text-2xl font-bold">{stats.racesTogether}</p>
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Race H2H</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {stats.headToHeadRace.driver1Wins} – {stats.headToHeadRace.driver2Wins}
-                </p>
-                <p className="text-xs text-muted-foreground">{d1Label} vs {d2Label}</p>
+              <CardContent className="p-4 flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-yellow-500/60" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Race H2H</p>
+                  <p className="text-2xl font-bold">
+                    {stats.headToHeadRace.driver1Wins} – {stats.headToHeadRace.driver2Wins}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{d1Label} vs {d2Label}</p>
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Quali H2H</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {stats.headToHeadQuali.driver1Wins} – {stats.headToHeadQuali.driver2Wins}
-                </p>
-                <p className="text-xs text-muted-foreground">{d1Label} vs {d2Label}</p>
+              <CardContent className="p-4 flex items-center gap-3">
+                <Gauge className="w-8 h-8 text-blue-400/60" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Quali H2H</p>
+                  <p className="text-2xl font-bold">
+                    {stats.headToHeadQuali.driver1Wins} – {stats.headToHeadQuali.driver2Wins}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{d1Label} vs {d2Label}</p>
+                </div>
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Avg Finish</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xl font-bold">
-                  {stats.driver1AvgFinish?.toFixed(1) ?? "—"} vs {stats.driver2AvgFinish?.toFixed(1) ?? "—"}
-                </p>
+              <CardContent className="p-4 flex items-center gap-3">
+                <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Avg Finish</p>
+                  <p className="text-2xl font-bold">
+                    {stats.driver1AvgFinish?.toFixed(1) ?? "—"} vs {stats.driver2AvgFinish?.toFixed(1) ?? "—"}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

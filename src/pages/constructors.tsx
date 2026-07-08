@@ -2,9 +2,11 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { getFlagUrl } from "@/lib/nationalityFlags"
+import { Search, X } from "lucide-react"
 import type { Constructor } from "@/types/database"
 
 export default function ConstructorsPage() {
@@ -73,85 +75,102 @@ export default function ConstructorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Constructors</h1>
-          <p className="text-muted-foreground">All Formula 1 constructors across history.</p>
+          <h1 className="text-2xl sm:text-3xl font-heading uppercase tracking-wide">Constructors</h1>
+          <p className="text-sm text-muted-foreground mt-1">All Formula 1 constructors across history.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex rounded-md border bg-muted p-0.5 text-sm">
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-1 rounded-xl bg-secondary/60 p-1">
+          {(["all", "current", "past"] as const).map((filter) => (
             <button
-              onClick={() => setTeamFilter("all")}
-              className={`rounded px-3 py-1 transition-colors ${teamFilter === "all" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              key={filter}
+              onClick={() => setTeamFilter(filter)}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-all capitalize",
+                teamFilter === filter ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              )}
             >
-              All
+              {filter}
             </button>
-            <button
-              onClick={() => setTeamFilter("current")}
-              className={`rounded px-3 py-1 transition-colors ${teamFilter === "current" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Current
-            </button>
-            <button
-              onClick={() => setTeamFilter("past")}
-              className={`rounded px-3 py-1 transition-colors ${teamFilter === "past" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Past
-            </button>
-          </div>
+          ))}
+        </div>
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search teams..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="rounded-md border px-3 py-1.5 text-sm bg-background"
+            className="w-full rounded-xl border border-border/50 bg-card pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
           />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
         </div>
       </div>
 
       {isLoading && (
-        <div className="text-center py-12 text-muted-foreground">Loading constructors...</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-40 rounded-xl bg-secondary/50 animate-pulse" />
+          ))}
+        </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filteredConstructors?.map((team) => (
           <Link key={team.id} to={`/constructors/${team.constructor_id}`}>
-            <Card className="h-full transition-colors hover:bg-muted/50">
-              <CardHeader>
-                <CardTitle className="text-lg font-heading uppercase tracking-wide flex items-center gap-2">
-                  {getFlagUrl(team.nationality) && (
-                    <img src={getFlagUrl(team.nationality)!} alt={team.nationality!} className="w-5 h-4 object-cover rounded-sm" />
+            <Card className="h-full group hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  {team.logo_url ? (
+                    <img src={team.logo_url} alt="" className="w-10 h-10 object-contain rounded-lg shrink-0 bg-secondary/50 p-1.5" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                      <span className="font-heading text-xs font-bold text-muted-foreground">{team.name[0]}</span>
+                    </div>
                   )}
-                  {team.name}
-                </CardTitle>
-                <div className="flex gap-2 mt-1">
-                  {team.founded_year && <Badge variant="outline">Founded {team.founded_year}</Badge>}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  {team.base && <p>Base: {team.base}</p>}
-                  {team.principal && <p>Team Principal: {team.principal}</p>}
-                  {team.engine_supplier && <p>Engine: {team.engine_supplier}</p>}
-                  {teamDrivers?.get(team.id) && teamDrivers.get(team.id)!.length > 0 && (
-                    <p className="mt-2">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-foreground font-heading">Current Drivers</span>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      {getFlagUrl(team.nationality) && (
+                        <img src={getFlagUrl(team.nationality)!} alt="" className="w-4 h-3 object-cover rounded-sm shrink-0" />
+                      )}
+                      <span className="font-heading uppercase tracking-wide text-sm truncate">{team.name}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {team.founded_year && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                          Est. {team.founded_year}
+                        </Badge>
+                      )}
+                      {currentTeamIds.has(team.id) && (
+                        <Badge className="text-[9px] px-1.5 py-0 bg-green-600 text-white border-0">
+                          Current
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-2 text-[11px] text-muted-foreground space-y-0.5">
+                      {team.base && <p>{team.base}</p>}
+                      {team.engine_supplier && <p>Engine: {team.engine_supplier}</p>}
+                    </div>
+                    {teamDrivers?.get(team.id) && teamDrivers.get(team.id)!.length > 0 && (
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
                         {teamDrivers.get(team.id)!.map((d) => (
-                          <Link
-                            key={d.driver_id}
-                            to={`/drivers/${d.driver_id}`}
-                            className="inline-flex items-center gap-1.5 text-sm font-heading text-foreground hover:underline transition-colors"
-                          >
+                          <div key={d.driver_id} className="flex items-center gap-1 text-[10px] text-muted-foreground">
                             {getFlagUrl(d.nationality) && (
-                              <img src={getFlagUrl(d.nationality)!} alt={d.nationality ?? ""} className="w-4 h-3 object-cover rounded-none" />
+                              <img src={getFlagUrl(d.nationality)!} alt="" className="w-3 h-2 object-cover" />
                             )}
-                            {d.given_name} {d.family_name}
-                          </Link>
+                            <span>{d.family_name.toUpperCase()}</span>
+                          </div>
                         ))}
                       </div>
-                    </p>
-                  )}
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -160,8 +179,8 @@ export default function ConstructorsPage() {
       </div>
 
       {filteredConstructors?.length === 0 && !isLoading && (
-        <div className="text-center py-12 text-muted-foreground">
-          No {teamFilter} teams found.
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">No {teamFilter} teams found.</p>
         </div>
       )}
     </div>

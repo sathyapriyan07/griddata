@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint } from "@/types/database"
+import { Trophy, Medal, CalendarDays, MapPin, Thermometer, Gauge, Route, Flag } from "lucide-react"
 
 export default function RaceDetailPage() {
   const { raceId } = useParams()
@@ -218,13 +219,17 @@ export default function RaceDetailPage() {
         <div className="relative flex flex-col lg:flex-row gap-6 p-6 lg:p-8">
           <div className="flex-1 space-y-4">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <Badge className="bg-white/10 text-white hover:bg-white/20">Round {race.round}</Badge>
+              <Badge className="bg-white/10 text-white hover:bg-white/20">
+                <Flag className="w-3 h-3 mr-1" />
+                Round {race.round}
+              </Badge>
               <span className="text-sm text-white/70">{race.season_year} Season</span>
             </div>
             <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight font-heading uppercase tracking-wide">
               {race.name}
             </h1>
-            <div className="text-white/80">
+            <div className="flex items-center gap-2 text-white/80">
+              <CalendarDays className="w-4 h-4" />
               {raceDate.toLocaleDateString(undefined, {
                 weekday: "long",
                 month: "long",
@@ -238,6 +243,7 @@ export default function RaceDetailPage() {
                   to={`/circuits/${circuit.circuit_id}`}
                   className="font-medium text-white/90 hover:text-white hover:underline inline-flex items-center gap-2"
                 >
+                  <MapPin className="w-4 h-4" />
                   {circuit.name}
                 </Link>
                 <div className="flex items-center gap-2 text-sm text-white/60">
@@ -255,30 +261,30 @@ export default function RaceDetailPage() {
             <div className="flex flex-wrap gap-2 pt-1">
               {firstWeather?.air_temp != null && (
                 <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-medium text-white">
-                  <span>☀</span>
+                  <Thermometer className="w-3 h-3" />
                   <span>{firstWeather.air_temp}°C</span>
                 </div>
               )}
               {race.laps != null && (
                 <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-medium text-white">
-                  <span>🏁</span>
+                  <Route className="w-3 h-3" />
                   <span>{race.laps} Laps</span>
                 </div>
               )}
               {circuit?.length_km != null && (
                 <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 text-xs font-medium text-white">
-                  <span>📏</span>
+                  <Gauge className="w-3 h-3" />
                   <span>{circuit.length_km.toFixed(3)} km</span>
                 </div>
               )}
             </div>
           </div>
-
         </div>
         {winner && (
           <div className="relative border-t border-white/10 px-6 lg:px-8 py-3">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-400" />
                 <span className="text-sm font-medium text-white/70">Winner</span>
               </div>
               <div className="flex items-center gap-2">
@@ -499,22 +505,25 @@ export default function RaceDetailPage() {
           {podium.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {podium.map((r, i) => {
-                const medals = ["🥇", "🥈", "🥉"]
+                const medalColors = ["text-yellow-400", "text-gray-300", "text-amber-600"]
                 return (
-                  <Card key={r.id}>
-                    <CardHeader>
+                  <Card key={r.id} className="relative overflow-hidden">
+                    <div className={`absolute top-0 left-0 w-1 h-full ${
+                      i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-300" : "bg-amber-600"
+                    }`} />
+                    <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-2">
-                        <span className="text-xl">{medals[i]}</span>
-                        P{r.position}
+                        <Medal className={`w-5 h-5 ${medalColors[i]}`} />
+                        <span>P{r.position}</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-3">
                         {r.driver.photo_url && (
-                          <img src={r.driver.photo_url} alt="" className="w-12 h-12 rounded-full object-cover" />
+                          <img src={r.driver.photo_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-border" />
                         )}
-                        <div>
-                          <Link to={`/drivers/${r.driver.driver_id}`} className="font-semibold hover:underline">
+                        <div className="min-w-0 flex-1">
+                          <Link to={`/drivers/${r.driver.driver_id}`} className="font-semibold hover:underline block truncate">
                             {`${r.driver.given_name} ${r.driver.family_name}`}
                           </Link>
                           <div className="text-sm text-muted-foreground">
@@ -526,7 +535,7 @@ export default function RaceDetailPage() {
                             </Link>
                           </div>
                         </div>
-                        <div className="ml-auto text-right">
+                        <div className="text-right shrink-0">
                           <div className="text-2xl font-bold">{r.points}</div>
                           <div className="text-xs text-muted-foreground">pts</div>
                         </div>

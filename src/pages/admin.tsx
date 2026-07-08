@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { SyncJob, Profile, CircuitImage } from "@/types/database"
+import { Shield, Database, Cloud } from "lucide-react"
 
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
   try {
@@ -666,7 +667,10 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Administration</h1>
+        <h1 className="text-3xl font-bold font-heading uppercase tracking-wide flex items-center gap-3">
+          <Shield className="w-7 h-7 text-primary" />
+          Administration
+        </h1>
         <p className="text-muted-foreground">
           Protected area for data management, imports, and CRUD operations.
         </p>
@@ -700,7 +704,8 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Database className="w-4 h-4" />
               Jolpica Import
             </CardTitle>
           </CardHeader>
@@ -754,7 +759,8 @@ export default function AdminPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Cloud className="w-4 h-4" />
               OpenF1 Import
             </CardTitle>
           </CardHeader>

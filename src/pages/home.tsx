@@ -1,8 +1,19 @@
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Flag,
+  Users,
+  Building2,
+  MapPin,
+  Trophy,
+  Swords,
+  ArrowRight,
+  Calendar,
+  Clock,
+} from "lucide-react"
 
 export default function HomePage() {
   const { data: latestSeason } = useQuery({
@@ -100,101 +111,153 @@ export default function HomePage() {
     enabled: !!recentRaces?.[0]?.id,
   })
 
+  const quickLinks = [
+    { href: "/races", label: "Races", icon: Flag, desc: "Browse every Grand Prix" },
+    { href: "/drivers", label: "Drivers", icon: Users, desc: "Driver profiles & stats" },
+    { href: "/constructors", label: "Teams", icon: Building2, desc: "Constructor history" },
+    { href: "/circuits", label: "Circuits", icon: MapPin, desc: "Circuit guides" },
+    { href: "/standings", label: "Standings", icon: Trophy, desc: "Championship tables" },
+    { href: "/rivalry", label: "Rivalry", icon: Swords, desc: "Head-to-head analysis" },
+  ]
+
   return (
     <div className="space-y-8">
-      <section className="text-center py-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-4">
-          Formula 1 Database & Statistics
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Explore every aspect of Formula 1 — from historical seasons to modern race weekends.
-        </p>
+      <section className="relative overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-secondary via-background to-background min-h-[280px] sm:min-h-[320px] flex items-center">
+        <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+        <div className="relative z-10 p-6 sm:p-10 w-full">
+          <div className="max-w-2xl">
+            <Badge variant="secondary" className="mb-4 text-xs font-heading tracking-wider uppercase">
+              {currentSeason} Season
+            </Badge>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading uppercase tracking-tight leading-none mb-3">
+              Formula 1<br />
+              <span className="text-red-600">Database & Statistics</span>
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-lg mb-6">
+              Explore every aspect of Formula 1 — from historical seasons to modern race weekends.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {nextRace && (
+                <Link
+                  to={`/races/${nextRace.id}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary text-primary-foreground px-5 py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Next: {nextRace.name}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+              <Link
+                to="/standings"
+                className="inline-flex items-center gap-2 rounded-xl bg-secondary text-secondary-foreground px-5 py-2.5 text-sm font-medium hover:bg-secondary/80 transition-colors"
+              >
+                <Trophy className="h-4 w-4" />
+                {currentSeason} Standings
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {latestResult && recentRaces?.[0] && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Latest Race Winner
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{recentRaces[0].name}</p>
-              <p className="text-sm text-muted-foreground">
-                Round {recentRaces[0].round} · {recentRaces[0].season_year}
-              </p>
+          <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 left-0 w-1 h-full bg-red-600" />
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-heading">
+                  Latest Winner
+                </span>
+                <span className="text-[10px] text-muted-foreground">Round {recentRaces[0].round}</span>
+              </div>
+              <p className="text-lg font-semibold">{recentRaces[0].name}</p>
               <Link
                 to={`/drivers/${latestResult.driver.driver_id}`}
-                className="inline-block mt-2 text-primary hover:underline font-medium"
+                className="text-sm text-red-600 hover:text-red-500 transition-colors font-medium"
               >
                 {latestResult.driver.given_name} {latestResult.driver.family_name}
               </Link>
               <Link
                 to={`/races/${recentRaces[0].id}`}
-                className="block mt-1 text-xs text-muted-foreground hover:underline"
+                className="flex items-center gap-1 mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                View race details →
+                View race details <ArrowRight className="h-3 w-3" />
               </Link>
             </CardContent>
           </Card>
         )}
 
         {driverLeaders && driverLeaders.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {currentSeason} Drivers' Championship
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 left-0 w-1 h-full bg-yellow-600" />
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-heading">
+                  Drivers' Championship
+                </span>
+                <Badge variant="outline" className="text-[10px]">{currentSeason}</Badge>
+              </div>
               <div className="space-y-2">
                 {driverLeaders.slice(0, 3).map((s, i) => (
                   <div key={s.driver.driver_id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={i === 0 ? "default" : "secondary"} className="w-6 justify-center">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn(
+                        "flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold shrink-0",
+                        i === 0 ? "bg-yellow-500 text-black" :
+                        i === 1 ? "bg-gray-300 text-black" :
+                        i === 2 ? "bg-amber-700 text-white" :
+                        "bg-muted text-muted-foreground"
+                      )}>
                         {s.position ?? i + 1}
-                      </Badge>
-                      <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline font-medium">
-                        {s.driver.given_name} {s.driver.family_name}
+                      </span>
+                      <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline truncate">
+                        {s.driver.family_name.toUpperCase()}
                       </Link>
                     </div>
-                    <span className="font-semibold">{s.points} pts</span>
+                    <span className="font-semibold tabular-nums text-sm">{s.points}</span>
                   </div>
                 ))}
               </div>
-              <Link to="/standings" className="block mt-3 text-xs text-muted-foreground hover:underline">
-                Full standings →
+              <Link to="/standings" className="flex items-center gap-1 mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Full standings <ArrowRight className="h-3 w-3" />
               </Link>
             </CardContent>
           </Card>
         )}
 
         {constructorLeaders && constructorLeaders.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {currentSeason} Constructors' Championship
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card className="relative overflow-hidden group hover:shadow-md transition-all duration-300">
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-600" />
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-heading">
+                  Constructors' Championship
+                </span>
+                <Badge variant="outline" className="text-[10px]">{currentSeason}</Badge>
+              </div>
               <div className="space-y-2">
                 {constructorLeaders.slice(0, 3).map((s, i) => (
                   <div key={s.constructor.constructor_id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={i === 0 ? "default" : "secondary"} className="w-6 justify-center">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn(
+                        "flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold shrink-0",
+                        i === 0 ? "bg-yellow-500 text-black" :
+                        i === 1 ? "bg-gray-300 text-black" :
+                        i === 2 ? "bg-amber-700 text-white" :
+                        "bg-muted text-muted-foreground"
+                      )}>
                         {s.position ?? i + 1}
-                      </Badge>
-                      <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline font-medium">
+                      </span>
+                      <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline truncate">
                         {s.constructor.name}
                       </Link>
                     </div>
-                    <span className="font-semibold">{s.points} pts</span>
+                    <span className="font-semibold tabular-nums text-sm">{s.points}</span>
                   </div>
                 ))}
               </div>
-              <Link to="/standings" className="block mt-3 text-xs text-muted-foreground hover:underline">
-                Full standings →
+              <Link to="/standings" className="flex items-center gap-1 mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Full standings <ArrowRight className="h-3 w-3" />
               </Link>
             </CardContent>
           </Card>
@@ -202,105 +265,64 @@ export default function HomePage() {
       </div>
 
       {nextRace && (
-        <Card className="bg-muted/30">
-          <CardContent className="p-6 text-center">
-            <p className="text-sm text-muted-foreground uppercase tracking-wide">Next Race</p>
-            <p className="text-2xl font-bold mt-1">{nextRace.name}</p>
-            <p className="text-muted-foreground">
-              Round {nextRace.round} · {new Date(nextRace.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-            </p>
-            <Link to={`/races/${nextRace.id}`} className="inline-block mt-2 text-sm text-primary hover:underline">
-              Race details →
-            </Link>
+        <Card className="relative overflow-hidden border-dashed border-border/60">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent" />
+          <CardContent className="p-5 sm:p-6 relative">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-secondary shrink-0">
+                  <Clock className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-heading">
+                    Up Next
+                  </p>
+                  <p className="text-lg sm:text-xl font-semibold mt-0.5">{nextRace.name}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Round {nextRace.round} &middot; {new Date(nextRace.date).toLocaleDateString(undefined, {
+                      weekday: "long", year: "numeric", month: "long", day: "numeric",
+                    })}
+                  </p>
+                </div>
+              </div>
+              <Link
+                to={`/races/${nextRace.id}`}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors shrink-0"
+              >
+                Race Details <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Races</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Browse race results, qualifying, practice sessions, and pit stop data across every season.
-            </p>
-            <Link to="/races" className="inline-block mt-3 text-sm text-primary hover:underline">
-              Explore races →
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Drivers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Full career profiles with statistics, teammate comparisons, and rivalry analysis.
-            </p>
-            <Link to="/drivers" className="inline-block mt-3 text-sm text-primary hover:underline">
-              Browse drivers →
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Constructors</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Team histories, constructor standings, driver rosters, and performance analytics.
-            </p>
-            <Link to="/constructors" className="inline-block mt-3 text-sm text-primary hover:underline">
-              View teams →
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Circuits</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Circuit specifications, lap records, winner history, and race stats for every track.
-            </p>
-            <Link to="/circuits" className="inline-block mt-3 text-sm text-primary hover:underline">
-              Explore circuits →
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Championships</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Driver and constructor standings with season progression charts and battle analysis.
-            </p>
-            <Link to="/standings" className="inline-block mt-3 text-sm text-primary hover:underline">
-              View standings →
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Search</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Press <kbd className="rounded border px-1.5 py-0.5 text-xs font-mono">⌘K</kbd> to quickly find drivers, teams, circuits, and races.
-            </p>
-            <Link to="/drivers" className="inline-block mt-3 text-sm text-primary hover:underline">
-              Get started →
-            </Link>
-          </CardContent>
-        </Card>
+      <div>
+        <h2 className="text-lg font-heading uppercase tracking-wider mb-4">Quick Navigation</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {quickLinks.map((link) => {
+            const Icon = link.icon
+            return (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="group flex flex-col items-center gap-2 rounded-xl border border-border/50 bg-card p-4 sm:p-5 text-center hover:border-border hover:shadow-sm transition-all duration-200"
+              >
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary group-hover:bg-secondary/80 transition-colors">
+                  <Icon className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{link.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{link.desc}</p>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
+}
+
+function cn(...classes: (string | boolean | undefined | null)[]) {
+  return classes.filter(Boolean).join(" ")
 }

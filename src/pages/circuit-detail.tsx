@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Circuit, Race, RaceResult, CircuitImage } from "@/types/database"
+import type { Circuit, Race, CircuitImage } from "@/types/database"
+import { MapPin, Gauge, Route, Flag, Trophy } from "lucide-react"
 
 export default function CircuitDetailPage() {
   const { circuitId } = useParams()
@@ -214,60 +215,67 @@ export default function CircuitDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-4">
+      <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-card to-muted p-6 lg:p-8">
         {circuit.image_url && (
-          <img
-            src={circuit.image_url}
-            alt={`${circuit.name} image`}
-            className="w-48 h-48 object-contain rounded-md"
-          />
+          <div className="absolute inset-0">
+            <img src={circuit.image_url} alt="" className="w-full h-full object-cover opacity-20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/80" />
+          </div>
         )}
-        <div>
-          <h1 className="text-3xl font-bold font-heading uppercase tracking-wide">{circuit.name}</h1>
-          <p className="text-lg text-muted-foreground">
-            {circuit.location}, {circuit.country}
-          </p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {circuit.direction && (
-              <Badge variant="secondary">Direction: {circuit.direction}</Badge>
-            )}
+        <div className="relative flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-3xl lg:text-4xl font-bold font-heading uppercase tracking-wide">{circuit.name}</h1>
+            <p className="text-base text-muted-foreground flex items-center gap-1 mt-1">
+              <MapPin className="w-4 h-4" />
+              {circuit.location}, {circuit.country}
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {circuit.direction && (
+                <Badge variant="secondary" className="gap-1">
+                  <Route className="w-3 h-3" />
+                  {circuit.direction}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Length</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {circuit.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}
-            </p>
+          <CardContent className="p-4 flex items-center gap-3">
+            <Gauge className="w-8 h-8 text-muted-foreground/40" />
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Length</p>
+              <p className="text-2xl font-bold">{circuit.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Turns</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{circuit.turns ?? "—"}</p>
+          <CardContent className="p-4 flex items-center gap-3">
+            <Route className="w-8 h-8 text-muted-foreground/40" />
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Turns</p>
+              <p className="text-2xl font-bold">{circuit.turns ?? "—"}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">First GP</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{races?.length ? Math.min(...races.map((r) => r.season_year)) : "—"}</p>
+          <CardContent className="p-4 flex items-center gap-3">
+            <Flag className="w-8 h-8 text-muted-foreground/40" />
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">First GP</p>
+              <p className="text-2xl font-bold">{races?.length ? Math.min(...races.map((r) => r.season_year)) : "—"}</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">GPs Held</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{races?.length ?? "—"}</p>
+          <CardContent className="p-4 flex items-center gap-3">
+            <Trophy className="w-8 h-8 text-yellow-500/60" />
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">GPs Held</p>
+              <p className="text-2xl font-bold">{races?.length ?? "—"}</p>
+            </div>
           </CardContent>
         </Card>
       </div>

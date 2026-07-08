@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import type { DriverStanding, ConstructorStanding, Season } from "@/types/database"
+import { Trophy, Medal, Crown, Building2, BarChart3, Users } from "lucide-react"
 
 export default function StandingsPage() {
   const [selectedSeason, setSelectedSeason] = useState(new Date().getFullYear())
@@ -114,6 +115,9 @@ export default function StandingsPage() {
 
   const getPositionBadge = (pos: number | null) => {
     if (!pos) return <span className="text-xs font-semibold">—</span>
+    if (pos === 1) return <Crown className="w-4 h-4 text-yellow-500" />
+    if (pos === 2) return <Medal className="w-4 h-4 text-gray-400" />
+    if (pos === 3) return <Medal className="w-4 h-4 text-amber-600" />
     return <span className="text-xs font-semibold">P{pos}</span>
   }
 
@@ -133,7 +137,10 @@ export default function StandingsPage() {
     <div className="space-y-6">
       <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold">Championship Standings</h1>
+          <h1 className="text-3xl font-bold font-heading uppercase tracking-wide flex items-center gap-3">
+            <Trophy className="w-7 h-7 text-yellow-500" />
+            Championship Standings
+          </h1>
           <p className="text-muted-foreground">Drivers' and Constructors' standings.</p>
         </div>
         <div className="overflow-x-auto hide-scrollbar">
@@ -145,14 +152,13 @@ export default function StandingsPage() {
                 className={
                   `inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ` +
                   (selectedSeason === s.year
-                    ? "bg-background text-foreground shadow"
+                    ? "bg-background text-foreground shadow-sm"
                     : "hover:bg-background/50")
                 }
               >
                 {s.year}
               </button>
             ))}
-
           </div>
         </div>
       </div>
@@ -160,8 +166,14 @@ export default function StandingsPage() {
       <Tabs defaultValue="drivers">
         <div className="overflow-x-auto hide-scrollbar">
           <TabsList className="inline-flex w-max min-w-full">
-            <TabsTrigger value="drivers">Drivers' Championship</TabsTrigger>
-            <TabsTrigger value="constructors">Constructors' Championship</TabsTrigger>
+            <TabsTrigger value="drivers" className="gap-2">
+              <Users className="w-4 h-4" />
+              Drivers' Championship
+            </TabsTrigger>
+            <TabsTrigger value="constructors" className="gap-2">
+              <Building2 className="w-4 h-4" />
+              Constructors' Championship
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -169,7 +181,10 @@ export default function StandingsPage() {
           {chartData.length > 0 && (
             <Card className="mb-4">
               <CardHeader>
-                <CardTitle>Top 10 Points — {selectedSeason}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                  Top 10 Points — {selectedSeason}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-72">

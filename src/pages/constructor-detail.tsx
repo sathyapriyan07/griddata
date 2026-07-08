@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import type { Constructor, RaceResult, ConstructorStanding, DriverImage } from "@/types/database"
+import { Trophy, Medal, Flag, MapPin, Users, Wrench, BarChart3, Target, Crown } from "lucide-react"
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -301,96 +302,124 @@ export default function ConstructorDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-4">
-        {team.logo_url && (
-          <img
-            src={team.logo_url}
-            alt={`${team.name} logo`}
-            className="w-16 h-16 object-contain rounded-md"
-          />
-        )}
-        <div>
-          <div className="flex items-center gap-3">
-            {colors && (
-              <div className="w-10 h-10 rounded-sm" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, border: `2px solid ${colors.accent}` }} />
-            )}
-            <h1 className="text-3xl font-bold">{team.name}</h1>
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {team.nationality && <Badge>{team.nationality}</Badge>}
-            {team.founded_year && <Badge variant="secondary">Founded {team.founded_year}</Badge>}
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-4 max-w-md text-sm">
-            {team.base && (
-              <div>
-                <span className="text-muted-foreground">Base</span>
-                <p className="font-medium">{team.base}</p>
-              </div>
-            )}
-            {team.principal && (
-              <div>
-                <span className="text-muted-foreground">Team Principal</span>
-                <p className="font-medium">{team.principal}</p>
-              </div>
-            )}
-            {team.engine_supplier && (
-              <div>
-                <span className="text-muted-foreground">Engine</span>
-                <p className="font-medium">{team.engine_supplier}</p>
-              </div>
-            )}
+      <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-card to-muted p-6 lg:p-8">
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-5">
+          {colors && (
+            <div className="w-full h-full rounded-full blur-3xl" style={{ background: colors.primary }} />
+          )}
+        </div>
+        <div className="relative flex items-start gap-4">
+          {team.logo_url && (
+            <div className="shrink-0 w-16 h-16 rounded-xl bg-card/50 p-2 border border-border/50 flex items-center justify-center">
+              <img
+                src={team.logo_url}
+                alt={`${team.name} logo`}
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              {colors && (
+                <div className="w-4 h-4 rounded-sm shrink-0" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }} />
+              )}
+              <h1 className="text-3xl font-bold font-heading uppercase tracking-wide">{team.name}</h1>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {team.nationality && (
+                <Badge variant="secondary" className="gap-1">
+                  <Flag className="w-3 h-3" />
+                  {team.nationality}
+                </Badge>
+              )}
+              {team.founded_year && (
+                <Badge variant="outline">{team.founded_year}</Badge>
+              )}
+            </div>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-xl text-sm">
+              {team.base && (
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> Base
+                  </span>
+                  <p className="font-medium mt-0.5">{team.base}</p>
+                </div>
+              )}
+              {team.principal && (
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium flex items-center gap-1">
+                    <Users className="w-3 h-3" /> Principal
+                  </span>
+                  <p className="font-medium mt-0.5">{team.principal}</p>
+                </div>
+              )}
+              {team.engine_supplier && (
+                <div>
+                  <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium flex items-center gap-1">
+                    <Wrench className="w-3 h-3" /> Engine
+                  </span>
+                  <p className="font-medium mt-0.5">{team.engine_supplier}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Races</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.totalRaces}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Flag className="w-8 h-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Races</p>
+                <p className="text-2xl font-bold">{stats.totalRaces}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Wins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.wins}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Trophy className="w-8 h-8 text-yellow-500/60" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Wins</p>
+                <p className="text-2xl font-bold">{stats.wins}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Podiums</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.podiums}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Medal className="w-8 h-8 text-amber-500/60" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Podiums</p>
+                <p className="text-2xl font-bold">{stats.podiums}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Championships</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.championships}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Crown className="w-8 h-8 text-yellow-500/60" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Titles</p>
+                <p className="text-2xl font-bold">{stats.championships}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Win Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{(stats.winRate * 100).toFixed(1)}%</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Target className="w-8 h-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Win Rate</p>
+                <p className="text-2xl font-bold">{(stats.winRate * 100).toFixed(1)}%</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Points</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.totalPoints}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Points</p>
+                <p className="text-2xl font-bold">{stats.totalPoints}</p>
+              </div>
             </CardContent>
           </Card>
         </div>

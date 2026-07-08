@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getFlagUrl } from "@/lib/nationalityFlags"
+import { cn } from "@/lib/utils"
+import { Calendar, CheckCircle2, Clock } from "lucide-react"
 import type { Race, Season } from "@/types/database"
 
 export default function RacesPage() {
@@ -75,60 +77,74 @@ export default function RacesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Races</h1>
-          <p className="text-muted-foreground">Browse Formula 1 races by season.</p>
+          <h1 className="text-2xl sm:text-3xl font-heading uppercase tracking-wide">Races</h1>
+          <p className="text-sm text-muted-foreground mt-1">Browse Formula 1 races by season.</p>
         </div>
-        <select
-          value={selectedSeason}
-          onChange={(e) => setSelectedSeason(Number(e.target.value))}
-          className="rounded-md border px-3 py-1.5 text-sm bg-background"
-        >
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
           {seasons?.map((s) => (
-            <option key={s.year} value={s.year}>
+            <button
+              key={s.year}
+              onClick={() => setSelectedSeason(s.year)}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap",
+                selectedSeason === s.year
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              )}
+            >
               {s.year}
-            </option>
+            </button>
           ))}
           {(!seasons || seasons.length === 0) && (
-            <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+            <span className="text-xs text-muted-foreground px-2 py-1.5">
+              {new Date().getFullYear()}
+            </span>
           )}
-        </select>
+        </div>
       </div>
 
       {isLoading && (
-        <div className="text-center py-12 text-muted-foreground">Loading races...</div>
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-xl bg-secondary/50 animate-pulse" />
+          ))}
+        </div>
       )}
 
       {upcoming.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-4">
-            Upcoming Races ({upcoming.length})
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-heading uppercase tracking-wider text-muted-foreground">
+              Upcoming ({upcoming.length})
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {upcoming.map((race) => (
               <Link key={race.id} to={`/races/${race.id}`}>
-                <Card className="h-full transition-colors hover:bg-muted/50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2 font-heading uppercase tracking-wide">
+                <Card className="h-full group hover:shadow-md transition-all duration-200 border-dashed border-border/60">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {getFlagUrl(race.circuits.country) && (
-                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
+                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-5 h-4 object-cover rounded-sm shrink-0" />
                         )}
-                        {race.name}
-                      </CardTitle>
-                      <Badge>Round {race.round}</Badge>
+                        <span className="font-heading uppercase tracking-wide text-sm truncate">
+                          {race.name}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0 text-[10px]">
+                        R{race.round}
+                      </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
                       {new Date(race.date).toLocaleDateString(undefined, {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
+                        weekday: "short", month: "short", day: "numeric",
                       })}
-                    </p>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>
@@ -139,45 +155,51 @@ export default function RacesPage() {
 
       {completed.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold mb-4">
-            Completed Races ({completed.length})
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-heading uppercase tracking-wider text-muted-foreground">
+              Completed ({completed.length})
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {completed.map((race) => (
               <Link key={race.id} to={`/races/${race.id}`}>
-                <Card className="h-full transition-colors hover:bg-muted/50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2 font-heading uppercase tracking-wide">
+                <Card className="h-full group hover:shadow-md transition-all duration-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {getFlagUrl(race.circuits.country) && (
-                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
+                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-5 h-4 object-cover rounded-sm shrink-0" />
                         )}
-                        {race.name}
-                      </CardTitle>
-                      <Badge variant="secondary">Round {race.round}</Badge>
+                        <span className="font-heading uppercase tracking-wide text-sm truncate">
+                          {race.name}
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        R{race.round}
+                      </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                      <Calendar className="h-3 w-3" />
                       {new Date(race.date).toLocaleDateString(undefined, {
-                        weekday: "long",
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
+                        weekday: "short", month: "short", day: "numeric",
                       })}
-                    </p>
+                    </div>
                     {podiumMap.get(race.id) && (
-                      <div className="flex flex-col gap-1 pt-3 border-t">
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/30">
                         {podiumMap.get(race.id)!.map((r, i) => (
-                          <div key={r.driver.driver_id} className="flex items-center gap-2 text-xs">
-                            <span className="w-4 shrink-0 font-heading text-xs font-bold">
+                          <div key={r.driver.driver_id} className="flex items-center gap-1 text-[11px]">
+                            <span className={cn(
+                              "font-heading text-xs font-bold",
+                              i === 0 ? "text-yellow-500" : i === 1 ? "text-gray-400" : "text-amber-700"
+                            )}>
                               P{i + 1}
                             </span>
                             {getFlagUrl(r.driver.nationality) && (
-                              <img src={getFlagUrl(r.driver.nationality)!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
+                              <img src={getFlagUrl(r.driver.nationality)!} alt="" className="w-3 h-2 object-cover" />
                             )}
-                            <span className="font-medium truncate">
-                              {r.driver.given_name} {r.driver.family_name}
+                            <span className="text-muted-foreground truncate max-w-[80px]">
+                              {r.driver.family_name.toUpperCase()}
                             </span>
                           </div>
                         ))}
@@ -192,8 +214,8 @@ export default function RacesPage() {
       )}
 
       {races?.length === 0 && !isLoading && (
-        <div className="text-center py-12 text-muted-foreground">
-          No races found for {selectedSeason}.
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">No races found for {selectedSeason}.</p>
         </div>
       )}
     </div>

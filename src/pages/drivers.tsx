@@ -2,10 +2,11 @@ import { useState, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Avatar } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
+import { getFlagUrl } from "@/lib/nationalityFlags"
+import { Search, X } from "lucide-react"
 import type { Driver } from "@/types/database"
 
 export default function DriversPage() {
@@ -87,146 +88,123 @@ export default function DriversPage() {
     [drivers, currentDriverIds],
   )
 
+  const [tab, setTab] = useState<"current" | "past">("current")
   const hasResults = drivers && drivers.length > 0
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Drivers</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-heading uppercase tracking-wide">Drivers</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Browse current and past Formula 1 drivers.
           </p>
         </div>
-        <div className="flex gap-2">
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search drivers..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="rounded-md border px-3 py-1.5 text-sm bg-background"
+            className="w-full rounded-xl border border-border/50 bg-card pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all"
           />
-          <select
-            value={nationality}
-            onChange={(e) => setNationality(e.target.value)}
-            className="rounded-md border px-3 py-1.5 text-sm bg-background"
-          >
-            <option value="">All Nationalities</option>
-            {nationalities?.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
         </div>
+        <select
+          value={nationality}
+          onChange={(e) => setNationality(e.target.value)}
+          className="rounded-xl border border-border/50 bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">All Nationalities</option>
+          {nationalities?.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex gap-1 rounded-xl bg-secondary/60 p-1 w-fit">
+        <button
+          onClick={() => setTab("current")}
+          className={cn(
+            "rounded-lg px-4 py-1.5 text-xs font-medium transition-all",
+            tab === "current" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Current ({currentDrivers.length})
+        </button>
+        <button
+          onClick={() => setTab("past")}
+          className={cn(
+            "rounded-lg px-4 py-1.5 text-xs font-medium transition-all",
+            tab === "past" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Past ({pastDrivers?.length ?? 0})
+        </button>
       </div>
 
       {isLoading && (
-        <div className="text-center py-12 text-muted-foreground">Loading drivers...</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-32 rounded-xl bg-secondary/50 animate-pulse" />
+          ))}
+        </div>
       )}
 
       {hasResults && (
-        <Tabs defaultValue="current">
-          <div className="overflow-x-auto hide-scrollbar">
-            <TabsList className="inline-flex w-max min-w-full">
-              <TabsTrigger value="current">
-                Current Drivers
-                {currentDrivers && <span className="ml-1.5 text-xs">({currentDrivers.length})</span>}
-              </TabsTrigger>
-              <TabsTrigger value="past">
-                Past Drivers
-                {pastDrivers && <span className="ml-1.5 text-xs">({pastDrivers.length})</span>}
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="current" className="mt-6">
-            {currentDrivers && currentDrivers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {currentDrivers.map((driver) => (
-                  <Link key={driver.id} to={`/drivers/${driver.driver_id}`}>
-                    <Card className="h-full transition-colors hover:bg-muted/50">
-                      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        <Avatar
-                          src={driver.photo_url ?? undefined}
-                          alt={`${driver.given_name} ${driver.family_name}`}
-                          fallback={`${driver.given_name[0]}${driver.family_name[0]}`}
-                        />
-                        <div>
-                          <CardTitle className="text-base">
-                            {driver.given_name} {driver.family_name}
-                          </CardTitle>
-                          {driver.nationality && (
-                            <Badge variant="secondary" className="mt-1">
-                              {driver.nationality}
-                            </Badge>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {driver.dob && (
-                          <p className="text-sm text-muted-foreground">
-                            Born: {new Date(driver.dob).toLocaleDateString()}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                No current drivers match your criteria.
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="past" className="mt-6">
-            {pastDrivers && pastDrivers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {pastDrivers.map((driver) => (
-                  <Link key={driver.id} to={`/drivers/${driver.driver_id}`}>
-                    <Card className="h-full transition-colors hover:bg-muted/50">
-                      <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                        <Avatar
-                          src={driver.photo_url ?? undefined}
-                          alt={`${driver.given_name} ${driver.family_name}`}
-                          fallback={`${driver.given_name[0]}${driver.family_name[0]}`}
-                        />
-                        <div>
-                          <CardTitle className="text-base">
-                            {driver.given_name} {driver.family_name}
-                          </CardTitle>
-                          {driver.nationality && (
-                            <Badge variant="secondary" className="mt-1">
-                              {driver.nationality}
-                            </Badge>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {driver.dob && (
-                          <p className="text-sm text-muted-foreground">
-                            Born: {new Date(driver.dob).toLocaleDateString()}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                No past drivers match your criteria.
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {(tab === "current" ? currentDrivers : pastDrivers).map((driver) => (
+            <Link key={driver.id} to={`/drivers/${driver.driver_id}`}>
+              <Card className="h-full group hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+                <CardContent className="p-4 flex flex-col items-center text-center gap-2">
+                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center overflow-hidden ring-2 ring-border/30 group-hover:ring-border/60 transition-all">
+                    {driver.photo_url ? (
+                      <img src={driver.photo_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="font-heading text-lg font-bold text-muted-foreground">
+                        {driver.given_name[0]}{driver.family_name[0]}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">
+                      {driver.family_name.toUpperCase()}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {driver.given_name}
+                    </p>
+                  </div>
+                  {driver.nationality && (
+                    <div className="flex items-center gap-1">
+                      {getFlagUrl(driver.nationality) && (
+                        <img src={getFlagUrl(driver.nationality)!} alt="" className="w-3.5 h-3 object-cover rounded-none" />
+                      )}
+                      <span className="text-[10px] text-muted-foreground">{driver.nationality}</span>
+                    </div>
+                  )}
+                  {driver.code && (
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                      {driver.code}
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       )}
 
       {drivers?.length === 0 && !isLoading && (
-        <div className="text-center py-12 text-muted-foreground">
-          No drivers found matching your criteria.
+        <div className="text-center py-16">
+          <p className="text-muted-foreground">No drivers found matching your criteria.</p>
         </div>
       )}
     </div>

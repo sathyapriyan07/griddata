@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+import { Trophy, Medal, Star, Flag, Zap, Target, BarChart3, Gauge } from "lucide-react"
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -243,13 +244,14 @@ export default function DriverDetailPage() {
     enabled: teammateUuids.length > 0,
   })
 
-  const teammateHeroMap = useMemo(() => {
+  const teammateHeroImagesMap = useMemo(() => {
     const map = new Map<string, string>()
     teammateHeroImages?.forEach((img) => {
       if (!map.has(img.driver_id)) map.set(img.driver_id, img.image_url)
     })
     return map
   }, [teammateHeroImages])
+  void teammateHeroImagesMap
 
   const { data: driverPoleImage } = useQuery({
     queryKey: ["driver-pole-image", driverUuid],
@@ -483,7 +485,7 @@ export default function DriverDetailPage() {
         <div className="relative z-10 p-4 sm:p-6">
           <div className="flex items-start justify-between">
             <div className="space-y-2">
-              <h1 className="text-xl sm:text-3xl font-bold text-white drop-shadow-lg">
+              <h1 className="text-2xl sm:text-4xl font-bold text-white drop-shadow-lg font-heading uppercase tracking-wide">
                 {driver.given_name} {driver.family_name}
               </h1>
               <div className="flex flex-wrap items-center gap-2">
@@ -534,71 +536,77 @@ export default function DriverDetailPage() {
       </div>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Races</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.totalRaces}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Flag className="w-8 h-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Races</p>
+                <p className="text-2xl font-bold">{stats.totalRaces}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Wins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.wins}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Trophy className="w-8 h-8 text-yellow-500/60" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Wins</p>
+                <p className="text-2xl font-bold">{stats.wins}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Podiums</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.podiums}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Medal className="w-8 h-8 text-amber-500/60" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Podiums</p>
+                <p className="text-2xl font-bold">{stats.podiums}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Points</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.totalPoints}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Points</p>
+                <p className="text-2xl font-bold">{stats.totalPoints}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Sprint Wins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.sprintWins}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Zap className="w-8 h-8 text-blue-400/60" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sprint Wins</p>
+                <p className="text-2xl font-bold">{stats.sprintWins}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Sprint Pods</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.sprintPodiums}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Star className="w-8 h-8 text-blue-400/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sprint Pods</p>
+                <p className="text-2xl font-bold">{stats.sprintPodiums}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Sprint Pts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{stats.sprintPoints}</p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Target className="w-8 h-8 text-blue-400/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sprint Pts</p>
+                <p className="text-2xl font-bold">{stats.sprintPoints}</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Finish</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                {stats.avgFinishingPosition?.toFixed(1) ?? "—"}
-              </p>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Gauge className="w-8 h-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Avg Finish</p>
+                <p className="text-2xl font-bold">{stats.avgFinishingPosition?.toFixed(1) ?? "—"}</p>
+              </div>
             </CardContent>
           </Card>
         </div>

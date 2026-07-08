@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { getConstructorColors } from "@/lib/constructorColors"
+import { getConstructorColors, getConstructorColorsFromRecord } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,7 +11,7 @@ import { PageSkeleton } from "@/components/loading-skeleton"
 import StartingGrid, { GridSkeleton } from "@/components/starting-grid"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint } from "@/types/database"
-import { Trophy, Medal, CalendarDays, MapPin, Thermometer, Gauge, Route, Flag } from "lucide-react"
+import { Trophy, CalendarDays, MapPin, Thermometer, Gauge, Route, Flag } from "lucide-react"
 
 export default function RaceDetailPage() {
   const { raceId } = useParams()
@@ -497,50 +497,41 @@ export default function RaceDetailPage() {
 
         <TabsContent value="podium">
           {podium.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {podium.map((r, i) => {
-                const medalColors = ["text-yellow-400", "text-gray-300", "text-amber-600"]
+                const c = getConstructorColorsFromRecord(r.constructor)
                 return (
-                  <Card key={r.id} className="relative overflow-hidden">
-                    <div className={`absolute top-0 left-0 w-1 h-full ${
-                      i === 0 ? "bg-yellow-400" : i === 1 ? "bg-gray-300" : "bg-amber-600"
-                    }`} />
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2">
-                        <Medal className={`w-5 h-5 ${medalColors[i]}`} />
-                        <span>P{r.position}</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        {r.driver.photo_url && (
-                          <img src={r.driver.photo_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-border" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <Link to={`/drivers/${r.driver.driver_id}`} className="font-semibold hover:underline block truncate">
-                            {`${r.driver.given_name} ${r.driver.family_name}`}
-                          </Link>
-                          <div className="text-sm text-muted-foreground">
-                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                              {r.constructor.logo_url && (
-                                <img src={r.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
-                              )}
-                              {r.constructor.name}
-                            </Link>
-                          </div>
+                  <div key={r.id} className="group relative select-none" style={{ borderRadius: "0.75rem" }}>
+                    <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                      <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, ${c.primary}CC, ${c.secondary}88)` }} />
+                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)` }} />
+                      <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: `radial-gradient(circle at top right, ${c.accent}, transparent 70%)` }} />
+                    </div>
+                    <div className="relative p-3 w-full">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
+                          <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>{r.position}</span>
                         </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-2xl font-bold">{r.points}</div>
-                          <div className="text-xs text-muted-foreground">pts</div>
+                        {r.driver.photo_url && (
+                          <div className="flex-shrink-0 self-end -mb-3 z-10">
+                            <img src={r.driver.photo_url} alt="" className="h-14 w-auto object-contain drop-shadow-xl" loading="lazy" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0 z-10">
+                          <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
+                            {r.driver.family_name.toUpperCase()}
+                          </Link>
+                          <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block">
+                            {r.constructor.name}
+                          </Link>
+                        </div>
+                        <div className="text-right flex-shrink-0 z-10">
+                          <div className="text-base font-bold text-white" style={{ fontFamily: "var(--font-heading)" }}>{r.points}</div>
+                          <div className="text-[10px] text-white/50 uppercase tracking-wider">pts</div>
                         </div>
                       </div>
-                      {(r.time || r.laps) && (
-                        <div className="mt-2 pt-2 border-t text-sm font-mono text-muted-foreground">
-                          {r.time ? `Time: ${r.time}` : `${r.laps} laps`}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -552,58 +543,47 @@ export default function RaceDetailPage() {
         <TabsContent value="results">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {results?.map((r) => {
-              const colors = getConstructorColors(r.constructor.name || "")
+              const c = getConstructorColorsFromRecord(r.constructor)
               return (
-                <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
-                  <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        {r.driver.photo_url ? (
-                          <img src={r.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                            {r.position ?? r.position_text ?? "DNF"}
-                          </div>
-                        )}
-                        <div>
-                          <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
-                            {`${r.driver.given_name} ${r.driver.family_name.toUpperCase()}`}
-                          </Link>
-                          <div className="text-sm text-muted-foreground">
-                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                              {r.constructor.logo_url && (
-                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                              )}
-                              {r.constructor.name}
-                            </Link>
-                          </div>
-                        </div>
+                <div key={r.id} className="group relative select-none" style={{ borderRadius: "0.75rem" }}>
+                  <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, ${c.primary}CC, ${c.secondary}88)` }} />
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)` }} />
+                    <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: `radial-gradient(circle at top right, ${c.accent}, transparent 70%)` }} />
+                  </div>
+                  <div className="relative p-3 w-full">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
+                        <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>{r.position ?? r.position_text ?? "DNF"}</span>
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold">{r.points}</div>
-                        <div className="text-xs text-muted-foreground">pts</div>
+                      <div className="flex-1 min-w-0 z-10">
+                        <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
+                          {r.driver.family_name.toUpperCase()}
+                        </Link>
+                        <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block">
+                          {r.constructor.name}
+                        </Link>
+                      </div>
+                      <div className="text-right flex-shrink-0 z-10">
+                        <div className="text-base font-bold text-white" style={{ fontFamily: "var(--font-heading)" }}>{r.points}</div>
+                        <div className="text-[10px] text-white/50 uppercase tracking-wider">pts</div>
                       </div>
                     </div>
                     {carImageMap.get(r.constructor_id) && (
-                      <img
-                        src={carImageMap.get(r.constructor_id)!}
-                        alt={`${r.constructor.name} car`}
-                        className="w-full h-16 object-contain mt-3"
-                      />
+                      <img src={carImageMap.get(r.constructor_id)!} alt={`${r.constructor.name} car`} className="w-full h-12 object-contain mt-2 opacity-80" />
                     )}
-                    <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div className="mt-2 pt-2 border-t border-white/10 grid grid-cols-3 gap-2 text-[11px]">
                       <div>
-                        <span className="block font-medium text-foreground">Grid</span>
-                        {r.grid ?? "—"}
+                        <span className="block text-white/40 uppercase tracking-wider">Grid</span>
+                        <span className="text-white/80">{r.grid ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="block font-medium text-foreground">Status</span>
-                        {r.status ?? "—"}
+                        <span className="block text-white/40 uppercase tracking-wider">Status</span>
+                        <span className="text-white/80">{r.status ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="block font-medium text-foreground">Fastest Lap</span>
-                        <span className="font-mono">{r.fastest_lap_time ?? "—"}</span>
+                        <span className="block text-white/40 uppercase tracking-wider">FL</span>
+                        <span className="text-white/80 font-mono text-[10px]">{r.fastest_lap_time ?? "—"}</span>
                       </div>
                     </div>
                   </div>
@@ -621,43 +601,40 @@ export default function RaceDetailPage() {
         <TabsContent value="qualifying">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {qualifying?.map((q) => {
-              const colors = getConstructorColors(q.constructor.name || "")
+              const c = getConstructorColorsFromRecord(q.constructor)
               return (
-                <div key={q.id} className="rounded-lg border bg-card overflow-hidden">
-                  <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                  <div className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                          {q.position}
-                        </div>
-                        <div>
-                          <Link to={`/drivers/${q.driver.driver_id}`} className="font-medium hover:underline">
-                            {`${q.driver.given_name} ${q.driver.family_name}`}
-                          </Link>
-                          <div className="text-sm text-muted-foreground">
-                            <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                              {q.constructor.logo_url && (
-                                <img src={q.constructor.logo_url} alt={`${q.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                              )}
-                              {q.constructor.name}
-                            </Link>
-                          </div>
-                        </div>
+                <div key={q.id} className="group relative select-none" style={{ borderRadius: "0.75rem" }}>
+                  <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, ${c.primary}CC, ${c.secondary}88)` }} />
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)` }} />
+                    <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: `radial-gradient(circle at top right, ${c.accent}, transparent 70%)` }} />
+                  </div>
+                  <div className="relative p-3 w-full">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
+                        <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>{q.position}</span>
+                      </div>
+                      <div className="flex-1 min-w-0 z-10">
+                        <Link to={`/drivers/${q.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
+                          {q.driver.family_name.toUpperCase()}
+                        </Link>
+                        <Link to={`/constructors/${q.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block">
+                          {q.constructor.name}
+                        </Link>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs">
+                    <div className="mt-2 pt-2 border-t border-white/10 grid grid-cols-3 gap-2 text-[11px]">
                       <div>
-                        <span className="block font-medium text-foreground">Q1</span>
-                        <span className="font-mono">{q.q1 ?? "—"}</span>
+                        <span className="block text-white/40 uppercase tracking-wider">Q1</span>
+                        <span className="text-white/80 font-mono">{q.q1 ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="block font-medium text-foreground">Q2</span>
-                        <span className="font-mono">{q.q2 ?? "—"}</span>
+                        <span className="block text-white/40 uppercase tracking-wider">Q2</span>
+                        <span className="text-white/80 font-mono">{q.q2 ?? "—"}</span>
                       </div>
                       <div>
-                        <span className="block font-medium text-foreground">Q3</span>
-                        <span className="font-mono">{q.q3 ?? "—"}</span>
+                        <span className="block text-white/40 uppercase tracking-wider">Q3</span>
+                        <span className="text-white/80 font-mono">{q.q3 ?? "—"}</span>
                       </div>
                     </div>
                   </div>

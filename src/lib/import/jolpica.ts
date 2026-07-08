@@ -80,7 +80,7 @@ async function fetchCircuitWikiData(wikiUrl: string): Promise<CircuitWikiData> {
     const pages = json.query?.pages ?? {}
     const content: string = Object.values(pages)[0]?.revisions?.[0]?.slots?.main?.["*"] ?? ""
 
-    const lengthMatch = content.match(/\|\s*length\s*=\s*([\d.]+)/i)
+    const lengthMatch = content.match(/\|\s*length(?:_km)?\s*=\s*([\d.]+)/i)
     const turnsMatch = content.match(/\|\s*turns\s*=\s*(\d+)/i)
     const firstGpMatch = content.match(/\|\s*first_held\s*=\s*(\d{4})/i)
       ?? content.match(/\|\s*inaugural\s*=\s*(\d{4})/i)

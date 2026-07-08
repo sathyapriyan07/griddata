@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { Circuit, Race, RaceResult } from "@/types/database"
+import type { Circuit, Race, RaceResult, CircuitImage } from "@/types/database"
 
 export default function CircuitDetailPage() {
   const { circuitId } = useParams()
@@ -79,12 +79,12 @@ export default function CircuitDetailPage() {
       if (raceIds.length === 0) return []
       const { data } = await supabase
         .from("race_results")
-        .select("driver:drivers(given_name, family_name, driver_id), constructor:constructors(name, constructor_id), races!inner(season_year, name)")
+        .select("driver:drivers(given_name, family_name, driver_id, photo_url), constructor:constructors(name, constructor_id, logo_url), races!inner(season_year, name)")
         .in("race_id", raceIds)
         .eq("position", 1)
         .order("race_id", { ascending: false })
         .limit(50)
-      return (data ?? []) as { driver: { given_name: string; family_name: string; driver_id: string }; constructor: { name: string; constructor_id: string }; races: { season_year: number; name: string } }[]
+      return (data ?? []) as { driver: { given_name: string; family_name: string; driver_id: string; photo_url: string | null }; constructor: { name: string; constructor_id: string; logo_url: string | null }; races: { season_year: number; name: string } }[]
     },
     enabled: raceIds.length > 0,
   })
@@ -101,6 +101,23 @@ export default function CircuitDetailPage() {
   const topWinners = Object.entries(driverWinCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
+
+  const { data: circuitImages } = useQuery({
+    queryKey: ["circuit-images", circuitUuid],
+    queryFn: async () => {
+      if (!circuitUuid) return []
+      const { data } = await supabase
+        .from("circuit_images")
+        .select("*")
+        .eq("circuit_id", circuitUuid)
+      return (data ?? []) as CircuitImage[]
+    },
+    enabled: !!circuitUuid,
+  })
+
+  const circuitLayout = circuitImages?.find((img) => img.type === "layout")
+  const circuitHero = circuitImages?.find((img) => img.type === "hero")
+  const circuitAerial = circuitImages?.find((img) => img.type === "aerial")
 
   const { data: raceResults } = useQuery({
     queryKey: ["circuit-race-results", raceIds],
@@ -242,7 +259,7 @@ export default function CircuitDetailPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">First GP</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{circuit.first_gp_year ?? "—"}</p>
+            <p className="text-2xl font-bold">{races?.length ? Math.min(...races.map((r) => r.season_year)) : "—"}</p>
           </CardContent>
         </Card>
         <Card>
@@ -263,6 +280,7 @@ export default function CircuitDetailPage() {
             <TabsTrigger value="fastest-laps">Fastest Laps</TabsTrigger>
             <TabsTrigger value="records">Records</TabsTrigger>
             <TabsTrigger value="team-records">Team Records</TabsTrigger>
+            <TabsTrigger value="circuit-info">Circuit Info</TabsTrigger>
           </TabsList>
         </div>
 
@@ -371,18 +389,40 @@ export default function CircuitDetailPage() {
             <CardContent className="space-y-4">
               {topWinners.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Most Wins</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {topWinners.map(([name, count]) => {
-                      const [driverId, displayName] = name.split("|")
-                      return (
-                        <Link key={driverId} to={`/drivers/${driverId}`}>
-                          <Badge variant="secondary" className="text-sm px-3 py-1 hover:bg-secondary/80">
-                            {displayName} ({count})
-                          </Badge>
-                        </Link>
-                      )
-                    })}
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Most Wins</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(() => {
+                      const winnerInfo = new Map<string, { photo_url: string | null; constructor: { name: string; constructor_id: string; logo_url: string | null } }>()
+                      winners?.forEach((w) => {
+                        const key = `${w.driver.driver_id}|${w.driver.given_name} ${w.driver.family_name}`
+                        if (!winnerInfo.has(key)) winnerInfo.set(key, { photo_url: w.driver.photo_url, constructor: w.constructor })
+                      })
+                      return topWinners.map(([name, count]) => {
+                        const [driverId, displayName] = name.split("|")
+                        const info = winnerInfo.get(name)
+                        return (
+                          <div key={driverId} className="rounded-lg border bg-card overflow-hidden">
+                            <div className="p-4">
+                              <div className="flex items-center gap-3">
+                                {info?.photo_url && (
+                                  <img src={info.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <Link to={`/drivers/${driverId}`} className="font-medium hover:underline block truncate">
+                                    {displayName}
+                                  </Link>
+
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className="text-xl font-bold">{count}</div>
+                                  <div className="text-xs text-muted-foreground">wins</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    })()}
                   </div>
                 </div>
               )}
@@ -524,6 +564,89 @@ export default function CircuitDetailPage() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="circuit-info">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {circuitHero && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Circuit Hero</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img src={circuitHero.image_url} alt="Circuit hero" className="w-full h-64 object-cover rounded-lg" />
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Coordinates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Latitude</span>
+                    <span className="font-medium">{circuit.lat ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Longitude</span>
+                    <span className="font-medium">{circuit.lng ?? "—"}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {circuitLayout && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Circuit Layout</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img src={circuitLayout.image_url} alt="Circuit layout" className="w-full h-48 object-contain rounded-lg" />
+                </CardContent>
+              </Card>
+            )}
+
+            {circuit.lat && circuit.lng && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Map</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <iframe
+                    title="Circuit Map"
+                    width="100%"
+                    height="350"
+                    className="rounded-lg border"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${circuit.lng - 0.02},${circuit.lat - 0.02},${circuit.lng + 0.02},${circuit.lat + 0.02}&layer=mapnik&marker=${circuit.lat},${circuit.lng}`}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {circuitAerial && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Aerial View</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img src={circuitAerial.image_url} alt="Aerial view" className="w-full h-80 object-cover rounded-lg" />
+                </CardContent>
+              </Card>
+            )}
+
+            {circuit.image_url && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Circuit Image</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img src={circuit.image_url} alt={circuit.name} className="w-full h-64 object-cover rounded-lg" />
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

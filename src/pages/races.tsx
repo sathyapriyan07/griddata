@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Race, Season, NationalityFlag } from "@/types/database"
+import { getFlagUrl } from "@/lib/nationalityFlags"
+import type { Race, Season } from "@/types/database"
 
 export default function RacesPage() {
   const { data: seasons } = useQuery({
@@ -27,20 +28,6 @@ export default function RacesPage() {
     }
   }, [seasons])
 
-  const { data: nationalityFlagsArray } = useQuery({
-    queryKey: ["nationality-flags"],
-    queryFn: async () => {
-      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
-      return (data ?? []) as NationalityFlag[]
-    },
-  })
-
-  const nationalityFlags = useMemo(() => {
-    const map = new Map<string, string>()
-    nationalityFlagsArray?.forEach((f) => map.set(f.nationality, f.flag_url))
-    return map
-  }, [nationalityFlagsArray])
-
   const { data: races, isLoading } = useQuery({
     queryKey: ["races", selectedSeason],
     queryFn: async () => {
@@ -52,6 +39,35 @@ export default function RacesPage() {
       return (data ?? []) as (Race & { circuits: { country: string } })[]
     },
   })
+
+  const completedRaceIds = useMemo(() => {
+    return races?.filter((r) => new Date(r.date) < new Date()).map((r) => r.id) ?? []
+  }, [races])
+
+  const { data: podiumResults } = useQuery({
+    queryKey: ["races-podium", selectedSeason, completedRaceIds.join(",")],
+    queryFn: async () => {
+      if (completedRaceIds.length === 0) return []
+      const { data } = await supabase
+        .from("race_results")
+        .select("race_id, driver:drivers(driver_id, given_name, family_name, photo_url), constructor:constructors(name)")
+        .in("race_id", completedRaceIds)
+        .in("position", [1, 2, 3])
+        .order("position", { ascending: true })
+      return (data ?? []) as { race_id: string; driver: { driver_id: string; given_name: string; family_name: string; photo_url: string | null }; constructor: { name: string } }[]
+    },
+    enabled: completedRaceIds.length > 0,
+  })
+
+  const podiumMap = useMemo(() => {
+    const map = new Map<string, { driver: { driver_id: string; given_name: string; family_name: string; photo_url: string | null }; constructor: { name: string } }[]>()
+    podiumResults?.forEach((r) => {
+      const arr = map.get(r.race_id) ?? []
+      arr.push(r)
+      map.set(r.race_id, arr)
+    })
+    return map
+  }, [podiumResults])
 
   const now = new Date()
   const upcoming = races?.filter((r) => new Date(r.date) >= now) ?? []
@@ -96,8 +112,8 @@ export default function RacesPage() {
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base flex items-center gap-2">
-                        {nationalityFlags?.get(race.circuits.country) && (
-                          <img src={nationalityFlags.get(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
+                        {getFlagUrl(race.circuits.country) && (
+                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
                         )}
                         {race.name}
                       </CardTitle>
@@ -133,15 +149,15 @@ export default function RacesPage() {
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base flex items-center gap-2">
-                        {nationalityFlags?.get(race.circuits.country) && (
-                          <img src={nationalityFlags.get(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
+                        {getFlagUrl(race.circuits.country) && (
+                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
                         )}
                         {race.name}
                       </CardTitle>
                       <Badge variant="secondary">Round {race.round}</Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {new Date(race.date).toLocaleDateString(undefined, {
                         weekday: "long",
@@ -150,6 +166,23 @@ export default function RacesPage() {
                         day: "numeric",
                       })}
                     </p>
+                    {podiumMap.get(race.id) && (
+                      <div className="flex flex-col gap-1 pt-3 border-t">
+                        {podiumMap.get(race.id)!.map((r, i) => (
+                          <div key={r.driver.driver_id} className="flex items-center gap-2 text-xs">
+                            <span className="w-4 shrink-0">
+                              {["🥇", "🥈", "🥉"][i]}
+                            </span>
+                            {r.driver.photo_url && (
+                              <img src={r.driver.photo_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                            )}
+                            <span className="font-medium truncate">
+                              {r.driver.given_name} {r.driver.family_name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </Link>

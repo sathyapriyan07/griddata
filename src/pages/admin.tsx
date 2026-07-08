@@ -15,13 +15,14 @@ import {
 } from "@/lib/import/jolpica"
 import { syncOpenF1Season } from "@/lib/import/openf1"
 import { getConstructorColors } from "@/lib/constructorColors"
+import { getFlagUrl } from "@/lib/nationalityFlags"
 import { useAuth, getProfile } from "@/stores/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { SyncJob, Profile, NationalityFlag, CircuitImage } from "@/types/database"
+import type { SyncJob, Profile, CircuitImage } from "@/types/database"
 
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
   try {
@@ -1797,19 +1798,6 @@ function ConstructorColorPanel() {
 function NationalityFlagPanel() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selected, setSelected] = useState<string | null>(null)
-  const [flagUrl, setFlagUrl] = useState("")
-  const [uploading, setUploading] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const queryClient = useQueryClient()
-
-  const { data: flags } = useQuery({
-    queryKey: ["nationality-flags"],
-    queryFn: async () => {
-      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
-      return (data ?? []) as NationalityFlag[]
-    },
-  })
 
   const { data: allNationalities } = useQuery({
     queryKey: ["all-nationalities"],
@@ -1827,70 +1815,11 @@ function NationalityFlagPanel() {
     },
   })
 
-  const validFlags = new Set(flags?.map((f) => f.nationality) ?? [])
   const filtered = (allNationalities ?? []).filter((n) =>
     n.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const selectNationality = (nationality: string) => {
-    setSelected(nationality)
-    setSearchQuery(nationality)
-    const existing = flags?.find((f) => f.nationality === nationality)
-    setFlagUrl(existing?.flag_url ?? "")
-  }
-
-  const deleteStorageFiles = async (nationality: string) => {
-    const { data: existing } = await supabase.storage.from("images").list("nationality-flags", {
-      search: nationality,
-    })
-    if (existing && existing.length > 0) {
-      const paths = existing.map((file) => `nationality-flags/${file.name}`)
-      await supabase.storage.from("images").remove(paths)
-    }
-  }
-
-  const uploadFlag = async (f: File) => {
-    if (!selected) return
-    setUploading(true)
-    setStatus(null)
-    try {
-      await deleteStorageFiles(selected)
-      const ext = f.name.split(".").pop() || "png"
-      const path = `nationality-flags/${selected}.${ext}`
-      const { error: uploadErr } = await supabase.storage.from("images").upload(path, f, { upsert: true })
-      if (uploadErr) throw uploadErr
-      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path)
-      const publicUrl = urlData.publicUrl
-      setFlagUrl(`${publicUrl}?t=${Date.now()}`)
-      const { error: dbErr } = await supabase.from("nationality_flags").upsert(
-        { nationality: selected, flag_url: publicUrl },
-        { onConflict: "nationality" }
-      )
-      if (dbErr) throw dbErr
-      setStatus("Flag uploaded.")
-      queryClient.invalidateQueries({ queryKey: ["nationality-flags"] })
-    } catch (err) {
-      setStatus(extractErrorMessage(err))
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const deleteFlag = async () => {
-    if (!selected) return
-    setStatus(null)
-    try {
-      await deleteStorageFiles(selected)
-      const { error } = await supabase.from("nationality_flags").delete().eq("nationality", selected)
-      if (error) throw error
-      setFlagUrl("")
-      setSelected(null)
-      setStatus("Flag removed.")
-      queryClient.invalidateQueries({ queryKey: ["nationality-flags"] })
-    } catch (err) {
-      setStatus(extractErrorMessage(err))
-    }
-  }
+  const flagPreviewUrl = selected ? getFlagUrl(selected, 64) : null
 
   return (
     <div className="space-y-3">
@@ -1906,11 +1835,11 @@ function NationalityFlagPanel() {
           {filtered.map((n) => (
             <button
               key={n}
-              onClick={() => selectNationality(n)}
+              onClick={() => { setSelected(n); setSearchQuery(n) }}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 ${selected === n ? "bg-muted font-medium" : ""}`}
             >
-              {validFlags.has(n) ? (
-                <img src={flags?.find((f) => f.nationality === n)?.flag_url} alt={n} className="w-5 h-3.5 object-cover" />
+              {getFlagUrl(n, 24) ? (
+                <img src={getFlagUrl(n, 24)!} alt={n} className="w-5 h-3.5 object-cover" />
               ) : (
                 <span className="w-5 h-3.5 rounded bg-muted" />
               )}
@@ -1925,31 +1854,22 @@ function NationalityFlagPanel() {
 
       {selected && (
         <div className="space-y-3 pt-2">
-          {flagUrl && (
+          {flagPreviewUrl && (
             <div className="flex items-center gap-3">
-              <img src={flagUrl} alt={selected} className="w-12 h-8 object-cover border" />
+              <img src={flagPreviewUrl} alt={selected} className="w-12 h-8 object-cover border" />
               <span className="text-sm font-medium">{selected}</span>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-              {uploading ? "Uploading..." : "Upload Flag"}
-            </Button>
-            {flagUrl && (
-              <Button variant="destructive" size="sm" onClick={deleteFlag}>Remove</Button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) uploadFlag(f)
-            }}
-          />
-          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+          {flagPreviewUrl && (
+            <p className="text-xs text-muted-foreground break-all">
+              {flagPreviewUrl}
+            </p>
+          )}
+          {!flagPreviewUrl && (
+            <p className="text-xs text-muted-foreground">
+              No flag mapping found for "{selected}".
+            </p>
+          )}
         </div>
       )}
     </div>

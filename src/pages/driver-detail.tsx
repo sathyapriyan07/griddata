@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import type { CircuitImage, Driver, DriverImage, NationalityFlag, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+import { getFlagUrl } from "@/lib/nationalityFlags"
+import type { CircuitImage, Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -248,21 +249,6 @@ export default function DriverDetailPage() {
     })
     return map
   }, [teammateHeroImages])
-
-  const { data: nationalityFlagsArray } = useQuery({
-    queryKey: ["nationality-flags"],
-    queryFn: async () => {
-      const { data } = await supabase.from("nationality_flags").select("*").order("nationality")
-      return (data ?? []) as NationalityFlag[]
-    },
-    staleTime: Infinity,
-  })
-
-  const nationalityFlags = useMemo(() => {
-    const map = new Map<string, string>()
-    nationalityFlagsArray?.forEach((f) => map.set(f.nationality, f.flag_url))
-    return map
-  }, [nationalityFlagsArray])
 
   const { data: driverPoleImage } = useQuery({
     queryKey: ["driver-pole-image", driverUuid],
@@ -522,8 +508,8 @@ export default function DriverDetailPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {driver.nationality && (
                   <div className="flex items-center gap-1">
-                    {nationalityFlags.get(driver.nationality) && (
-                      <img src={nationalityFlags.get(driver.nationality)!} alt="" className="w-4 h-3 object-cover rounded" />
+                    {getFlagUrl(driver.nationality) && (
+                      <img src={getFlagUrl(driver.nationality)!} alt="" className="w-4 h-3 object-cover rounded" />
                     )}
                     <span className="text-xs text-white/90 drop-shadow-sm">{driver.nationality}</span>
                   </div>

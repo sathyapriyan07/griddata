@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
+import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Race, Circuit } from "@/types/database"
 
 export function RaceWeekendBar() {
@@ -34,19 +35,6 @@ export function RaceWeekendBar() {
     },
   })
 
-  const { data: nationalityFlagsArray } = useQuery({
-    queryKey: ["rwb-nationality-flags"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("nationality_flags")
-        .select("nationality, flag_url")
-      return (data ?? []) as { nationality: string; flag_url: string }[]
-    },
-  })
-
-  const nationalityFlags = new Map<string, string>()
-  nationalityFlagsArray?.forEach((f) => nationalityFlags.set(f.nationality, f.flag_url))
-
   if (!nextRace) return null
 
   const now = new Date()
@@ -62,9 +50,9 @@ export function RaceWeekendBar() {
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {diffDays > 0 ? "Next Race" : "Race Weekend"}
           </span>
-          {nationalityFlags.get(nextRace.circuits.country) && (
+          {getFlagUrl(nextRace.circuits.country) && (
             <img
-              src={nationalityFlags.get(nextRace.circuits.country)!}
+              src={getFlagUrl(nextRace.circuits.country)!}
               alt={nextRace.circuits.country}
               className="w-5 h-4 object-cover rounded-sm"
             />

@@ -1,13 +1,14 @@
 import { useParams, Link } from "react-router-dom"
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { getConstructorColors, getConstructorColorsFromRecord } from "@/lib/constructorColors"
+import { getConstructorColors } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
+import StartingGrid, { GridSkeleton } from "@/components/starting-grid"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint } from "@/types/database"
 import { Trophy, Medal, CalendarDays, MapPin, Thermometer, Gauge, Route, Flag } from "lucide-react"
@@ -156,13 +157,6 @@ export default function RaceDetailPage() {
     },
     enabled: !!raceId,
   })
-
-  const [showAllStats, setShowAllStats] = useState(false)
-  const [showQ1Q2, setShowQ1Q2] = useState(false)
-  const [cardView, setCardView] = useState(false)
-  const [gridCardView, setGridCardView] = useState(false)
-  const [sprintGridCardView, setSprintGridCardView] = useState(false)
-  const [sprintRaceCardView, setSprintRaceCardView] = useState(false)
 
   const winner = useMemo(() => {
     if (!results) return null
@@ -556,552 +550,236 @@ export default function RaceDetailPage() {
         </TabsContent>
 
         <TabsContent value="results">
-          <div className="flex items-center justify-end mb-3 gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Cards</span>
-              <button
-                onClick={() => setCardView(!cardView)}
-                aria-pressed={cardView}
-                className={
-                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
-                  (cardView ? "bg-primary" : "bg-muted")
-                }
-              >
-                <span
-                  className={
-                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
-                    (cardView ? "translate-x-4.5" : "translate-x-0.5")
-                  }
-                />
-              </button>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">All Stats</span>
-              <button
-                onClick={() => setShowAllStats(!showAllStats)}
-                aria-pressed={showAllStats}
-                className={
-                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
-                  (showAllStats ? "bg-primary" : "bg-muted")
-                }
-              >
-                <span
-                  className={
-                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
-                    (showAllStats ? "translate-x-4.5" : "translate-x-0.5")
-                  }
-                />
-              </button>
-            </div>
-          </div>
-          {cardView ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {results?.map((r) => {
-                const colors = getConstructorColors(r.constructor.name || "")
-                return (
-                  <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
-                    <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                    <div className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          {r.driver.photo_url ? (
-                            <img src={r.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                          ) : (
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                              {r.position ?? r.position_text ?? "DNF"}
-                            </div>
-                          )}
-                          <div>
-                            <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
-                              {`${r.driver.given_name} ${r.driver.family_name.toUpperCase()}`}
-                            </Link>
-                            <div className="text-sm text-muted-foreground">
-                              <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                {r.constructor.logo_url && (
-                                  <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                                )}
-                                {r.constructor.name}
-                              </Link>
-                            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {results?.map((r) => {
+              const colors = getConstructorColors(r.constructor.name || "")
+              return (
+                <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
+                  <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {r.driver.photo_url ? (
+                          <img src={r.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                            {r.position ?? r.position_text ?? "DNF"}
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold">{r.points}</div>
-                          <div className="text-xs text-muted-foreground">pts</div>
+                        )}
+                        <div>
+                          <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
+                            {`${r.driver.given_name} ${r.driver.family_name.toUpperCase()}`}
+                          </Link>
+                          <div className="text-sm text-muted-foreground">
+                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                              {r.constructor.logo_url && (
+                                <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-3 h-3 object-contain" />
+                              )}
+                              {r.constructor.name}
+                            </Link>
+                          </div>
                         </div>
                       </div>
-                      {carImageMap.get(r.constructor_id) && (
-                        <img
-                          src={carImageMap.get(r.constructor_id)!}
-                          alt={`${r.constructor.name} car`}
-                          className="w-full h-16 object-contain mt-3"
-                        />
-                      )}
-                      {showAllStats && (
-                        <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                          <div>
-                            <span className="block font-medium text-foreground">Grid</span>
-                            {r.grid ?? "—"}
-                          </div>
-                          <div>
-                            <span className="block font-medium text-foreground">Status</span>
-                            {r.status ?? "—"}
-                          </div>
-                          <div>
-                            <span className="block font-medium text-foreground">Fastest Lap</span>
-                            <span className="font-mono">{r.fastest_lap_time ?? "—"}</span>
-                          </div>
-                        </div>
-                      )}
+                      <div className="text-right">
+                        <div className="text-lg font-bold">{r.points}</div>
+                        <div className="text-xs text-muted-foreground">pts</div>
+                      </div>
+                    </div>
+                    {carImageMap.get(r.constructor_id) && (
+                      <img
+                        src={carImageMap.get(r.constructor_id)!}
+                        alt={`${r.constructor.name} car`}
+                        className="w-full h-16 object-contain mt-3"
+                      />
+                    )}
+                    <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                      <div>
+                        <span className="block font-medium text-foreground">Grid</span>
+                        {r.grid ?? "—"}
+                      </div>
+                      <div>
+                        <span className="block font-medium text-foreground">Status</span>
+                        {r.status ?? "—"}
+                      </div>
+                      <div>
+                        <span className="block font-medium text-foreground">Fastest Lap</span>
+                        <span className="font-mono">{r.fastest_lap_time ?? "—"}</span>
+                      </div>
                     </div>
                   </div>
-                )
-              })}
-              {(!results || results.length === 0) && (
-                <p className="col-span-full text-center text-muted-foreground py-8">
-                  No results available yet.
-                </p>
-              )}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead><div className="text-center">Pos</div></TableHead>
-                  <TableHead><div>Driver</div></TableHead>
-                  <TableHead><div>Team</div></TableHead>
-                  {showAllStats && <TableHead><div className="text-center">Grid</div></TableHead>}
-                  <TableHead><div className="text-end">Points</div></TableHead>
-                  {showAllStats && <TableHead><div>Status</div></TableHead>}
-                  {showAllStats && <TableHead><div className="text-end">Fastest Lap</div></TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {results?.map((r) => (
-                  <TableRow key={r.id} style={{ boxShadow: `inset 3px 0 0 ${getConstructorColorsFromRecord(r.constructor).primary}` }}>
-                    <TableCell><div className="text-center">{r.position ?? r.position_text ?? "DNF"}</div></TableCell>
-                    <TableCell>
-                      <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                        {getFlagUrl(r.driver.nationality ?? "") && (
-                          <img src={getFlagUrl(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-4 object-cover rounded-none" />
-                        )}
-                        {`${r.driver.given_name} ${r.driver.family_name.toUpperCase()}`}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                        <span>{r.constructor.name}</span>
-                      </Link>
-                    </TableCell>
-                    {showAllStats && <TableCell><div className="text-center">{r.grid ?? "—"}</div></TableCell>}
-                    <TableCell><div className="text-end">{r.points}</div></TableCell>
-                    {showAllStats && <TableCell>{r.status ?? "—"}</TableCell>}
-                    {showAllStats && <TableCell><div className="text-end font-mono">{r.fastest_lap_time ?? "—"}</div></TableCell>}
-                  </TableRow>
-                ))}
-                {(!results || results.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={showAllStats ? 7 : 4} className="text-center text-muted-foreground">
-                      No results available yet.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
+                </div>
+              )
+            })}
+            {(!results || results.length === 0) && (
+              <p className="col-span-full text-center text-muted-foreground py-8">
+                No results available yet.
+              </p>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="qualifying">
-          <div className="flex items-center justify-end mb-3 gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Show Q1/Q2</span>
-              <button
-                onClick={() => setShowQ1Q2(!showQ1Q2)}
-                aria-pressed={showQ1Q2}
-                className={
-                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
-                  (showQ1Q2 ? "bg-primary" : "bg-muted")
-                }
-              >
-                <span
-                  className={
-                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
-                    (showQ1Q2 ? "translate-x-4.5" : "translate-x-0.5")
-                  }
-                />
-              </button>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {qualifying?.map((q) => {
+              const colors = getConstructorColors(q.constructor.name || "")
+              return (
+                <div key={q.id} className="rounded-lg border bg-card overflow-hidden">
+                  <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                          {q.position}
+                        </div>
+                        <div>
+                          <Link to={`/drivers/${q.driver.driver_id}`} className="font-medium hover:underline">
+                            {`${q.driver.given_name} ${q.driver.family_name}`}
+                          </Link>
+                          <div className="text-sm text-muted-foreground">
+                            <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                              {q.constructor.logo_url && (
+                                <img src={q.constructor.logo_url} alt={`${q.constructor.name} logo`} className="w-3 h-3 object-contain" />
+                              )}
+                              {q.constructor.name}
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className="block font-medium text-foreground">Q1</span>
+                        <span className="font-mono">{q.q1 ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="block font-medium text-foreground">Q2</span>
+                        <span className="font-mono">{q.q2 ?? "—"}</span>
+                      </div>
+                      <div>
+                        <span className="block font-medium text-foreground">Q3</span>
+                        <span className="font-mono">{q.q3 ?? "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {(!qualifying || qualifying.length === 0) && (
+              <p className="col-span-full text-center text-muted-foreground py-8">
+                No qualifying data available.
+              </p>
+            )}
           </div>
-          <Table>
-                <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center w-10">Pos</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Team</TableHead>
-                      {showQ1Q2 && <TableHead className="text-right font-mono">Q1</TableHead>}
-                      {showQ1Q2 && <TableHead className="text-right font-mono">Q2</TableHead>}
-                      <TableHead className="text-right font-mono">Q3</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {qualifying?.map((q) => (
-                      <TableRow key={q.id} style={{ boxShadow: `inset 3px 0 0 ${getConstructorColorsFromRecord(q.constructor).primary}` }}>
-                          <TableCell className="text-center font-medium">{q.position}</TableCell>
-                      <TableCell>
-                        <Link to={`/drivers/${q.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                          {getFlagUrl(q.driver.nationality ?? "") && (
-                            <img src={getFlagUrl(q.driver.nationality ?? "")!} alt={q.driver.nationality ?? ""} className="w-4 h-4 object-cover rounded-none" />
-                          )}
-                          {`${q.driver.given_name} ${q.driver.family_name}`}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/constructors/${q.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                          <span>{q.constructor.name}</span>
-                        </Link>
-                      </TableCell>
-                      {showQ1Q2 && <TableCell className="text-right font-mono text-xs">{q.q1 ?? "—"}</TableCell>}
-                      {showQ1Q2 && <TableCell className="text-right font-mono text-xs">{q.q2 ?? "—"}</TableCell>}
-                      <TableCell className="text-right font-mono text-xs">{q.q3 ?? "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                  {(!qualifying || qualifying.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={showQ1Q2 ? 6 : 4} className="text-center text-muted-foreground">
-                        No qualifying data available.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
         </TabsContent>
 
         <TabsContent value="sprint">
           <div className="space-y-6">
             <div>
-              <div className="flex items-center justify-end mb-3 gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Cards</span>
-                  <button
-                    onClick={() => setSprintGridCardView(!sprintGridCardView)}
-                    aria-pressed={sprintGridCardView}
-                    className={
-                      `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
-                      (sprintGridCardView ? "bg-primary" : "bg-muted")
-                    }
-                  >
-                    <span
-                      className={
-                        `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
-                        (sprintGridCardView ? "translate-x-4.5" : "translate-x-0.5")
-                      }
-                    />
-                  </button>
-                </div>
-              </div>
-              {sprintGridCardView ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {sprints?.length ? (
-                    [...sprints]
-                      .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                      .map((s) => {
-                        const colors = getConstructorColors(s.constructor.name || "")
-                        return (
-                          <div key={s.id} className="rounded-lg border bg-card overflow-hidden">
-                            <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                            <div className="p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                                    {s.grid ?? "—"}
-                                  </div>
-                                  <div>
-                                    <Link to={`/drivers/${s.driver.driver_id}`} className="font-medium hover:underline">
-                                      {`${s.driver.given_name} ${s.driver.family_name}`}
-                                    </Link>
-                                    <div className="text-sm text-muted-foreground">
-                                      <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                        {s.constructor.logo_url && (
-                                          <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                                        )}
-                                        {s.constructor.name}
-                                      </Link>
-                                    </div>
-                                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {sprints?.length ? (
+                  [...sprints]
+                    .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
+                    .map((s) => {
+                      const colors = getConstructorColors(s.constructor.name || "")
+                      return (
+                        <div key={s.id} className="rounded-lg border bg-card overflow-hidden">
+                          <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                          <div className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                                  {s.grid ?? "—"}
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })
-                  ) : (
-                    <p className="col-span-full text-center text-muted-foreground py-8">No sprint qualifying data available.</p>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center w-10">Grid</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Team</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sprints?.length ? (
-                      [...sprints]
-                        .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                        .map((s) => (
-                          <TableRow key={s.id} style={{ boxShadow: `inset 3px 0 0 ${getConstructorColorsFromRecord(s.constructor).primary}` }}>
-                            <TableCell className="text-center font-medium">{s.grid ?? "—"}</TableCell>
-                            <TableCell>
-                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                {getFlagUrl(s.driver.nationality ?? "") && (
-                                  <img src={getFlagUrl(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-4 object-cover rounded-none" />
-                                )}
-                                {`${s.driver.given_name} ${s.driver.family_name}`}
-                              </Link>
-                            </TableCell>
-                            <TableCell>
-                              <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                {s.constructor.name}
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground">
-                          No sprint qualifying data available.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center justify-end mb-3 gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Cards</span>
-                  <button
-                    onClick={() => setSprintRaceCardView(!sprintRaceCardView)}
-                    aria-pressed={sprintRaceCardView}
-                    className={
-                      `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
-                      (sprintRaceCardView ? "bg-primary" : "bg-muted")
-                    }
-                  >
-                    <span
-                      className={
-                        `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
-                        (sprintRaceCardView ? "translate-x-4.5" : "translate-x-0.5")
-                      }
-                    />
-                  </button>
-                </div>
-              </div>
-              {sprintRaceCardView ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {sprints?.map((s) => {
-                    const colors = getConstructorColors(s.constructor.name || "")
-                    return (
-                      <div key={s.id} className="rounded-lg border bg-card overflow-hidden">
-                        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                        <div className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                                {s.position ?? "DNF"}
-                              </div>
-                              <div>
-                                <Link to={`/drivers/${s.driver.driver_id}`} className="font-medium hover:underline">
-                                  {`${s.driver.given_name} ${s.driver.family_name}`}
-                                </Link>
-                                <div className="text-sm text-muted-foreground">
-                                  <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                    {s.constructor.logo_url && (
-                                      <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                                    )}
-                                    {s.constructor.name}
+                                <div>
+                                  <Link to={`/drivers/${s.driver.driver_id}`} className="font-medium hover:underline">
+                                    {`${s.driver.given_name} ${s.driver.family_name}`}
                                   </Link>
+                                  <div className="text-sm text-muted-foreground">
+                                    <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                      {s.constructor.logo_url && (
+                                        <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-3 h-3 object-contain" />
+                                      )}
+                                      {s.constructor.name}
+                                    </Link>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-lg font-bold">{s.points}</div>
-                              <div className="text-xs text-muted-foreground">pts</div>
-                            </div>
-                          </div>
-                          <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                            <div>
-                              <span className="block font-medium text-foreground">Laps</span>
-                              {s.laps ?? "—"}
-                            </div>
-                            <div>
-                              <span className="block font-medium text-foreground">Status</span>
-                              {s.status ?? "—"}
                             </div>
                           </div>
                         </div>
+                      )
+                    })
+                ) : (
+                  <p className="col-span-full text-center text-muted-foreground py-8">No sprint qualifying data available.</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {sprints?.map((s) => {
+                  const colors = getConstructorColors(s.constructor.name || "")
+                  return (
+                    <div key={s.id} className="rounded-lg border bg-card overflow-hidden">
+                      <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
+                      <div className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
+                              {s.position ?? "DNF"}
+                            </div>
+                            <div>
+                              <Link to={`/drivers/${s.driver.driver_id}`} className="font-medium hover:underline">
+                                {`${s.driver.given_name} ${s.driver.family_name}`}
+                              </Link>
+                              <div className="text-sm text-muted-foreground">
+                                <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                                  {s.constructor.logo_url && (
+                                    <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-3 h-3 object-contain" />
+                                  )}
+                                  {s.constructor.name}
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold">{s.points}</div>
+                            <div className="text-xs text-muted-foreground">pts</div>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          <div>
+                            <span className="block font-medium text-foreground">Laps</span>
+                            {s.laps ?? "—"}
+                          </div>
+                          <div>
+                            <span className="block font-medium text-foreground">Status</span>
+                            {s.status ?? "—"}
+                          </div>
+                        </div>
                       </div>
-                    )
-                  })}
-                  {(!sprints || sprints.length === 0) && (
-                    <p className="col-span-full text-center text-muted-foreground py-8">
-                      No sprint race data available. This race may not have had a sprint.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-center w-10">Pos</TableHead>
-                      <TableHead>Driver</TableHead>
-                      <TableHead>Team</TableHead>
-                      <TableHead className="text-right">Points</TableHead>
-                      <TableHead className="text-right">Laps</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sprints?.map((s) => (
-                      <TableRow key={s.id} style={{ boxShadow: `inset 3px 0 0 ${getConstructorColorsFromRecord(s.constructor).primary}` }}>
-                          <TableCell className="text-center font-medium">{s.position ?? "DNF"}</TableCell>
-                          <TableCell>
-                            <Link to={`/drivers/${s.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                              {getFlagUrl(s.driver.nationality ?? "") && (
-                                <img src={getFlagUrl(s.driver.nationality ?? "")!} alt={s.driver.nationality ?? ""} className="w-4 h-4 object-cover rounded-none" />
-                              )}
-                              {`${s.driver.given_name} ${s.driver.family_name}`}
-                            </Link>
-                          </TableCell>
-                          <TableCell>
-                            <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                              {s.constructor.name}
-                            </Link>
-                          </TableCell>
-                        <TableCell className="text-right">{s.points}</TableCell>
-                        <TableCell className="text-right">{s.laps ?? "—"}</TableCell>
-                        <TableCell>{s.status ?? "—"}</TableCell>
-                      </TableRow>
-                    ))}
-                    {(!sprints || sprints.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
-                          No sprint race data available. This race may not have had a sprint.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
+                    </div>
+                  )
+                })}
+                {(!sprints || sprints.length === 0) && (
+                  <p className="col-span-full text-center text-muted-foreground py-8">
+                    No sprint race data available. This race may not have had a sprint.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>
 
         <TabsContent value="grid">
-          <div className="flex items-center justify-end mb-3 gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Cards</span>
-              <button
-                onClick={() => setGridCardView(!gridCardView)}
-                aria-pressed={gridCardView}
-                className={
-                  `relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ` +
-                  (gridCardView ? "bg-primary" : "bg-muted")
-                }
-              >
-                <span
-                  className={
-                    `inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ` +
-                    (gridCardView ? "translate-x-4.5" : "translate-x-0.5")
-                  }
-                />
-              </button>
-            </div>
-          </div>
-          {gridCardView ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {results?.length ? (
-                [...results]
-                  .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                  .map((r) => {
-                    const colors = getConstructorColors(r.constructor.name || "")
-                    return (
-                      <div key={r.id} className="rounded-lg border bg-card overflow-hidden">
-                        <div className="h-1.5" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                        <div className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted font-bold text-lg">
-                                {r.grid ?? "—"}
-                              </div>
-                              <div>
-                                <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
-                                  {`${r.driver.given_name} ${r.driver.family_name}`}
-                                </Link>
-                                <div className="text-sm text-muted-foreground">
-                                  <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                    {r.constructor.logo_url && (
-                                      <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                                    )}
-                                    {r.constructor.name}
-                                  </Link>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })
-              ) : (
-                <p className="col-span-full text-center text-muted-foreground py-8">No grid data available.</p>
-              )}
-            </div>
+          {results?.length ? (
+            <StartingGrid
+              results={results}
+              qualifying={qualifying ?? []}
+              race={race}
+            />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center w-10">Grid</TableHead>
-                  <TableHead>Driver</TableHead>
-                  <TableHead>Team</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {results?.length ? (
-                  [...results]
-                    .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                    .map((r) => (
-                      <TableRow key={r.id} style={{ boxShadow: `inset 3px 0 0 ${getConstructorColorsFromRecord(r.constructor).primary}` }}>
-                        <TableCell className="text-center font-medium">{r.grid ?? "—"}</TableCell>
-                        <TableCell>
-                          <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                            {getFlagUrl(r.driver.nationality ?? "") && (
-                              <img src={getFlagUrl(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-4 object-cover rounded-none" />
-                            )}
-                            {`${r.driver.given_name} ${r.driver.family_name}`}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                            <span>{r.constructor.name}</span>
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      No grid data available.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <GridSkeleton />
           )}
         </TabsContent>
 

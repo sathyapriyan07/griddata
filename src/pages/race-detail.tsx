@@ -604,7 +604,7 @@ export default function RaceDetailPage() {
                           )}
                           <div>
                             <Link to={`/drivers/${r.driver.driver_id}`} className="font-medium hover:underline">
-                              {`${r.driver.given_name} ${r.driver.family_name}`}
+                              {`${r.driver.given_name} ${r.driver.family_name.toUpperCase()}`}
                             </Link>
                             <div className="text-sm text-muted-foreground">
                               <Link to={`/constructors/${r.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
@@ -676,7 +676,7 @@ export default function RaceDetailPage() {
                         {getFlagUrl(r.driver.nationality ?? "") && (
                           <img src={getFlagUrl(r.driver.nationality ?? "")!} alt={r.driver.nationality ?? ""} className="w-4 h-4 object-cover rounded-none" />
                         )}
-                        {`${r.driver.given_name} ${r.driver.family_name}`}
+                        {`${r.driver.given_name} ${r.driver.family_name.toUpperCase()}`}
                       </Link>
                     </TableCell>
                     <TableCell>

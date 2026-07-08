@@ -40,6 +40,18 @@ async function logSyncJob(source: string, entityType: string, status: string, lo
   }
 }
 
+function extractStoragePath(publicUrl: string, bucket: string): string | null {
+  try {
+    const url = new URL(publicUrl)
+    const parts = url.pathname.split("/")
+    const bucketIndex = parts.indexOf(bucket)
+    if (bucketIndex === -1 || bucketIndex >= parts.length - 1) return null
+    return parts.slice(bucketIndex + 1).join("/")
+  } catch {
+    return null
+  }
+}
+
 function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message
   if (typeof err === "object" && err !== null) {
@@ -1374,9 +1386,16 @@ function DriverImagePanel() {
     }
   }
 
-  const deleteImage = async (id: string) => {
+  const deleteImage = async (id: string, imageUrl: string) => {
     if (!confirm("Delete this image?")) return
     setStatus("Deleting...")
+    try {
+      const storagePath = extractStoragePath(imageUrl, "images")
+      if (storagePath) {
+        await supabase.storage.from("images").remove([storagePath])
+      }
+    } catch {
+    }
     const { error } = await supabase.from("driver_images").delete().eq("id", id)
     if (error) setStatus(`Delete failed: ${error.message}`)
     else {
@@ -1464,7 +1483,7 @@ function DriverImagePanel() {
                     <span className="font-medium capitalize">{img.type}</span>
                     {img.year && <span className="text-muted-foreground ml-2">({img.year})</span>}
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => deleteImage(img.id)}>Delete</Button>
+                  <Button variant="outline" size="sm" onClick={() => deleteImage(img.id, img.image_url)}>Delete</Button>
                 </div>
               ))}
             </div>

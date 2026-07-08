@@ -1,8 +1,10 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 
+import { supabase } from "@/lib/supabase"
 import { getConstructorColorsFromRecord } from "@/lib/constructorColors"
-import type { Race } from "@/types/database"
+import type { Race, DriverImage } from "@/types/database"
 import { Flag, Minimize2 } from "lucide-react"
 
 interface DriverData {
@@ -70,12 +72,15 @@ function getConstructorStyles(constructor: ConstructorData) {
 const DriverCard = ({
   result,
   qualifyingTimes,
+  cardImageUrl,
 }: {
   result: GridResult
   qualifyingTimes: { q1: string | null; q2: string | null; q3: string | null } | null
+  cardImageUrl?: string | null
 }) => {
   const colors = getConstructorStyles(result.constructor)
   const gridPos = result.grid ?? 99
+  const imageUrl = cardImageUrl || result.driver.photo_url
 
   return (
     <div
@@ -118,10 +123,10 @@ const DriverCard = ({
           </span>
         </div>
 
-        {result.driver.photo_url && (
+        {imageUrl && (
           <div className="flex-shrink-0 self-end -mb-2 z-10">
             <img
-              src={result.driver.photo_url}
+              src={imageUrl}
               alt={`${result.driver.given_name} ${result.driver.family_name}`}
               className="h-14 w-auto object-contain drop-shadow-xl"
               loading="lazy"
@@ -214,6 +219,31 @@ export default function StartingGrid({
   qualifying,
   race,
 }: StartingGridProps) {
+  const driverIds = useMemo(() => [...new Set(results.map((r) => r.driver_id))], [results])
+
+  const { data: driverCardImages } = useQuery({
+    queryKey: ["driver-card-images", race.season_year, driverIds.join(",")],
+    queryFn: async () => {
+      if (driverIds.length === 0) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .in("driver_id", driverIds)
+        .eq("type", "card")
+        .eq("year", race.season_year)
+      return (data ?? []) as DriverImage[]
+    },
+    enabled: driverIds.length > 0 && !!race.season_year,
+  })
+
+  const cardImageMap = useMemo(() => {
+    const map = new Map<string, string>()
+    driverCardImages?.forEach((img) => {
+      if (!map.has(img.driver_id)) map.set(img.driver_id, img.image_url)
+    })
+    return map
+  }, [driverCardImages])
+
   const gridSorted = useMemo(() => {
     return [...results]
       .filter((r) => r.grid != null)
@@ -254,6 +284,7 @@ export default function StartingGrid({
                     key={result.id}
                     result={result}
                     qualifyingTimes={q}
+                    cardImageUrl={cardImageMap.get(result.driver.driver_id)}
                   />
                 )
               })}
@@ -266,6 +297,7 @@ export default function StartingGrid({
                     key={result.id}
                     result={result}
                     qualifyingTimes={q}
+                    cardImageUrl={cardImageMap.get(result.driver.driver_id)}
                   />
                 )
               })}
@@ -282,12 +314,14 @@ export default function StartingGrid({
                   <DriverCard
                     result={odd}
                     qualifyingTimes={qualifyingMap.get(odd.driver_id) ?? null}
+                    cardImageUrl={cardImageMap.get(odd.driver.driver_id)}
                   />
                 )}
                 {even && (
                   <DriverCard
                     result={even}
                     qualifyingTimes={qualifyingMap.get(even.driver_id) ?? null}
+                    cardImageUrl={cardImageMap.get(even.driver.driver_id)}
                   />
                 )}
                 {i < gridPairs.length - 1 && odd && even && (

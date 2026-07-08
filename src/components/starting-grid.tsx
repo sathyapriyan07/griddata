@@ -80,7 +80,7 @@ const DriverCard = ({
 }) => {
   const colors = getConstructorStyles(result.constructor)
   const gridPos = result.grid ?? 99
-  const imageUrl = cardImageUrl || result.driver.photo_url
+  const imageUrl = cardImageUrl
 
   return (
     <div
@@ -284,7 +284,7 @@ export default function StartingGrid({
                     key={result.id}
                     result={result}
                     qualifyingTimes={q}
-                    cardImageUrl={cardImageMap.get(result.driver.driver_id)}
+                    cardImageUrl={cardImageMap.get(result.driver_id)}
                   />
                 )
               })}
@@ -297,7 +297,7 @@ export default function StartingGrid({
                     key={result.id}
                     result={result}
                     qualifyingTimes={q}
-                    cardImageUrl={cardImageMap.get(result.driver.driver_id)}
+                    cardImageUrl={cardImageMap.get(result.driver_id)}
                   />
                 )
               })}
@@ -314,14 +314,14 @@ export default function StartingGrid({
                   <DriverCard
                     result={odd}
                     qualifyingTimes={qualifyingMap.get(odd.driver_id) ?? null}
-                    cardImageUrl={cardImageMap.get(odd.driver.driver_id)}
+                    cardImageUrl={cardImageMap.get(odd.driver_id)}
                   />
                 )}
                 {even && (
                   <DriverCard
                     result={even}
                     qualifyingTimes={qualifyingMap.get(even.driver_id) ?? null}
-                    cardImageUrl={cardImageMap.get(even.driver.driver_id)}
+                    cardImageUrl={cardImageMap.get(even.driver_id)}
                   />
                 )}
                 {i < gridPairs.length - 1 && odd && even && (

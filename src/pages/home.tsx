@@ -149,7 +149,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {driverLeaders.map((s, i) => (
+                {driverLeaders.slice(0, 3).map((s, i) => (
                   <div key={s.driver.driver_id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <Badge variant={i === 0 ? "default" : "secondary"} className="w-6 justify-center">
@@ -179,7 +179,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {constructorLeaders.map((s, i) => (
+                {constructorLeaders.slice(0, 3).map((s, i) => (
                   <div key={s.constructor.constructor_id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <Badge variant={i === 0 ? "default" : "secondary"} className="w-6 justify-center">

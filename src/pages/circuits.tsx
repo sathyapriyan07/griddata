@@ -48,7 +48,7 @@ export default function CircuitsPage() {
           <Link key={circuit.id} to={`/circuits/${circuit.circuit_id}`}>
             <Card className="h-full transition-colors hover:bg-muted/50">
               <CardHeader>
-                <CardTitle className="text-lg">{circuit.name}</CardTitle>
+                <CardTitle className="text-lg font-heading uppercase tracking-wide">{circuit.name}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground space-y-1">

@@ -111,7 +111,7 @@ export default function RacesPage() {
                 <Card className="h-full transition-colors hover:bg-muted/50">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="text-base flex items-center gap-2 font-heading uppercase tracking-wide">
                         {getFlagUrl(race.circuits.country) && (
                           <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
                         )}
@@ -148,7 +148,7 @@ export default function RacesPage() {
                 <Card className="h-full transition-colors hover:bg-muted/50">
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
+                      <CardTitle className="text-base flex items-center gap-2 font-heading uppercase tracking-wide">
                         {getFlagUrl(race.circuits.country) && (
                           <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-4 h-3 object-cover" />
                         )}

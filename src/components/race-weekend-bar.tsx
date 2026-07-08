@@ -59,7 +59,7 @@ export function RaceWeekendBar() {
           )}
           <Link
             to={`/races/${nextRace.id}`}
-            className="font-medium hover:underline"
+            className="font-medium hover:underline font-heading uppercase tracking-wide"
           >
             {nextRace.name}
           </Link>

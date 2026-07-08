@@ -221,7 +221,7 @@ export default function RaceDetailPage() {
               <Badge className="bg-white/10 text-white hover:bg-white/20">Round {race.round}</Badge>
               <span className="text-sm text-white/70">{race.season_year} Season</span>
             </div>
-            <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
+            <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight font-heading uppercase tracking-wide">
               {race.name}
             </h1>
             <div className="text-white/80">

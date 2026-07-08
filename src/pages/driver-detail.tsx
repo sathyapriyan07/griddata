@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { getFlagUrl } from "@/lib/nationalityFlags"
-import type { CircuitImage, Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -24,6 +24,7 @@ function formatSeasonRange(seasons: number[]): string {
 
 export default function DriverDetailPage() {
   const { driverId } = useParams()
+  const [resultYear, setResultYear] = useState<number | null>(null)
 
   const { data: driver } = useQuery({
     queryKey: ["driver", driverId],
@@ -59,10 +60,10 @@ export default function DriverDetailPage() {
       if (!driverUuid) return []
       const { data } = await supabase
         .from("race_results")
-        .select("*, races!inner(season_year, round, name, date, circuit_id, distance_km, circuits!inner(name)), constructor:constructors!inner(name, logo_url, color_primary, color_secondary, color_accent)")
+        .select("*, races!inner(season_year, round, name, date, circuit_id, distance_km, circuits!inner(name, country)), constructor:constructors!inner(name, logo_url, color_primary, color_secondary, color_accent)")
         .eq("driver_id", driverUuid)
         .order("races(date)", { ascending: false, nullsFirst: false })
-      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string; circuit_id: string; distance_km: number | null; circuits: { name: string } }; constructor: { name: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
+      return (data ?? []) as (RaceResult & { races: { season_year: number; round: number; name: string; date: string; circuit_id: string; distance_km: number | null; circuits: { name: string; country: string | null } }; constructor: { name: string; logo_url: string | null; color_primary: string | null; color_secondary: string | null; color_accent: string | null } })[]
     },
     enabled: !!driverUuid,
   })
@@ -264,26 +265,6 @@ export default function DriverDetailPage() {
     },
     enabled: !!driverUuid,
   })
-
-  const { data: circuitHeroImages } = useQuery({
-    queryKey: ["circuit-hero-images"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("circuit_images")
-        .select("*")
-        .eq("type", "hero")
-      return (data ?? []) as CircuitImage[]
-    },
-    staleTime: Infinity,
-  })
-
-  const circuitImageMap = useMemo(() => {
-    const map = new Map<string, string>()
-    circuitHeroImages?.forEach((img) => {
-      if (!map.has(img.circuit_id)) map.set(img.circuit_id, img.image_url)
-    })
-    return map
-  }, [circuitHeroImages])
 
   const currentTeam = teamSeasons && teamSeasons.length > 0 ? teamSeasons[0] : null
 
@@ -494,9 +475,9 @@ export default function DriverDetailPage() {
         <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
         </div>
-        {(driverPoleImage?.image_url || driver?.photo_url) && (
+        {driverPoleImage?.image_url && (
           <div className="absolute right-[-6%] bottom-0 h-[115%] w-[55%] sm:w-[50%] pointer-events-none z-0">
-            <img src={driverPoleImage?.image_url ?? driver?.photo_url!} alt="" className="h-full w-full object-contain object-right-bottom" />
+            <img src={driverPoleImage.image_url} alt="" className="h-full w-full object-contain object-right-bottom" />
           </div>
         )}
         <div className="relative z-10 p-4 sm:p-6">
@@ -641,55 +622,68 @@ export default function DriverDetailPage() {
         </div>
 
         <TabsContent value="results">
-          <div className="space-y-3">
-            {results?.map((r) => {
-              const circuitImageUrl = circuitImageMap.get(r.races.circuit_id)
-              return (
-                <Card key={r.id} className="overflow-hidden relative">
-                  {circuitImageUrl && (
-                    <>
-                      <div className="absolute inset-0">
-                        <img src={circuitImageUrl} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/50 to-transparent" />
-                    </>
-                  )}
-                  <div className="flex items-stretch relative">
-                    <div className="flex-1 p-3 sm:p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Link to={`/races/${r.race_id}`} className="font-semibold hover:underline truncate">
-                              {r.races.name}
-                            </Link>
-                            <span className="text-xs text-muted-foreground shrink-0">{r.races.season_year}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            {r.constructor?.logo_url && (
-                              <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
-                            )}
-                            <span className="text-xs text-muted-foreground">{r.constructor?.name ?? "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground border-t pt-2">
-                        <span className="font-semibold">{r.points} pts</span>
-                        <span>Grid P{r.grid ?? "—"}</span>
-                        {r.fastest_lap_rank === 1 && (
-                          <span className="text-purple-500 font-medium">⚡ Fastest Lap</span>
-                        )}
-                        <span>{r.laps ?? "—"} laps</span>
-                        <span>{r.status || (r.position ? "Finished" : "—")}</span>
-                      </div>
-                    </div>
+          {(() => {
+            const years = [...new Set(results?.map((r) => r.races.season_year) ?? [])].sort((a, b) => b - a)
+            const selectedYear = resultYear ?? years[0] ?? null
+            const filtered = years.length > 0 ? (results ?? []).filter((r) => r.races.season_year === selectedYear) : results ?? []
+            return (
+              <div className="space-y-3">
+                {years.length > 1 && (
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {years.map((y) => (
+                      <button
+                        key={y}
+                        onClick={() => setResultYear(y)}
+                        className={`shrink-0 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                          selectedYear === y
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        }`}
+                      >
+                        {y}
+                      </button>
+                    ))}
                   </div>
-                </Card>
-              )
-            })}
-            {(!results || results.length === 0) && (
-              <p className="text-center text-muted-foreground py-8">No results available yet.</p>
-            )}
-          </div>
+                )}
+                {filtered.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableBody>
+                        {filtered.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell className="text-xs text-muted-foreground align-top pt-2.5">{r.races.round}</TableCell>
+                            <TableCell className="align-top pt-2">
+                              <Link to={`/races/${r.race_id}`} className="font-heading font-medium hover:underline">
+                                {getFlagUrl(r.races.circuits?.country) && (
+                                  <img src={getFlagUrl(r.races.circuits?.country)!} alt="" className="w-4 h-3 object-cover inline-block mr-1.5 -mt-0.5" />
+                                )}
+                                {r.races.name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="align-top pt-2">
+                              <div className="flex items-center gap-1.5">
+                                {r.constructor?.logo_url && (
+                                  <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                                )}
+                                <span className="text-xs text-muted-foreground">{r.constructor?.name ?? "—"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right align-top pt-2">{r.position ?? "—"}</TableCell>
+                            <TableCell className="text-right align-top pt-2 text-xs text-muted-foreground">{r.status || (r.position ? "Finished" : "—")}</TableCell>
+                            <TableCell className="text-right font-semibold align-top pt-2">{r.points}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    {years.length > 0 ? "No results for this year." : "No results available yet."}
+                  </p>
+                )}
+              </div>
+            )
+          })()}
         </TabsContent>
 
         <TabsContent value="seasons">
@@ -892,51 +886,53 @@ export default function DriverDetailPage() {
         </TabsContent>
 
         <TabsContent value="team-mates">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Teammates</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {teammates?.map((t) => (
-                  <Link key={t.id} to={`/drivers/${t.id}`}>
-                    <Card className="relative overflow-hidden transition-colors cursor-pointer border hover:border-foreground/20 aspect-square flex flex-col">
-                      {teammateHeroMap.get(t.uuid) && (
-                        <>
-                          <div className="absolute inset-0">
-                            <img src={teammateHeroMap.get(t.uuid)!} alt="" className="w-full h-full object-cover" />
-                          </div>
-                          <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
-                        </>
-                      )}
-                      <CardContent className="relative p-4 mt-auto">
-                        <div className="font-medium truncate text-white drop-shadow-sm">{t.given_name} {t.family_name}</div>
-                        <div className="text-xs text-white/70 drop-shadow-sm mt-1">{t.nationality ?? "—"}</div>
-                        <div className="mt-2 text-xs text-white/50 drop-shadow-sm">
-                          {formatSeasonRange(t.seasons.map((s) => s.season_year))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-                {(!teammates || teammates.length === 0) && (
-                  <div className="col-span-full text-center text-muted-foreground py-8">
-                    No teammates found.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {teammates && teammates.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Teammate</TableHead>
+                    <TableHead>Nationality</TableHead>
+                    <TableHead>Seasons Together</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {teammates.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>
+                        <Link to={`/drivers/${t.id}`} className="flex items-center gap-1.5 font-medium hover:underline">
+                          {getFlagUrl(t.nationality) && (
+                            <img src={getFlagUrl(t.nationality)!} alt="" className="w-4 h-3 object-cover rounded-none" />
+                          )}
+                          {t.given_name} {t.family_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{t.nationality ?? "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatSeasonRange(t.seasons.map((s) => s.season_year))}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No teammates found.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="teammates">
-          <Card>
-            <CardHeader>
-              <CardTitle>Teammate Comparisons</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {teamSeasons && teamSeasons.length > 0 ? (
-                <div className="space-y-6">
+          {teamSeasons && teamSeasons.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Season</TableHead>
+                    <TableHead>Teammate</TableHead>
+                    <TableHead className="text-right">Races</TableHead>
+                    <TableHead className="text-right">Race H2H</TableHead>
+                    <TableHead className="text-right">Quali H2H</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {teamSeasons.map((ts) => (
                     <TeammateSection
                       key={`${ts.season_year}-${ts.constructor_id}`}
@@ -945,12 +941,12 @@ export default function DriverDetailPage() {
                       constructorId={ts.constructor_id}
                     />
                   ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No teammate data available.</p>
-              )}
-            </CardContent>
-          </Card>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">No teammate data available.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="milestones">
@@ -1271,37 +1267,31 @@ function TeammateSection({
 
       const { data: results } = await supabase
         .from("race_results")
-        .select("*, constructors!inner(constructor_id), drivers!inner(driver_id, given_name, family_name)")
+        .select("*, constructors!inner(constructor_id), drivers!inner(driver_id, given_name, family_name, nationality)")
         .in("race_id", raceIds)
         .eq("constructors.constructor_id", constructorId)
         .order("race_id", { ascending: true })
 
       const { data: quali } = await supabase
         .from("qualifying_results")
-        .select("*, constructors!inner(constructor_id), drivers!inner(driver_id, given_name, family_name)")
+        .select("*, constructors!inner(constructor_id), drivers!inner(driver_id, given_name, family_name, nationality)")
         .in("race_id", raceIds)
         .eq("constructors.constructor_id", constructorId)
 
-      const allResults = (results ?? []) as (Record<string, unknown> & { driver_id: string; drivers: { driver_id: string; given_name: string; family_name: string } })[]
-      const allQuali = (quali ?? []) as (Record<string, unknown> & { driver_id: string; drivers: { driver_id: string; given_name: string; family_name: string } })[]
+      const allResults = (results ?? []) as (Record<string, unknown> & { driver_id: string; drivers: { driver_id: string; given_name: string; family_name: string; nationality: string | null } })[]
+      const allQuali = (quali ?? []) as (Record<string, unknown> & { driver_id: string; drivers: { driver_id: string; given_name: string; family_name: string; nationality: string | null } })[]
 
       const teammate = allResults.find((r) => r.driver_id !== driverUuid)
       const teammateName = teammate ? `${teammate.drivers.given_name} ${teammate.drivers.family_name}` : ""
+      const teammateNationality = teammate?.drivers.nationality ?? null
 
-      return { results: allResults, qualifying: allQuali, teammate: teammate?.driver_id ?? null, teammateName }
+      return { results: allResults, qualifying: allQuali, teammate: teammate?.driver_id ?? null, teammateName, teammateNationality }
     },
     enabled: !!driverUuid,
   })
 
   if (!teamResults?.teammate) {
-    return (
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <p className="text-sm font-medium">{season}</p>
-          <p className="text-xs text-muted-foreground mt-1">No teammate data available for this season.</p>
-        </CardContent>
-      </Card>
-    )
+    return null
   }
 
   const driverRaceResults = teamResults.results.filter((r) => r.driver_id === driverUuid)
@@ -1334,24 +1324,24 @@ function TeammateSection({
     }
   }
 
+  const raceH2HText = `${raceH2H.driverWins}–${raceH2H.teammateWins}${raceH2H.ties > 0 ? `–${raceH2H.ties}` : ""}`
+  const qualiH2HText = `${qualiH2H.driverWins}–${qualiH2H.teammateWins}${qualiH2H.ties > 0 ? `–${qualiH2H.ties}` : ""}`
+
   return (
-    <Card className="bg-muted/30">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">{season} Season</p>
-          <Badge variant="outline">
-            {commonRaceIds.length} races together
-          </Badge>
+    <TableRow>
+      <TableCell>{season}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          {getFlagUrl(teamResults.teammateNationality) && (
+            <img src={getFlagUrl(teamResults.teammateNationality)!} alt="" className="w-4 h-3 object-cover rounded-none" />
+          )}
+          <span className="font-medium">{teamResults.teammateName}</span>
         </div>
-        <div className="text-right text-sm">
-          <p className="font-semibold">{teamResults.teammateName}</p>
-        </div>
-        <div className="border-t pt-2 text-xs text-muted-foreground">
-          <p>Race H2H: {raceH2H.driverWins} - {raceH2H.teammateWins} {raceH2H.ties > 0 ? `(${raceH2H.ties} ties)` : ""}</p>
-          <p>Qualifying H2H: {qualiH2H.driverWins} - {qualiH2H.teammateWins} {qualiH2H.ties > 0 ? `(${qualiH2H.ties} ties)` : ""}</p>
-        </div>
-      </CardContent>
-    </Card>
+      </TableCell>
+      <TableCell className="text-right">{commonRaceIds.length}</TableCell>
+      <TableCell className="text-right text-xs">{raceH2HText}</TableCell>
+      <TableCell className="text-right text-xs">{qualiH2HText}</TableCell>
+    </TableRow>
   )
 }
 

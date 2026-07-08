@@ -50,17 +50,17 @@ export default function RacesPage() {
       if (completedRaceIds.length === 0) return []
       const { data } = await supabase
         .from("race_results")
-        .select("race_id, driver:drivers(driver_id, given_name, family_name, photo_url), constructor:constructors(name)")
+        .select("race_id, driver:drivers(driver_id, given_name, family_name, nationality), constructor:constructors(name)")
         .in("race_id", completedRaceIds)
         .in("position", [1, 2, 3])
         .order("position", { ascending: true })
-      return (data ?? []) as { race_id: string; driver: { driver_id: string; given_name: string; family_name: string; photo_url: string | null }; constructor: { name: string } }[]
+      return (data ?? []) as { race_id: string; driver: { driver_id: string; given_name: string; family_name: string; nationality: string | null }; constructor: { name: string } }[]
     },
     enabled: completedRaceIds.length > 0,
   })
 
   const podiumMap = useMemo(() => {
-    const map = new Map<string, { driver: { driver_id: string; given_name: string; family_name: string; photo_url: string | null }; constructor: { name: string } }[]>()
+    const map = new Map<string, { driver: { driver_id: string; given_name: string; family_name: string; nationality: string | null }; constructor: { name: string } }[]>()
     podiumResults?.forEach((r) => {
       const arr = map.get(r.race_id) ?? []
       arr.push(r)
@@ -170,11 +170,11 @@ export default function RacesPage() {
                       <div className="flex flex-col gap-1 pt-3 border-t">
                         {podiumMap.get(race.id)!.map((r, i) => (
                           <div key={r.driver.driver_id} className="flex items-center gap-2 text-xs">
-                            <span className="w-4 shrink-0">
-                              {["🥇", "🥈", "🥉"][i]}
+                            <span className="w-4 shrink-0 font-heading text-xs font-bold">
+                              P{i + 1}
                             </span>
-                            {r.driver.photo_url && (
-                              <img src={r.driver.photo_url} alt="" className="w-4 h-4 rounded-full object-cover" />
+                            {getFlagUrl(r.driver.nationality) && (
+                              <img src={getFlagUrl(r.driver.nationality)!} alt={r.driver.nationality ?? ""} className="w-4 h-3 object-cover" />
                             )}
                             <span className="font-medium truncate">
                               {r.driver.given_name} {r.driver.family_name}

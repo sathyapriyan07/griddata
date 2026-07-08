@@ -14,7 +14,7 @@ export default function ConstructorsPage() {
   const { data: constructors, isLoading } = useQuery({
     queryKey: ["constructors", search],
     queryFn: async () => {
-      let query = supabase.from("constructors").select("*").order("name", { ascending: true }).limit(100)
+      let query = supabase.from("constructors").select("*").order("name", { ascending: true })
 
       if (search) {
         query = query.textSearch("search_vector", search, { type: "websearch" })

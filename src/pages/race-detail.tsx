@@ -498,7 +498,7 @@ export default function RaceDetailPage() {
         <TabsContent value="podium">
           {podium.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {podium.map((r, i) => {
+              {podium.map((r) => {
                 const c = getConstructorColorsFromRecord(r.constructor)
                 return (
                   <div key={r.id} className="group relative select-none" style={{ borderRadius: "0.75rem" }}>
@@ -507,28 +507,25 @@ export default function RaceDetailPage() {
                       <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)` }} />
                       <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: `radial-gradient(circle at top right, ${c.accent}, transparent 70%)` }} />
                     </div>
-                    <div className="relative p-3 w-full">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
-                          <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>{r.position}</span>
+                    <div className="relative flex items-center gap-2 p-2 w-full">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
+                        <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>{r.position}</span>
+                      </div>
+                      {r.driver.photo_url && (
+                        <div className="flex-shrink-0 self-end -mb-2 z-10">
+                          <img src={r.driver.photo_url} alt="" className="h-20 w-auto object-contain drop-shadow-xl" loading="lazy" />
                         </div>
-                        {r.driver.photo_url && (
-                          <div className="flex-shrink-0 self-end -mb-3 z-10">
-                            <img src={r.driver.photo_url} alt="" className="h-14 w-auto object-contain drop-shadow-xl" loading="lazy" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0 z-10">
-                          <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
-                            {r.driver.family_name.toUpperCase()}
-                          </Link>
-                          <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block">
-                            {r.constructor.name}
-                          </Link>
-                        </div>
-                        <div className="text-right flex-shrink-0 z-10">
-                          <div className="text-base font-bold text-white" style={{ fontFamily: "var(--font-heading)" }}>{r.points}</div>
-                          <div className="text-[10px] text-white/50 uppercase tracking-wider">pts</div>
-                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 z-10">
+                        <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
+                          {r.driver.family_name.toUpperCase()}
+                        </Link>
+                        <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate">
+                          {r.constructor.logo_url && (
+                            <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="h-3 w-auto object-contain" />
+                          )}
+                          {r.constructor.name.toUpperCase()}
+                        </Link>
                       </div>
                     </div>
                   </div>

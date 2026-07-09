@@ -128,7 +128,7 @@ const DriverCard = ({
             <img
               src={imageUrl}
               alt={`${result.driver.given_name} ${result.driver.family_name}`}
-              className="h-14 w-auto object-contain drop-shadow-xl"
+              className="h-20 w-auto object-contain drop-shadow-xl"
               loading="lazy"
             />
           </div>
@@ -146,9 +146,16 @@ const DriverCard = ({
           <Link
             to={`/constructors/${result.constructor.constructor_id}`}
             onClick={(e) => e.stopPropagation()}
-            className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block"
+            className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate"
           >
-            {result.constructor.name}
+            {result.constructor.logo_url && (
+              <img
+                src={result.constructor.logo_url}
+                alt={`${result.constructor.name} logo`}
+                className="h-3 w-auto object-contain"
+              />
+            )}
+            {result.constructor.name.toUpperCase()}
           </Link>
         </div>
 

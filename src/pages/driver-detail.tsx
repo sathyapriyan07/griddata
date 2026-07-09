@@ -6,13 +6,23 @@ import { computeDriverCareerStats, computeDriverSeasonStats, detectMilestones, g
 import { getConstructorColorsFromRecord } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-
+import { motion } from "framer-motion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
-import { Trophy, Medal, Star, Flag, Zap, Target, BarChart3, Gauge } from "lucide-react"
+import { Trophy, Medal, Flag, Zap, Target, BarChart3, Gauge, CalendarDays } from "lucide-react"
+
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const } },
+}
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -468,45 +478,65 @@ export default function DriverDetailPage() {
   }
 
   const constructorColors = currentConstructorData ? getConstructorColorsFromRecord(currentConstructorData) : null
-  const heroBgColor = constructorColors?.primary ?? "#1e1e1e"
   const careerYears = seasons.length > 0 ? `${Math.min(...seasons)}-${String(Math.max(...seasons)).slice(2)}` : ""
 
   return (
-    <div className="space-y-6">
-      <div className="relative min-h-[220px] sm:min-h-[420px] rounded-xl border overflow-visible" style={{ backgroundColor: heroBgColor }}>
-        <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] as const }}
+      className="space-y-6"
+    >
+      <section className="relative overflow-hidden rounded-3xl min-h-[240px] lg:min-h-[280px] flex items-end bg-gradient-to-br from-accent-red/10 via-bg-primary to-bg-primary border border-default">
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `radial-gradient(circle at 20% 50%, hsl(3,95%,46%) 0%, transparent 60%)`
+        }} />
+        <div className="absolute inset-0 opacity-[0.015]" style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }} />
         {driverPoleImage?.image_url && (
           <div className="absolute right-[-6%] bottom-0 h-[115%] w-[55%] sm:w-[50%] pointer-events-none z-0">
             <img src={driverPoleImage.image_url} alt="" className="h-full w-full object-contain object-right-bottom" />
           </div>
         )}
-        <div className="relative z-10 p-4 sm:p-6">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <h1 className="text-2xl sm:text-4xl font-bold text-white drop-shadow-lg font-heading uppercase tracking-wide">
-                {driver.given_name} {driver.family_name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-2">
+        <div className="absolute top-0 left-0 h-full w-[4px] bg-accent-red" />
+        <div className="relative z-10 w-full p-8 lg:p-12">
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 flex-wrap mb-1">
+                {constructorColors && (
+                  <div className="w-4 h-4 rounded-sm shrink-0" style={{ background: `linear-gradient(135deg, ${constructorColors.primary}, ${constructorColors.secondary})` }} />
+                )}
+                <h1 className="text-3xl lg:text-5xl font-heading font-bold uppercase leading-[0.9] tracking-[-0.02em] text-white drop-shadow-lg">
+                  {driver.given_name} {driver.family_name}
+                </h1>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 {driver.nationality && (
-                  <div className="flex items-center gap-1">
+                  <Badge variant="brand" className="gap-1">
                     {getFlagUrl(driver.nationality) && (
-                      <img src={getFlagUrl(driver.nationality)!} alt="" className="w-4 h-3 object-cover rounded" />
+                      <img src={getFlagUrl(driver.nationality)!} alt="" className="w-3.5 h-2.5 object-cover rounded" />
                     )}
-                    <span className="text-xs text-white/90 drop-shadow-sm">{driver.nationality}</span>
-                  </div>
+                    {driver.nationality}
+                  </Badge>
                 )}
                 {driver.dob && (
-                  <span className="text-xs text-white/70 drop-shadow-sm">
+                  <Badge variant="outline" className="gap-1">
+                    <CalendarDays className="w-3 h-3" />
                     Born {new Date(driver.dob).toLocaleDateString()}
-                  </span>
+                  </Badge>
                 )}
                 {careerYears && (
-                  <span className="text-xs text-white/70 drop-shadow-sm">{careerYears}</span>
+                  <Badge variant="outline">{careerYears}</Badge>
+                )}
+                {driver.code && (
+                  <Badge variant="outline" className="border-white/30 text-white/80">
+                    #{driver.code}
+                  </Badge>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2 mt-3">
                 {currentConstructorData && (
                   <Badge
                     className="text-xs gap-1"
@@ -521,95 +551,119 @@ export default function DriverDetailPage() {
                     {currentConstructorData.name}
                   </Badge>
                 )}
-                {driver.code && (
-                  <Badge variant="outline" className="text-xs border-white/30 text-white/80">
-                    #{driver.code}
-                  </Badge>
-                )}
               </div>
+              {driver.bio && (
+                <p className="mt-3 max-w-xl text-sm text-white/60 drop-shadow-sm leading-relaxed">{driver.bio}</p>
+              )}
             </div>
           </div>
-          {driver.bio && (
-            <p className="mt-2 max-w-xl text-xs text-white/60 drop-shadow-sm leading-relaxed">{driver.bio}</p>
-          )}
         </div>
-      </div>
+      </section>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Flag className="w-8 h-8 text-muted-foreground/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Races</p>
-                <p className="text-2xl font-bold">{stats.totalRaces}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-500/60" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Wins</p>
-                <p className="text-2xl font-bold">{stats.wins}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Medal className="w-8 h-8 text-amber-500/60" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Podiums</p>
-                <p className="text-2xl font-bold">{stats.podiums}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Points</p>
-                <p className="text-2xl font-bold">{stats.totalPoints}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Zap className="w-8 h-8 text-blue-400/60" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sprint Wins</p>
-                <p className="text-2xl font-bold">{stats.sprintWins}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Star className="w-8 h-8 text-blue-400/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sprint Pods</p>
-                <p className="text-2xl font-bold">{stats.sprintPodiums}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Target className="w-8 h-8 text-blue-400/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sprint Pts</p>
-                <p className="text-2xl font-bold">{stats.sprintPoints}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Gauge className="w-8 h-8 text-muted-foreground/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Avg Finish</p>
-                <p className="text-2xl font-bold">{stats.avgFinishingPosition?.toFixed(1) ?? "—"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <motion.div
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3"
+        >
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Flag className="w-8 h-8 text-text-tertiary" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Races</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.totalRaces}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-yellow-500/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Wins</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.wins}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-amber-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Medal className="w-8 h-8 text-amber-500/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Podiums</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.podiums}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red/80" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <BarChart3 className="w-8 h-8 text-text-tertiary" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Points</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.totalPoints}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Zap className="w-8 h-8 text-blue-400/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Sprint Wins</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.sprintWins}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-sky-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Medal className="w-8 h-8 text-sky-400/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Sprint Pods</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.sprintPodiums}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-indigo-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Target className="w-8 h-8 text-indigo-400/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Sprint Pts</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.sprintPoints}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Gauge className="w-8 h-8 text-text-tertiary" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Avg Finish</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.avgFinishingPosition?.toFixed(1) ?? "—"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
       )}
 
       <Tabs defaultValue="results">
@@ -635,17 +689,22 @@ export default function DriverDetailPage() {
             const selectedYear = resultYear ?? years[0] ?? null
             const filtered = years.length > 0 ? (results ?? []).filter((r) => r.races.season_year === selectedYear) : results ?? []
             return (
-              <div className="space-y-3">
+              <motion.div
+                variants={containerVariants}
+                initial="initial"
+                animate="animate"
+                className="space-y-3"
+              >
                 {years.length > 1 && (
                   <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                     {years.map((y) => (
                       <button
                         key={y}
                         onClick={() => setResultYear(y)}
-                        className={`shrink-0 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                        className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                           selectedYear === y
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                            ? "bg-accent-red text-white"
+                            : "bg-tertiary text-text-secondary hover:bg-tertiary/80"
                         }`}
                       >
                         {y}
@@ -659,9 +718,9 @@ export default function DriverDetailPage() {
                       <TableBody>
                         {filtered.map((r) => (
                           <TableRow key={r.id}>
-                            <TableCell className="text-xs text-muted-foreground align-top pt-2.5">{r.races.round}</TableCell>
+                            <TableCell className="text-xs text-text-secondary align-top pt-2.5">{r.races.round}</TableCell>
                             <TableCell className="align-top pt-2">
-                              <Link to={`/races/${r.race_id}`} className="font-heading font-medium hover:underline">
+                              <Link to={`/races/${r.race_id}`} className="font-heading font-medium hover:underline text-text-primary">
                                 {getFlagUrl(r.races.circuits?.country) && (
                                   <img src={getFlagUrl(r.races.circuits?.country)!} alt="" className="w-4 h-3 object-cover inline-block mr-1.5 -mt-0.5" />
                                 )}
@@ -673,582 +732,686 @@ export default function DriverDetailPage() {
                                 {r.constructor?.logo_url && (
                                   <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
                                 )}
-                                <span className="text-xs text-muted-foreground">{r.constructor?.name ?? "—"}</span>
+                                <span className="text-xs text-text-secondary">{r.constructor?.name ?? "—"}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right align-top pt-2">{r.position ?? "—"}</TableCell>
-                            <TableCell className="text-right align-top pt-2 text-xs text-muted-foreground">{r.status || (r.position ? "Finished" : "—")}</TableCell>
-                            <TableCell className="text-right font-semibold align-top pt-2">{r.points}</TableCell>
+                            <TableCell className="text-right align-top pt-2 text-text-primary">{r.position ?? "—"}</TableCell>
+                            <TableCell className="text-right align-top pt-2 text-xs text-text-secondary">{r.status || (r.position ? "Finished" : "—")}</TableCell>
+                            <TableCell className="text-right font-semibold align-top pt-2 text-text-primary">{r.points}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">
+                  <p className="text-center text-text-secondary py-8">
                     {years.length > 0 ? "No results for this year." : "No results available yet."}
                   </p>
                 )}
-              </div>
+              </motion.div>
             )
           })()}
         </TabsContent>
 
         <TabsContent value="seasons">
-          <Card>
-            <CardHeader>
-              <CardTitle>Season Statistics</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto hide-scrollbar">
-              <Table>
-                <TableHeader>
-                  <TableRow>
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Season Statistics</CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto hide-scrollbar">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
                       <TableHead>Season</TableHead>
                       <TableHead>Team</TableHead>
-                      <TableHead>Races</TableHead>
-                      <TableHead>Wins</TableHead>
-                      <TableHead>Podiums</TableHead>
-                      <TableHead>Points</TableHead>
-                      <TableHead>Avg Finish</TableHead>
-                      <TableHead>Win Rate</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {seasons.map((season) => {
-                    const seasonResults = (results ?? []).filter((r) => r.races.season_year === season)
-                    const seasonSprints = (sprints ?? []).filter((s) => s.races.season_year === season)
-                    const seasonData = computeDriverSeasonStats(seasonResults, season, seasonSprints)
-                    const team = teamBySeason.get(season)
-                    return (
-                      <TableRow key={season}>
-                        <TableCell className="font-medium">{season}</TableCell>
-                        <TableCell>
-                          {team ? (
-                            <Link to={`/constructors/${team.constructor_id}`} className="hover:underline">
-                              {team.name}
-                            </Link>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>{seasonData.races + seasonData.sprints}</TableCell>
-                        <TableCell>{seasonData.wins + seasonData.sprintWins}</TableCell>
-                        <TableCell>{seasonData.podiums + seasonData.sprintPodiums}</TableCell>
-                        <TableCell className="font-bold">{seasonData.points + seasonData.sprintPoints}</TableCell>
-                        <TableCell>{seasonData.avgFinishingPosition?.toFixed(1) ?? "—"}</TableCell>
-                        <TableCell>{seasonData.races + seasonData.sprints > 0 ? `${((seasonData.wins + seasonData.sprintWins) / (seasonData.races + seasonData.sprints) * 100).toFixed(0)}%` : "—"}</TableCell>
-                      </TableRow>
-                    )
-                  })}
-                  {seasons.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        No season data available.
-                      </TableCell>
+                      <TableHead><div className="text-end">Races</div></TableHead>
+                      <TableHead><div className="text-end">Wins</div></TableHead>
+                      <TableHead><div className="text-end">Podiums</div></TableHead>
+                      <TableHead><div className="text-end">Points</div></TableHead>
+                      <TableHead><div className="text-end">Avg Finish</div></TableHead>
+                      <TableHead><div className="text-end">Win Rate</div></TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {seasons.map((season) => {
+                      const seasonResults = (results ?? []).filter((r) => r.races.season_year === season)
+                      const seasonSprints = (sprints ?? []).filter((s) => s.races.season_year === season)
+                      const seasonData = computeDriverSeasonStats(seasonResults, season, seasonSprints)
+                      const team = teamBySeason.get(season)
+                      return (
+                        <TableRow key={season}>
+                          <TableCell className="font-medium text-text-primary">{season}</TableCell>
+                          <TableCell className="text-text-primary">
+                            {team ? (
+                              <Link to={`/constructors/${team.constructor_id}`} className="hover:underline">
+                                {team.name}
+                              </Link>
+                            ) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right text-text-primary">{seasonData.races + seasonData.sprints}</TableCell>
+                          <TableCell className="text-right text-text-primary">{seasonData.wins + seasonData.sprintWins}</TableCell>
+                          <TableCell className="text-right text-text-primary">{seasonData.podiums + seasonData.sprintPodiums}</TableCell>
+                          <TableCell className="text-right font-bold text-text-primary">{seasonData.points + seasonData.sprintPoints}</TableCell>
+                          <TableCell className="text-right text-text-primary">{seasonData.avgFinishingPosition?.toFixed(1) ?? "—"}</TableCell>
+                          <TableCell className="text-right text-text-primary">{seasonData.races + seasonData.sprints > 0 ? `${((seasonData.wins + seasonData.sprintWins) / (seasonData.races + seasonData.sprints) * 100).toFixed(0)}%` : "—"}</TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {seasons.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-text-secondary">
+                          No season data available.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="teams">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team History & Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {teamSeasons && teamSeasons.length > 0 ? (
-                <div className="space-y-6">
-                  {(() => {
-                    const latestSeason = teamSeasons[0].season_year
-                    const currentTeam = {
-                      name: teamSeasons[0].constructor_name,
-                      constructor_id: teamSeasons[0].constructor_id,
-                    }
-                    const currentTeamSince = Math.min(
-                      ...teamSeasons
-                        .filter((ts) => ts.constructor_id === currentTeam.constructor_id)
-                        .map((ts) => ts.season_year)
-                    )
-                    const currentTeamRecord = driverTeamRecords.find((t) => t.constructor_id === currentTeam.constructor_id)
-                    const seenCtors = new Set<string>()
-                    const priorTeams = teamSeasons.filter((ts) => {
-                      if (ts.constructor_id === currentTeam.constructor_id) return false
-                      if (seenCtors.has(ts.constructor_id)) return false
-                      seenCtors.add(ts.constructor_id)
-                      return true
-                    })
-                    return (
-                      <>
-                        <Card className="border-primary/30 bg-primary/5">
-                          <CardContent className="p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Current Team</p>
-                                <Link
-                                  to={`/constructors/${currentTeam.constructor_id}`}
-                                  className="text-xl font-bold hover:underline"
-                                >
-                                  {currentTeam.name}
-                                </Link>
-                                <p className="text-sm text-muted-foreground">since {currentTeamSince}</p>
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Team History & Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {teamSeasons && teamSeasons.length > 0 ? (
+                  <div className="space-y-6">
+                    {(() => {
+                      const latestSeason = teamSeasons[0].season_year
+                      const currentTeam = {
+                        name: teamSeasons[0].constructor_name,
+                        constructor_id: teamSeasons[0].constructor_id,
+                      }
+                      const currentTeamSince = Math.min(
+                        ...teamSeasons
+                          .filter((ts) => ts.constructor_id === currentTeam.constructor_id)
+                          .map((ts) => ts.season_year)
+                      )
+                      const currentTeamRecord = driverTeamRecords.find((t) => t.constructor_id === currentTeam.constructor_id)
+                      const seenCtors = new Set<string>()
+                      const priorTeams = teamSeasons.filter((ts) => {
+                        if (ts.constructor_id === currentTeam.constructor_id) return false
+                        if (seenCtors.has(ts.constructor_id)) return false
+                        seenCtors.add(ts.constructor_id)
+                        return true
+                      })
+                      return (
+                        <>
+                          <Card className="border-accent-red/30 bg-accent-red/5">
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Current Team</p>
+                                  <Link
+                                    to={`/constructors/${currentTeam.constructor_id}`}
+                                    className="text-xl font-bold hover:underline text-text-primary"
+                                  >
+                                    {currentTeam.name}
+                                  </Link>
+                                  <p className="text-sm text-text-secondary">since {currentTeamSince}</p>
+                                </div>
+                                <Badge variant="default" className="text-xs">{latestSeason}</Badge>
                               </div>
-                              <Badge variant="default" className="text-xs">{latestSeason}</Badge>
-                            </div>
-                            {currentTeamRecord && (
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm pt-2 border-t border-primary/20">
-                                <div>
-                                  <span className="text-muted-foreground">Races</span>
-                                  <p className="font-semibold">{currentTeamRecord.races + currentTeamRecord.sprints}</p>
+                              {currentTeamRecord && (
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm pt-2 border-t border-accent-red/20">
+                                  <div>
+                                    <span className="text-text-secondary">Races</span>
+                                    <p className="font-semibold text-text-primary">{currentTeamRecord.races + currentTeamRecord.sprints}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Wins</span>
+                                    <p className="font-semibold text-text-primary">{currentTeamRecord.wins + currentTeamRecord.sprintWins}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Podiums</span>
+                                    <p className="font-semibold text-text-primary">{currentTeamRecord.podiums + currentTeamRecord.sprintPodiums}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Points</span>
+                                    <p className="font-semibold text-text-primary">{currentTeamRecord.points + currentTeamRecord.sprintPoints}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Poles</span>
+                                    <p className="font-semibold text-text-primary">{currentTeamRecord.poles}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-text-secondary">Win Rate</span>
+                                    <p className="font-semibold text-text-primary">
+                                      {currentTeamRecord.races + currentTeamRecord.sprints > 0
+                                        ? `${((currentTeamRecord.wins + currentTeamRecord.sprintWins) / (currentTeamRecord.races + currentTeamRecord.sprints) * 100).toFixed(1)}%`
+                                        : "—"}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <span className="text-muted-foreground">Wins</span>
-                                  <p className="font-semibold">{currentTeamRecord.wins + currentTeamRecord.sprintWins}</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Podiums</span>
-                                  <p className="font-semibold">{currentTeamRecord.podiums + currentTeamRecord.sprintPodiums}</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Points</span>
-                                  <p className="font-semibold">{currentTeamRecord.points + currentTeamRecord.sprintPoints}</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Poles</span>
-                                  <p className="font-semibold">{currentTeamRecord.poles}</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Win Rate</span>
-                                  <p className="font-semibold">
-                                    {currentTeamRecord.races + currentTeamRecord.sprints > 0
-                                      ? `${((currentTeamRecord.wins + currentTeamRecord.sprintWins) / (currentTeamRecord.races + currentTeamRecord.sprints) * 100).toFixed(1)}%`
-                                      : "—"}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                        {priorTeams.map((ts) => {
-                          const teamRecord = driverTeamRecords.find((t) => t.constructor_id === ts.constructor_id)
-                          return (
-                            <TeamHistoryCard key={ts.constructor_id} entry={ts} teamSeasons={teamSeasons} results={results ?? []} driverUuid={driverUuid!} teamRecord={teamRecord} />
-                          )
-                        })}
-                      </>
-                    )
-                  })()}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No team history data available.</p>
-              )}
-            </CardContent>
-          </Card>
+                              )}
+                            </CardContent>
+                          </Card>
+                          {priorTeams.map((ts) => {
+                            const teamRecord = driverTeamRecords.find((t) => t.constructor_id === ts.constructor_id)
+                            return (
+                              <TeamHistoryCard key={ts.constructor_id} entry={ts} teamSeasons={teamSeasons} results={results ?? []} driverUuid={driverUuid!} teamRecord={teamRecord} />
+                            )
+                          })}
+                        </>
+                      )
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-text-secondary">No team history data available.</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="team-records">
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Team</TableHead>
-                    <TableHead>Races</TableHead>
-                    <TableHead>Wins</TableHead>
-                    <TableHead>Win %</TableHead>
-                    <TableHead>Podiums</TableHead>
-                    <TableHead>Points</TableHead>
-                    <TableHead>Poles</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {driverTeamRecords.map((t) => (
-                    <TableRow key={t.constructor_id}>
-                      <TableCell>
-                        <Link to={`/constructors/${t.constructor_id}`} className="font-medium hover:underline">
-                          {t.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{t.races + t.sprints}</TableCell>
-                      <TableCell className="font-semibold">{t.wins + t.sprintWins}</TableCell>
-                      <TableCell>{t.races + t.sprints > 0 ? `${((t.wins + t.sprintWins) / (t.races + t.sprints) * 100).toFixed(1)}%` : "—"}</TableCell>
-                      <TableCell>{t.podiums + t.sprintPodiums}</TableCell>
-                      <TableCell className="font-bold">{t.points + t.sprintPoints}</TableCell>
-                      <TableCell>{t.poles}</TableCell>
-                    </TableRow>
-                  ))}
-                  {driverTeamRecords.length === 0 && (
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Records</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No team record data available.
-                      </TableCell>
+                      <TableHead>Team</TableHead>
+                      <TableHead><div className="text-end">Races</div></TableHead>
+                      <TableHead><div className="text-end">Wins</div></TableHead>
+                      <TableHead><div className="text-end">Win %</div></TableHead>
+                      <TableHead><div className="text-end">Podiums</div></TableHead>
+                      <TableHead><div className="text-end">Points</div></TableHead>
+                      <TableHead><div className="text-end">Poles</div></TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {driverTeamRecords.map((t) => (
+                      <TableRow key={t.constructor_id}>
+                        <TableCell>
+                          <Link to={`/constructors/${t.constructor_id}`} className="font-medium hover:underline text-text-primary">
+                            {t.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-right text-text-primary">{t.races + t.sprints}</TableCell>
+                        <TableCell className="text-right font-semibold text-text-primary">{t.wins + t.sprintWins}</TableCell>
+                        <TableCell className="text-right text-text-primary">{t.races + t.sprints > 0 ? `${((t.wins + t.sprintWins) / (t.races + t.sprints) * 100).toFixed(1)}%` : "—"}</TableCell>
+                        <TableCell className="text-right text-text-primary">{t.podiums + t.sprintPodiums}</TableCell>
+                        <TableCell className="text-right font-bold text-text-primary">{t.points + t.sprintPoints}</TableCell>
+                        <TableCell className="text-right text-text-primary">{t.poles}</TableCell>
+                      </TableRow>
+                    ))}
+                    {driverTeamRecords.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-text-secondary">
+                          No team record data available.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="team-mates">
-          {teammates && teammates.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Teammate</TableHead>
-                    <TableHead>Nationality</TableHead>
-                    <TableHead>Seasons Together</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teammates.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell>
-                        <Link to={`/drivers/${t.id}`} className="flex items-center gap-1.5 font-medium hover:underline">
-                          {getFlagUrl(t.nationality) && (
-                            <img src={getFlagUrl(t.nationality)!} alt="" className="w-4 h-3 object-cover rounded-none" />
-                          )}
-                          {t.given_name} {t.family_name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{t.nationality ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{formatSeasonRange(t.seasons.map((s) => s.season_year))}</TableCell>
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            {teammates && teammates.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Teammate</TableHead>
+                      <TableHead>Nationality</TableHead>
+                      <TableHead>Seasons Together</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">No teammates found.</p>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {teammates.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell>
+                          <Link to={`/drivers/${t.id}`} className="flex items-center gap-1.5 font-medium hover:underline text-text-primary">
+                            {getFlagUrl(t.nationality) && (
+                              <img src={getFlagUrl(t.nationality)!} alt="" className="w-4 h-3 object-cover rounded-none" />
+                            )}
+                            {t.given_name} {t.family_name}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-xs text-text-secondary">{t.nationality ?? "—"}</TableCell>
+                        <TableCell className="text-xs text-text-secondary">{formatSeasonRange(t.seasons.map((s) => s.season_year))}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-text-secondary">No teammates found.</p>
+            )}
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="teammates">
-          {teamSeasons && teamSeasons.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Season</TableHead>
-                    <TableHead>Teammate</TableHead>
-                    <TableHead className="text-right">Races</TableHead>
-                    <TableHead className="text-right">Race H2H</TableHead>
-                    <TableHead className="text-right">Quali H2H</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teamSeasons.map((ts) => (
-                    <TeammateSection
-                      key={`${ts.season_year}-${ts.constructor_id}`}
-                      driverUuid={driverUuid!}
-                      season={ts.season_year}
-                      constructorId={ts.constructor_id}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground">No teammate data available.</p>
-          )}
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            {teamSeasons && teamSeasons.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Season</TableHead>
+                      <TableHead>Teammate</TableHead>
+                      <TableHead className="text-right">Races</TableHead>
+                      <TableHead className="text-right">Race H2H</TableHead>
+                      <TableHead className="text-right">Quali H2H</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teamSeasons.map((ts) => (
+                      <TeammateSection
+                        key={`${ts.season_year}-${ts.constructor_id}`}
+                        driverUuid={driverUuid!}
+                        season={ts.season_year}
+                        constructorId={ts.constructor_id}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-text-secondary">No teammate data available.</p>
+            )}
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="milestones">
-          <Card>
-            <CardHeader>
-              <CardTitle>Career Milestones</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {milestones.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {milestones.slice(0, 20).map((m, i) => (
-                    <Card key={i} className="bg-muted/50">
-                      <CardContent className="p-3">
-                        <p className="text-sm font-medium">{m.description}</p>
-                        {m.raceName && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {m.seasonYear} Round {m.round} — {m.raceName}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No milestones detected yet.</p>
-              )}
-            </CardContent>
-          </Card>
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Career Milestones</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {milestones.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {milestones.slice(0, 20).map((m, i) => (
+                      <motion.div key={i} variants={itemVariants}>
+                        <Card className="bg-tertiary/50">
+                          <CardContent className="p-3">
+                            <p className="text-sm font-medium text-text-primary">{m.description}</p>
+                            {m.raceName && (
+                              <p className="text-xs text-text-secondary mt-1">
+                                {m.seasonYear} Round {m.round} — {m.raceName}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-text-secondary">No milestones detected yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="achievements">
-          <Card>
-            <CardHeader>
-              <CardTitle>Achievements</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {achievements ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Total Wins</p>
-                      <p className="text-3xl font-bold mt-1">{achievements.totalWins}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Favorite Circuit</p>
-                      <p className="text-lg font-bold mt-1">{achievements.favoriteCircuit.name}</p>
-                      <p className="text-sm text-muted-foreground">{achievements.favoriteCircuit.count} wins</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Best Season</p>
-                      <p className="text-lg font-bold mt-1">{achievements.bestSeason[0]}</p>
-                      <p className="text-sm text-muted-foreground">{achievements.bestSeason[1]} wins</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Consecutive Winning Seasons</p>
-                      <p className="text-3xl font-bold mt-1">{achievements.consecutiveWinningSeasons}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Pole-to-Win</p>
-                      <p className="text-3xl font-bold mt-1">{achievements.poleWins}</p>
-                      <p className="text-sm text-muted-foreground">{achievements.totalWins > 0 ? `${(achievements.poleWins / achievements.totalWins * 100).toFixed(0)}% conversion` : "—"}</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/50">
-                    <CardContent className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Comeback Wins</p>
-                      <p className="text-3xl font-bold mt-1">{achievements.comebackWins}</p>
-                      <p className="text-sm text-muted-foreground">(started outside top 5)</p>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-muted/50 sm:col-span-2 lg:col-span-3">
-                    <CardContent className="p-4 flex flex-col sm:flex-row gap-6">
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">First Win</p>
-                        <p className="text-lg font-bold mt-1">{achievements.firstWin.races.name}</p>
-                        <p className="text-sm text-muted-foreground">{achievements.firstWin.races.season_year} Round {achievements.firstWin.races.round} — {new Date(achievements.firstWin.races.date).toLocaleDateString()}</p>
-                      </div>
-                      <div className="sm:border-l sm:pl-6">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Latest Win</p>
-                        <p className="text-lg font-bold mt-1">{achievements.latestWin.races.name}</p>
-                        <p className="text-sm text-muted-foreground">{achievements.latestWin.races.season_year} Round {achievements.latestWin.races.round} — {new Date(achievements.latestWin.races.date).toLocaleDateString()}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No wins yet — achievements will appear here once the driver has a win.</p>
-              )}
-            </CardContent>
-          </Card>
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Achievements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {achievements ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Total Wins</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{achievements.totalWins}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Favorite Circuit</p>
+                        <p className="text-lg font-bold mt-1 text-text-primary">{achievements.favoriteCircuit.name}</p>
+                        <p className="text-sm text-text-secondary">{achievements.favoriteCircuit.count} wins</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Best Season</p>
+                        <p className="text-lg font-bold mt-1 text-text-primary">{achievements.bestSeason[0]}</p>
+                        <p className="text-sm text-text-secondary">{achievements.bestSeason[1]} wins</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-purple-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Consecutive Winning Seasons</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{achievements.consecutiveWinningSeasons}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-amber-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Pole-to-Win</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{achievements.poleWins}</p>
+                        <p className="text-sm text-text-secondary">{achievements.totalWins > 0 ? `${(achievements.poleWins / achievements.totalWins * 100).toFixed(0)}% conversion` : "—"}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Comeback Wins</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{achievements.comebackWins}</p>
+                        <p className="text-sm text-text-secondary">(started outside top 5)</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-tertiary/50 sm:col-span-2 lg:col-span-3">
+                      <CardContent className="p-4 flex flex-col sm:flex-row gap-6">
+                        <div className="flex-1">
+                          <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">First Win</p>
+                          <p className="text-lg font-bold mt-1 text-text-primary">{achievements.firstWin.races.name}</p>
+                          <p className="text-sm text-text-secondary">{achievements.firstWin.races.season_year} Round {achievements.firstWin.races.round} — {new Date(achievements.firstWin.races.date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="sm:border-l sm:border-default sm:pl-6 flex-1">
+                          <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Latest Win</p>
+                          <p className="text-lg font-bold mt-1 text-text-primary">{achievements.latestWin.races.name}</p>
+                          <p className="text-sm text-text-secondary">{achievements.latestWin.races.season_year} Round {achievements.latestWin.races.round} — {new Date(achievements.latestWin.races.date).toLocaleDateString()}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <p className="text-text-secondary">No wins yet — achievements will appear here once the driver has a win.</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="circuit-performance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Circuit Performance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <p className="text-sm text-muted-foreground">Sort by:</p>
-                <select
-                  value={circuitSort}
-                  onChange={(event) => setCircuitSort(event.target.value as "wins" | "podiums" | "avgFinish")}
-                  className="rounded-md border px-3 py-2"
-                >
-                  <option value="wins">Most wins</option>
-                  <option value="podiums">Most podiums</option>
-                  <option value="avgFinish">Best average finish</option>
-                </select>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead><div>Circuit</div></TableHead>
-                    <TableHead><div className="text-end">Races</div></TableHead>
-                    <TableHead><div className="text-end">Wins</div></TableHead>
-                    <TableHead><div className="text-end">Podiums</div></TableHead>
-                    <TableHead><div className="text-end">Poles</div></TableHead>
-                    <TableHead><div className="text-end">Fastest Laps</div></TableHead>
-                    <TableHead><div className="text-end">Average Finish</div></TableHead>
-                    <TableHead><div className="text-end">Points</div></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {circuitPerformance.map((row) => (
-                    <TableRow key={row.circuitId}>
-                      <TableCell>{row.circuitName}</TableCell>
-                      <TableCell><div className="text-end">{row.races}</div></TableCell>
-                      <TableCell><div className="text-end">{row.wins}</div></TableCell>
-                      <TableCell><div className="text-end">{row.podiums}</div></TableCell>
-                      <TableCell><div className="text-end">{row.poles}</div></TableCell>
-                      <TableCell><div className="text-end">{row.fastestLaps}</div></TableCell>
-                      <TableCell><div className="text-end">{row.averageFinish ? row.averageFinish.toFixed(2) : "—"}</div></TableCell>
-                      <TableCell><div className="text-end">{row.points}</div></TableCell>
-                    </TableRow>
-                  ))}
-                  {circuitPerformance.length === 0 && (
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Circuit Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <p className="text-sm text-text-secondary">Sort by:</p>
+                  <select
+                    value={circuitSort}
+                    onChange={(event) => setCircuitSort(event.target.value as "wins" | "podiums" | "avgFinish")}
+                    className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
+                  >
+                    <option value="wins">Most wins</option>
+                    <option value="podiums">Most podiums</option>
+                    <option value="avgFinish">Best average finish</option>
+                  </select>
+                </div>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        No circuit performance data available yet.
-                      </TableCell>
+                      <TableHead>Circuit</TableHead>
+                      <TableHead><div className="text-end">Races</div></TableHead>
+                      <TableHead><div className="text-end">Wins</div></TableHead>
+                      <TableHead><div className="text-end">Podiums</div></TableHead>
+                      <TableHead><div className="text-end">Poles</div></TableHead>
+                      <TableHead><div className="text-end">Fastest Laps</div></TableHead>
+                      <TableHead><div className="text-end">Avg Finish</div></TableHead>
+                      <TableHead><div className="text-end">Points</div></TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {circuitPerformance.map((row) => (
+                      <TableRow key={row.circuitId}>
+                        <TableCell className="text-text-primary">{row.circuitName}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.races}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.wins}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.podiums}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.poles}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.fastestLaps}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.averageFinish ? row.averageFinish.toFixed(2) : "—"}</TableCell>
+                        <TableCell className="text-right text-text-primary">{row.points}</TableCell>
+                      </TableRow>
+                    ))}
+                    {circuitPerformance.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-text-secondary">
+                          No circuit performance data available yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="advanced-stats">
-          <Card>
-            <CardHeader>
-              <CardTitle>Advanced Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Front Row Starts</p>
-                    <p className="text-3xl font-bold mt-1">{frontRowStarts}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Points Finishes</p>
-                    <p className="text-3xl font-bold mt-1">{pointsFinishes}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Top 5 Finishes</p>
-                    <p className="text-3xl font-bold mt-1">{top5Finishes}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Top 10 Finishes</p>
-                    <p className="text-3xl font-bold mt-1">{top10Finishes}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Laps Led</p>
-                    <p className="text-3xl font-bold mt-1">—</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Total Laps Completed</p>
-                    <p className="text-3xl font-bold mt-1">{totalLapsCompleted}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Kilometers Raced</p>
-                    <p className="text-3xl font-bold mt-1">{totalKilometersRaced.toFixed(1)}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Q3 Appearances</p>
-                    <p className="text-3xl font-bold mt-1">{q3Appearances}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Grand Slams</p>
-                    <p className="text-3xl font-bold mt-1">{grandSlams}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Average Qualifying</p>
-                    <p className="text-3xl font-bold mt-1">{averageQualifying ? averageQualifying.toFixed(2) : "—"}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Average Grid</p>
-                    <p className="text-3xl font-bold mt-1">{averageGrid ? averageGrid.toFixed(2) : "—"}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Average Finish</p>
-                    <p className="text-3xl font-bold mt-1">{stats?.avgFinishingPosition ? stats.avgFinishingPosition.toFixed(2) : "—"}</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Advanced Stats</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Front Row Starts</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{frontRowStarts}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Points Finishes</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{pointsFinishes}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Top 5 Finishes</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{top5Finishes}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Top 10 Finishes</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{top10Finishes}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-purple-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Laps Led</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">—</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-indigo-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Total Laps</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{totalLapsCompleted}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-amber-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Kilometers</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{totalKilometersRaced.toFixed(1)}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-sky-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Q3 Appearances</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{q3Appearances}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Grand Slams</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{grandSlams}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red/80" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Avg Qualifying</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{averageQualifying ? averageQualifying.toFixed(2) : "—"}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Avg Grid</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{averageGrid ? averageGrid.toFixed(2) : "—"}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                  <motion.div variants={itemVariants}>
+                    <Card className="relative overflow-hidden bg-tertiary/50">
+                      <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
+                      <CardContent className="p-4">
+                        <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Avg Finish</p>
+                        <p className="text-3xl font-bold mt-1 text-text-primary">{stats?.avgFinishingPosition ? stats.avgFinishingPosition.toFixed(2) : "—"}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="streaks">
-          <Card>
-            <CardHeader>
-              <CardTitle>Best Streaks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">Longest Win Streaks</h3>
-                <div className="flex flex-wrap gap-2">
-                  {winStreaks.slice(0, 5).map((s, i) => (
-                    <Badge key={i} variant={s.active ? "default" : "secondary"} className="text-sm px-3 py-1">
-                      {s.length} {s.length === 1 ? "win" : "wins"}
-                      {s.active ? " (active)" : ""}
-                    </Badge>
-                  ))}
-                  {winStreaks.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No win streaks yet.</p>
-                  )}
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Best Streaks</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-medium text-text-secondary mb-3">Longest Win Streaks</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {winStreaks.slice(0, 5).map((s, i) => (
+                      <Badge key={i} variant={s.active ? "brand" : "default"} className="text-sm px-3 py-1">
+                        {s.length} {s.length === 1 ? "win" : "wins"}
+                        {s.active ? " (active)" : ""}
+                      </Badge>
+                    ))}
+                    {winStreaks.length === 0 && (
+                      <p className="text-sm text-text-secondary">No win streaks yet.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">Longest Podium Streaks</h3>
-                <div className="flex flex-wrap gap-2">
-                  {podiumStreaks.slice(0, 5).map((s, i) => (
-                    <Badge key={i} variant={s.active ? "default" : "secondary"} className="text-sm px-3 py-1">
-                      {s.length} {s.length === 1 ? "podium" : "podiums"}
-                      {s.active ? " (active)" : ""}
-                    </Badge>
-                  ))}
-                  {podiumStreaks.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No podium streaks yet.</p>
-                  )}
+                <div>
+                  <h3 className="text-sm font-medium text-text-secondary mb-3">Longest Podium Streaks</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {podiumStreaks.slice(0, 5).map((s, i) => (
+                      <Badge key={i} variant={s.active ? "brand" : "default"} className="text-sm px-3 py-1">
+                        {s.length} {s.length === 1 ? "podium" : "podiums"}
+                        {s.active ? " (active)" : ""}
+                      </Badge>
+                    ))}
+                    {podiumStreaks.length === 0 && (
+                      <p className="text-sm text-text-secondary">No podium streaks yet.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">Longest Points Streaks</h3>
-                <div className="flex flex-wrap gap-2">
-                  {pointStreaks.slice(0, 5).map((s, i) => (
-                    <Badge key={i} variant={s.active ? "default" : "secondary"} className="text-sm px-3 py-1">
-                      {s.length} {s.length === 1 ? "race" : "races"}
-                      {s.active ? " (active)" : ""}
-                    </Badge>
-                  ))}
-                  {pointStreaks.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No points streaks yet.</p>
-                  )}
+                <div>
+                  <h3 className="text-sm font-medium text-text-secondary mb-3">Longest Points Streaks</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {pointStreaks.slice(0, 5).map((s, i) => (
+                      <Badge key={i} variant={s.active ? "brand" : "default"} className="text-sm px-3 py-1">
+                        {s.length} {s.length === 1 ? "race" : "races"}
+                        {s.active ? " (active)" : ""}
+                      </Badge>
+                    ))}
+                    {pointStreaks.length === 0 && (
+                      <p className="text-sm text-text-secondary">No points streaks yet.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   )
 }
 
@@ -1337,18 +1500,18 @@ function TeammateSection({
 
   return (
     <TableRow>
-      <TableCell>{season}</TableCell>
+      <TableCell className="text-text-primary">{season}</TableCell>
       <TableCell>
         <div className="flex items-center gap-1.5">
           {getFlagUrl(teamResults.teammateNationality) && (
             <img src={getFlagUrl(teamResults.teammateNationality)!} alt="" className="w-4 h-3 object-cover rounded-none" />
           )}
-          <span className="font-medium">{teamResults.teammateName}</span>
+          <span className="font-medium text-text-primary">{teamResults.teammateName}</span>
         </div>
       </TableCell>
-      <TableCell className="text-right">{commonRaceIds.length}</TableCell>
-      <TableCell className="text-right text-xs">{raceH2HText}</TableCell>
-      <TableCell className="text-right text-xs">{qualiH2HText}</TableCell>
+      <TableCell className="text-right text-text-primary">{commonRaceIds.length}</TableCell>
+      <TableCell className="text-right text-xs text-text-primary">{raceH2HText}</TableCell>
+      <TableCell className="text-right text-xs text-text-primary">{qualiH2HText}</TableCell>
     </TableRow>
   )
 }
@@ -1390,19 +1553,19 @@ function TeamHistoryCard({
   })()
 
   return (
-    <Card className="bg-muted/30">
+    <Card className="bg-tertiary/30">
       <CardContent className="p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <Link to={`/constructors/${entry.constructor_id}`} className="text-lg font-semibold hover:underline">{entry.constructor_name}</Link>
-            <p className="text-sm text-muted-foreground">{seasons.join(", ")}</p>
+            <Link to={`/constructors/${entry.constructor_id}`} className="text-lg font-semibold hover:underline text-text-primary">{entry.constructor_name}</Link>
+            <p className="text-sm text-text-secondary">{seasons.join(", ")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5">
+            <span className="text-xs bg-accent-red/10 text-accent-red rounded-full px-2 py-0.5">
               {t.races + t.sprints} races
             </span>
             {t.wins + t.sprintWins > 0 && (
-              <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full px-2 py-0.5">
+              <span className="text-xs bg-emerald-500/10 text-emerald-400 rounded-full px-2 py-0.5">
                 {t.wins + t.sprintWins} {t.wins + t.sprintWins === 1 ? "win" : "wins"}
               </span>
             )}
@@ -1410,28 +1573,28 @@ function TeamHistoryCard({
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div>
-            <span className="text-muted-foreground">Races</span>
-            <p className="font-semibold">{t.races + t.sprints}</p>
+            <span className="text-text-secondary">Races</span>
+            <p className="font-semibold text-text-primary">{t.races + t.sprints}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Wins</span>
-            <p className="font-semibold">{t.wins + t.sprintWins}</p>
+            <span className="text-text-secondary">Wins</span>
+            <p className="font-semibold text-text-primary">{t.wins + t.sprintWins}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Podiums</span>
-            <p className="font-semibold">{t.podiums + t.sprintPodiums}</p>
+            <span className="text-text-secondary">Podiums</span>
+            <p className="font-semibold text-text-primary">{t.podiums + t.sprintPodiums}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Points</span>
-            <p className="font-semibold">{t.points + t.sprintPoints}</p>
+            <span className="text-text-secondary">Points</span>
+            <p className="font-semibold text-text-primary">{t.points + t.sprintPoints}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Poles</span>
-            <p className="font-semibold">{t.poles}</p>
+            <span className="text-text-secondary">Poles</span>
+            <p className="font-semibold text-text-primary">{t.poles}</p>
           </div>
           <div>
-            <span className="text-muted-foreground">Win Rate</span>
-            <p className="font-semibold">
+            <span className="text-text-secondary">Win Rate</span>
+            <p className="font-semibold text-text-primary">
               {t.races + t.sprints > 0
                 ? `${((t.wins + t.sprintWins) / (t.races + t.sprints) * 100).toFixed(1)}%`
                 : "—"}
@@ -1442,3 +1605,5 @@ function TeamHistoryCard({
     </Card>
   )
 }
+
+

@@ -6,8 +6,22 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import { cn } from "@/lib/utils"
-import { Calendar, CheckCircle2, Clock } from "lucide-react"
+import { motion } from "framer-motion"
+import { Calendar, CheckCircle2, Clock, Trophy, ChevronRight } from "lucide-react"
 import type { Race, Season } from "@/types/database"
+
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05, delayChildren: 0.1 },
+  },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const } },
+}
 
 export default function RacesPage() {
   const { data: seasons } = useQuery({
@@ -76,11 +90,16 @@ export default function RacesPage() {
   const completed = races?.filter((r) => new Date(r.date) < now) ?? []
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] as const }}
+      className="space-y-8"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-heading uppercase tracking-wide">Races</h1>
-          <p className="text-sm text-muted-foreground mt-1">Browse Formula 1 races by season.</p>
+          <h1 className="text-2xl sm:text-3xl font-heading uppercase tracking-wide text-text-primary">Races</h1>
+          <p className="text-sm text-text-secondary mt-1">Browse Formula 1 races by season.</p>
         </div>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">
           {seasons?.map((s) => (
@@ -88,17 +107,17 @@ export default function RacesPage() {
               key={s.year}
               onClick={() => setSelectedSeason(s.year)}
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap",
+                "rounded-lg px-4 py-1.5 text-xs font-medium transition-all duration-200 whitespace-nowrap",
                 selectedSeason === s.year
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+                  ? "bg-accent-red text-white shadow-sm"
+                  : "bg-tertiary text-text-secondary hover:text-text-primary"
               )}
             >
               {s.year}
             </button>
           ))}
           {(!seasons || seasons.length === 0) && (
-            <span className="text-xs text-muted-foreground px-2 py-1.5">
+            <span className="text-xs text-text-secondary px-2 py-1.5">
               {new Date().getFullYear()}
             </span>
           )}
@@ -106,118 +125,140 @@ export default function RacesPage() {
       </div>
 
       {isLoading && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-xl bg-secondary/50 animate-pulse" />
+            <div key={i} className="h-28 rounded-2xl bg-tertiary/50 animate-pulse" />
           ))}
         </div>
       )}
 
       {upcoming.length > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-heading uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="h-4 w-4 text-accent-red" />
+            <h2 className="text-sm font-heading uppercase tracking-wider text-text-secondary">
               Upcoming ({upcoming.length})
             </h2>
+            <div className="h-px flex-1 bg-border-subtle" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+          >
             {upcoming.map((race) => (
-              <Link key={race.id} to={`/races/${race.id}`}>
-                <Card className="h-full group hover:shadow-md transition-all duration-200 border-dashed border-border/60">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {getFlagUrl(race.circuits.country) && (
-                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-5 h-4 object-cover rounded-sm shrink-0" />
-                        )}
-                        <span className="font-heading uppercase tracking-wide text-sm truncate">
-                          {race.name}
-                        </span>
+              <motion.div key={race.id} variants={itemVariants}>
+                <Link to={`/races/${race.id}`} className="block h-full">
+                  <Card className="relative overflow-hidden h-full border-dashed border-default hover:border-strong transition-all duration-300">
+                    <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red/60" />
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getFlagUrl(race.circuits.country) && (
+                            <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-5 h-4 object-cover rounded-sm shrink-0" />
+                          )}
+                          <span className="font-heading uppercase tracking-wide text-sm font-bold text-text-primary truncate">
+                            {race.name}
+                          </span>
+                        </div>
+                        <Badge variant="secondary" className="shrink-0">
+                          R{race.round}
+                        </Badge>
                       </div>
-                      <Badge variant="secondary" className="shrink-0 text-[10px]">
-                        R{race.round}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(race.date).toLocaleDateString(undefined, {
-                        weekday: "short", month: "short", day: "numeric",
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                      <div className="flex items-center gap-1.5 text-xs text-text-secondary">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(race.date).toLocaleDateString(undefined, {
+                          weekday: "short", month: "short", day: "numeric",
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </section>
       )}
 
       {completed.length > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-3">
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-            <h2 className="text-sm font-heading uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center gap-2 mb-4">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <h2 className="text-sm font-heading uppercase tracking-wider text-text-secondary">
               Completed ({completed.length})
             </h2>
+            <div className="h-px flex-1 bg-border-subtle" />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <motion.div
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+          >
             {completed.map((race) => (
-              <Link key={race.id} to={`/races/${race.id}`}>
-                <Card className="h-full group hover:shadow-md transition-all duration-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {getFlagUrl(race.circuits.country) && (
-                          <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-5 h-4 object-cover rounded-sm shrink-0" />
-                        )}
-                        <span className="font-heading uppercase tracking-wide text-sm truncate">
-                          {race.name}
-                        </span>
+              <motion.div key={race.id} variants={itemVariants}>
+                <Link to={`/races/${race.id}`} className="block h-full">
+                  <Card className="relative overflow-hidden h-full group hover:border-strong transition-all duration-300">
+                    <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500/60" />
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {getFlagUrl(race.circuits.country) && (
+                            <img src={getFlagUrl(race.circuits.country)!} alt={race.circuits.country} className="w-5 h-4 object-cover rounded-sm shrink-0" />
+                          )}
+                          <span className="font-heading uppercase tracking-wide text-sm font-bold text-text-primary truncate">
+                            {race.name}
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="shrink-0">
+                          R{race.round}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-[10px]">
-                        R{race.round}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(race.date).toLocaleDateString(undefined, {
-                        weekday: "short", month: "short", day: "numeric",
-                      })}
-                    </div>
-                    {podiumMap.get(race.id) && (
-                      <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-                        {podiumMap.get(race.id)!.map((r, i) => (
-                          <div key={r.driver.driver_id} className="flex items-center gap-1 text-[11px]">
-                            <span className={cn(
-                              "font-heading text-xs font-bold",
-                              i === 0 ? "text-yellow-500" : i === 1 ? "text-gray-400" : "text-amber-700"
-                            )}>
-                              P{i + 1}
-                            </span>
-                            {getFlagUrl(r.driver.nationality) && (
-                              <img src={getFlagUrl(r.driver.nationality)!} alt="" className="w-3 h-2 object-cover" />
-                            )}
-                            <span className="text-muted-foreground truncate max-w-[80px]">
-                              {r.driver.family_name.toUpperCase()}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="flex items-center gap-1.5 text-xs text-text-secondary mb-3">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(race.date).toLocaleDateString(undefined, {
+                          weekday: "short", month: "short", day: "numeric",
+                        })}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
+                      {podiumMap.get(race.id) && (
+                        <div className="flex items-center gap-2 pt-3 border-t border-subtle">
+                          <Trophy className="h-3 w-3 text-yellow-500 shrink-0" />
+                          {podiumMap.get(race.id)!.map((r, i) => (
+                            <div key={r.driver.driver_id} className="flex items-center gap-1 text-[11px]">
+                              <span className={cn(
+                                "font-heading text-xs font-bold",
+                                i === 0 ? "text-yellow-500" : i === 1 ? "text-zinc-400" : "text-amber-700"
+                              )}>
+                                P{i + 1}
+                              </span>
+                              {getFlagUrl(r.driver.nationality) && (
+                                <img src={getFlagUrl(r.driver.nationality)!} alt="" className="w-3 h-2 object-cover" />
+                              )}
+                              <span className="text-text-secondary truncate max-w-[80px]">
+                                {r.driver.family_name.toUpperCase()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-1 mt-3 text-[0.6rem] font-medium uppercase tracking-wider text-text-tertiary group-hover:text-text-secondary transition-colors">
+                        View details <ChevronRight className="h-3 w-3" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </section>
       )}
 
       {races?.length === 0 && !isLoading && (
         <div className="text-center py-16">
-          <p className="text-muted-foreground">No races found for {selectedSeason}.</p>
+          <p className="text-text-secondary">No races found for {selectedSeason}.</p>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

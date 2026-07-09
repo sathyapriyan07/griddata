@@ -81,54 +81,88 @@ const DriverCard = ({
   const colors = getConstructorStyles(result.constructor)
   const gridPos = result.grid ?? 99
   const imageUrl = cardImageUrl
+  const isPole = gridPos === 1
 
   return (
     <div
-      className="group relative select-none"
-      style={{ borderRadius: "0.75rem" }}
+      className={`group relative select-none transition-all duration-300 ${
+        isPole ? "scale-[1.02] -translate-y-0.5" : ""
+      }`}
+      style={{ borderRadius: "1rem" }}
     >
-      <div
-        className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none"
-      >
+      <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none transition-shadow duration-300">
         <div
-          className="absolute inset-0 opacity-90"
+          className="absolute inset-0 transition-all duration-500 group-hover:brightness-125"
           style={{
-            background: `linear-gradient(135deg, ${colors.primary}CC, ${colors.secondary}88)`,
+            background: `linear-gradient(135deg, ${colors.primary}DD, ${colors.secondary}99)`,
           }}
         />
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-[0.08]"
           style={{
             backgroundImage: `
-              repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px),
-              repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)
+              repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,255,255,0.04) 6px, rgba(255,255,255,0.04) 12px),
+              repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(255,255,255,0.03) 6px, rgba(255,255,255,0.03) 12px)
             `,
           }}
         />
         <div
-          className="absolute top-0 right-0 w-24 h-24 opacity-10"
+          className="absolute top-0 right-0 w-32 h-32 opacity-[0.12]"
           style={{
             background: `radial-gradient(circle at top right, ${colors.accent}, transparent 70%)`,
           }}
         />
+        {isPole && (
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `linear-gradient(180deg, rgba(234,179,8,0.08) 0%, transparent 50%)`,
+            }}
+          />
+        )}
+        {isPole && (
+          <div
+            className="absolute -inset-[1px] rounded-2xl pointer-events-none"
+            style={{
+              border: "1.5px solid rgba(234,179,8,0.3)",
+              boxShadow: "0 0 30px rgba(234,179,8,0.06), inset 0 0 30px rgba(234,179,8,0.03)",
+            }}
+          />
+        )}
       </div>
 
-      <div className="relative flex items-center gap-2 p-2 w-full">
+      <div className="relative flex items-center gap-3 p-3 w-full">
         <div
-          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10"
-          style={{ backgroundColor: `${colors.primary}`, color: colors.accent }}
+          className={`flex-shrink-0 flex items-center justify-center shadow-xl z-10 transition-transform duration-300 group-hover:scale-105 ${
+            isPole
+              ? "w-12 h-12 rounded-2xl"
+              : "w-11 h-11 rounded-xl"
+          }`}
+          style={{
+            backgroundColor: `${colors.primary}`,
+            color: colors.accent,
+            boxShadow: isPole
+              ? `0 0 24px ${colors.primary}60, 0 8px 32px rgba(0,0,0,0.3)`
+              : `0 4px 16px rgba(0,0,0,0.25)`,
+          }}
         >
-          <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>
+          <span
+            className={`font-bold leading-none ${isPole ? "text-xl" : "text-lg"}`}
+            style={{ fontFamily: "var(--font-heading)" }}
+          >
             {gridPos}
           </span>
         </div>
 
         {imageUrl && (
-          <div className="flex-shrink-0 self-end -mb-2 z-10">
+          <div className="flex-shrink-0 self-end -mb-3 z-10 transition-transform duration-300 group-hover:scale-105">
             <img
               src={imageUrl}
               alt={`${result.driver.given_name} ${result.driver.family_name}`}
-              className="h-20 w-auto object-contain drop-shadow-xl"
+              className="h-20 w-auto object-contain drop-shadow-2xl"
+              style={{
+                filter: isPole ? "brightness(1.1)" : undefined,
+              }}
               loading="lazy"
             />
           </div>
@@ -138,16 +172,18 @@ const DriverCard = ({
           <Link
             to={`/drivers/${result.driver.driver_id}`}
             onClick={(e) => e.stopPropagation()}
-            className="block text-base font-bold leading-tight text-white hover:underline truncate"
-            style={{ fontFamily: "var(--font-heading)" }}
+            className={`block font-bold leading-tight hover:underline truncate transition-colors ${
+              isPole ? "text-yellow-300" : "text-white"
+            }`}
+            style={{ fontFamily: "var(--font-heading)", fontSize: isPole ? "1.1rem" : "1rem" }}
           >
             {result.driver.family_name.toUpperCase()}
           </Link>
           <Link
             to={`/constructors/${result.constructor.constructor_id}`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate"
-            style={{ fontFamily: "var(--font-team)" }}
+            className="inline-flex items-center gap-1.5 text-white/60 hover:text-white/85 hover:underline truncate transition-colors"
+            style={{ fontSize: "0.75rem", fontFamily: "var(--font-team)" }}
           >
             {result.constructor.logo_url && (
               <img
@@ -162,7 +198,12 @@ const DriverCard = ({
 
         {qualifyingTimes?.q3 && (
           <div className="hidden sm:block text-right flex-shrink-0 z-10">
-            <span className="text-xs font-mono text-white/60">{qualifyingTimes.q3}</span>
+            <span
+              className="text-xs font-mono"
+              style={{ color: isPole ? "rgba(253,224,71,0.7)" : "rgba(255,255,255,0.5)" }}
+            >
+              {qualifyingTimes.q3}
+            </span>
           </div>
         )}
       </div>
@@ -171,31 +212,33 @@ const DriverCard = ({
 }
 
 const GridSkeleton = () => (
-  <div className="space-y-3 max-w-4xl mx-auto">
+  <div className="space-y-3 max-w-5xl mx-auto">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className="h-20 rounded-xl bg-white/5 animate-pulse overflow-hidden relative">
+        <div
+          key={i}
+          className="h-[72px] rounded-2xl overflow-hidden relative animate-pulse"
+          style={{
+            background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
+            border: "1px solid rgba(255,255,255,0.04)",
+          }}
+        >
           <div
-            className="absolute inset-0 opacity-10"
+            className="absolute inset-0 opacity-[0.03]"
             style={{
-              background: `linear-gradient(135deg, #666, #333)`,
-            }}
-          />
-          <div
-            className="absolute inset-0 opacity-5"
-            style={{
-              backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.05) 8px, rgba(255,255,255,0.05) 16px)`,
+              backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,255,255,0.04) 6px, rgba(255,255,255,0.04) 12px)`,
             }}
           />
           <div className="relative flex items-center gap-3 p-3">
-            <div className="w-12 h-12 rounded-xl bg-white/10" />
+            <div className="w-11 h-11 rounded-xl bg-white/5" />
             <div className="flex items-center gap-3 flex-1">
-              <div className="w-12 h-14 rounded bg-white/10" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-24 rounded bg-white/10" />
-                <div className="h-3 w-20 rounded bg-white/10" />
+              <div className="w-16 h-16 rounded bg-white/5 self-end -mb-3" />
+              <div className="flex-1 space-y-2.5">
+                <div className="h-4 w-28 rounded bg-white/5" />
+                <div className="h-3 w-20 rounded bg-white/5" />
               </div>
             </div>
+            <div className="hidden sm:block w-16 h-3 rounded bg-white/5" />
           </div>
         </div>
       ))}
@@ -204,20 +247,35 @@ const GridSkeleton = () => (
 )
 
 const EmptyGrid = ({ raceName }: { raceName: string }) => (
-  <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-    <div className="relative mb-6">
-      <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center">
-        <Flag className="w-10 h-10 text-white/20" />
+  <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+    <div className="relative mb-8">
+      <div
+        className="w-28 h-28 rounded-full flex items-center justify-center"
+        style={{
+          background: "radial-gradient(circle, rgba(255,255,255,0.04), transparent)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <Flag className="w-12 h-12 text-white/15" />
       </div>
-      <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-        <Minimize2 className="w-4 h-4 text-white/20" />
+      <div
+        className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full flex items-center justify-center"
+        style={{
+          background: "radial-gradient(circle, rgba(255,255,255,0.04), transparent)",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <Minimize2 className="w-5 h-5 text-white/15" />
       </div>
     </div>
-    <h3 className="text-xl font-bold text-white/60 mb-2" style={{ fontFamily: "var(--font-heading)" }}>
+    <h3
+      className="text-xl font-bold text-white/50 mb-3 tracking-wide"
+      style={{ fontFamily: "var(--font-heading)" }}
+    >
       STARTING GRID NOT YET PUBLISHED
     </h3>
-    <p className="text-sm text-white/40 max-w-xs">
-      The starting grid for {raceName} has not been published yet. Check back after qualifying.
+    <p className="text-sm text-white/30 max-w-xs leading-relaxed" style={{ fontFamily: "var(--font-team)" }}>
+      The starting grid for <span className="text-white/50">{raceName}</span> has not been published yet. Check back after qualifying.
     </p>
   </div>
 )
@@ -278,7 +336,7 @@ export default function StartingGrid({
   }, [qualifying])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {gridSorted.length === 0 ? (
         <EmptyGrid raceName={race.name} />
       ) : (
@@ -297,7 +355,7 @@ export default function StartingGrid({
                 )
               })}
             </div>
-            <div className="space-y-3 pt-0 md:pt-8">
+            <div className="space-y-3 pt-0 lg:pt-8">
               {evenPositions.map((result) => {
                 const q = qualifyingMap.get(result.driver_id) ?? null
                 return (
@@ -314,10 +372,7 @@ export default function StartingGrid({
 
           <div className="md:hidden space-y-3">
             {gridPairs.map(([odd, even], i) => (
-              <div
-                key={`pair-${i}`}
-                className="space-y-2"
-              >
+              <div key={`pair-${i}`} className="space-y-2">
                 {odd && (
                   <DriverCard
                     result={odd}
@@ -334,7 +389,7 @@ export default function StartingGrid({
                 )}
                 {i < gridPairs.length - 1 && odd && even && (
                   <div className="flex items-center gap-2 px-4 py-0.5">
-                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
                   </div>
                 )}
               </div>

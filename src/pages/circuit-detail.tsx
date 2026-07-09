@@ -6,14 +6,25 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
+import { motion } from "framer-motion"
 import type { Circuit, Race, CircuitImage } from "@/types/database"
 import { MapPin, Gauge, Route, Flag, Trophy } from "lucide-react"
+
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const } },
+}
 
 export default function CircuitDetailPage() {
   const { circuitId } = useParams()
 
   const { data: circuit } = useQuery({
-    queryKey: ["circuit", circuitId],
+    queryKey: ["circuit", circuitId ?? ""],
     queryFn: async () => {
       const { data } = await supabase
         .from("circuits")
@@ -25,7 +36,7 @@ export default function CircuitDetailPage() {
   })
 
   const { data: circuitRecord } = useQuery({
-    queryKey: ["circuit-record", circuitId],
+    queryKey: ["circuit-record", circuitId ?? ""],
     queryFn: async () => {
       if (!circuitId) return null
       const { data } = await supabase
@@ -140,15 +151,8 @@ export default function CircuitDetailPage() {
       acc[id] = {
         driverId: r.driver.driver_id,
         name: `${r.driver.given_name} ${r.driver.family_name}`,
-        races: 0,
-        points: 0,
-        wins: 0,
-        podiums: 0,
-        p2: 0,
-        p3: 0,
-        poles: 0,
-        dnfs: 0,
-        dns: 0,
+        races: 0, points: 0, wins: 0, podiums: 0, p2: 0, p3: 0,
+        poles: 0, dnfs: 0, dns: 0,
       }
     }
     const s = acc[id]
@@ -165,14 +169,9 @@ export default function CircuitDetailPage() {
     if (status.includes("dnf")) s.dnfs += 1
     if (status.includes("dns")) s.dns += 1
     return acc
-  }, {} as Record<string, { driverId: string; name: string; races: number; points: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }>)
+  }, {} as Record<string, { driverId: string; name: string; races: number; points: number; wins: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }>)
 
   type DriverStat = { driverId: string; name: string; races: number; points: number; wins: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }
-
-  const statsToTop = (key: keyof DriverStat) =>
-    Object.values(driverStats as Record<string, DriverStat>)
-      .sort((a, b) => (b[key] as number) - (a[key] as number))
-      .slice(0, 5)
 
   const teamStats = (raceResults ?? []).reduce((acc, r) => {
     const ctor = r.constructor
@@ -182,15 +181,8 @@ export default function CircuitDetailPage() {
       acc[id] = {
         constructorId: ctor.constructor_id,
         name: ctor.name,
-        races: 0,
-        points: 0,
-        wins: 0,
-        podiums: 0,
-        p2: 0,
-        p3: 0,
-        poles: 0,
-        dnfs: 0,
-        dns: 0,
+        races: 0, points: 0, wins: 0, podiums: 0, p2: 0, p3: 0,
+        poles: 0, dnfs: 0, dns: 0,
       }
     }
     const s = acc[id]
@@ -207,82 +199,111 @@ export default function CircuitDetailPage() {
     if (status.includes("dnf")) s.dnfs += 1
     if (status.includes("dns")) s.dns += 1
     return acc
-  }, {} as Record<string, { constructorId: string; name: string; races: number; points: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }>)
+  }, {} as Record<string, { constructorId: string; name: string; races: number; points: number; wins: number; podiums: number; p2: number; p3: number; poles: number; dnfs: number; dns: number }>)
 
   if (!circuit) {
     return <PageSkeleton />
   }
 
   return (
-    <div className="space-y-6">
-      <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-card to-muted p-6 lg:p-8">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] as const }}
+      className="space-y-6"
+    >
+      <section className="relative overflow-hidden rounded-3xl min-h-[240px] lg:min-h-[280px] flex items-end bg-gradient-to-br from-accent-red/10 via-bg-primary to-bg-primary border border-default">
         {circuit.image_url && (
           <div className="absolute inset-0">
-            <img src={circuit.image_url} alt="" className="w-full h-full object-cover opacity-20" />
-            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/80" />
+            <img src={circuit.image_url} alt="" className="w-full h-full object-cover opacity-30" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-transparent" />
           </div>
         )}
-        <div className="relative flex items-start gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-3xl lg:text-4xl font-bold font-heading uppercase tracking-wide">{circuit.name}</h1>
-            <p className="text-base text-muted-foreground flex items-center gap-1 mt-1">
-              <MapPin className="w-4 h-4" />
-              {circuit.location}, {circuit.country}
-            </p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {circuit.direction && (
-                <Badge variant="secondary" className="gap-1">
-                  <Route className="w-3 h-3" />
-                  {circuit.direction}
-                </Badge>
-              )}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `radial-gradient(circle at 20% 50%, hsl(3,95%,46%) 0%, transparent 60%)`
+        }} />
+        <div className="relative z-10 w-full p-8 lg:p-12">
+          <div className="flex items-start gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-3xl lg:text-5xl font-heading font-bold uppercase leading-[0.9] tracking-[-0.02em] text-text-primary">
+                {circuit.name}
+              </h1>
+              <p className="text-base text-text-secondary flex items-center gap-1 mt-2">
+                <MapPin className="w-4 h-4" />
+                {circuit.location}, {circuit.country}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {circuit.direction && (
+                  <Badge variant="brand" className="gap-1">
+                    <Route className="w-3 h-3" />
+                    {circuit.direction}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Gauge className="w-8 h-8 text-muted-foreground/40" />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Length</p>
-              <p className="text-2xl font-bold">{circuit.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Route className="w-8 h-8 text-muted-foreground/40" />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Turns</p>
-              <p className="text-2xl font-bold">{circuit.turns ?? "—"}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Flag className="w-8 h-8 text-muted-foreground/40" />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">First GP</p>
-              <p className="text-2xl font-bold">{races?.length ? Math.min(...races.map((r) => r.season_year)) : "—"}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-yellow-500/60" />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">GPs Held</p>
-              <p className="text-2xl font-bold">{races?.length ?? "—"}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <motion.div
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+      >
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden h-full">
+            <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
+            <CardContent className="p-5 flex items-center gap-3">
+              <Gauge className="w-8 h-8 text-text-tertiary" />
+              <div>
+                <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Length</p>
+                <p className="text-2xl font-bold text-text-primary">{circuit.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden h-full">
+            <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+            <CardContent className="p-5 flex items-center gap-3">
+              <Route className="w-8 h-8 text-text-tertiary" />
+              <div>
+                <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Turns</p>
+                <p className="text-2xl font-bold text-text-primary">{circuit.turns ?? "—"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden h-full">
+            <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+            <CardContent className="p-5 flex items-center gap-3">
+              <Flag className="w-8 h-8 text-text-tertiary" />
+              <div>
+                <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">First GP</p>
+                <p className="text-2xl font-bold text-text-primary">{races?.length ? Math.min(...races.map((r) => r.season_year)) : "—"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card className="relative overflow-hidden h-full">
+            <div className="absolute top-0 left-0 w-[3px] h-full bg-purple-500" />
+            <CardContent className="p-5 flex items-center gap-3">
+              <Trophy className="w-8 h-8 text-yellow-500/60" />
+              <div>
+                <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">GPs Held</p>
+                <p className="text-2xl font-bold text-text-primary">{races?.length ?? "—"}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       <Tabs defaultValue="races">
         <div className="overflow-x-auto hide-scrollbar">
-          <TabsList className="inline-flex w-max min-w-full">
+          <TabsList>
             <TabsTrigger value="races">Grands Prix</TabsTrigger>
             <TabsTrigger value="winners">Winners</TabsTrigger>
             <TabsTrigger value="fastest-laps">Fastest Laps</TabsTrigger>
@@ -310,19 +331,19 @@ export default function CircuitDetailPage() {
                 <TableBody>
                   {races?.map((race) => (
                     <TableRow key={race.id}>
-                      <TableCell>{race.season_year}</TableCell>
-                      <TableCell>{race.round}</TableCell>
+                      <TableCell className="text-text-primary">{race.season_year}</TableCell>
+                      <TableCell className="text-text-primary">{race.round}</TableCell>
                       <TableCell>
-                        <Link to={`/races/${race.id}`} className="hover:underline">
+                        <Link to={`/races/${race.id}`} className="hover:underline text-text-primary">
                           {race.name}
                         </Link>
                       </TableCell>
-                      <TableCell>{new Date(race.date).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-text-secondary">{new Date(race.date).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))}
                   {(!races || races.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-text-secondary">
                         No race data available yet.
                       </TableCell>
                     </TableRow>
@@ -361,24 +382,24 @@ export default function CircuitDetailPage() {
                     .map((s) => (
                       <TableRow key={s.constructorId}>
                         <TableCell>
-                          <Link to={`/constructors/${s.constructorId}`} className="hover:underline">
+                          <Link to={`/constructors/${s.constructorId}`} className="hover:underline text-text-primary">
                             {s.name}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right">{s.races}</TableCell>
-                        <TableCell className="text-right">{s.points}</TableCell>
-                        <TableCell className="text-right">{s.wins}</TableCell>
-                        <TableCell className="text-right">{s.podiums}</TableCell>
-                        <TableCell className="text-right">{s.p2}</TableCell>
-                        <TableCell className="text-right">{s.p3}</TableCell>
-                        <TableCell className="text-right">{s.poles}</TableCell>
-                        <TableCell className="text-right">{s.dnfs}</TableCell>
-                        <TableCell className="text-right">{s.dns}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.races}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.points}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.wins}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.podiums}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.p2}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.p3}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.poles}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.dnfs}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.dns}</TableCell>
                       </TableRow>
                     ))}
                   {Object.values(teamStats).length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-text-secondary">
                         No team records available yet.
                       </TableCell>
                     </TableRow>
@@ -397,7 +418,7 @@ export default function CircuitDetailPage() {
             <CardContent className="space-y-4">
               {topWinners.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Most Wins</h3>
+                  <h3 className="text-sm font-medium text-text-secondary mb-3">Most Wins</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {(() => {
                       const winnerInfo = new Map<string, { photo_url: string | null; constructor: { name: string; constructor_id: string; logo_url: string | null } }>()
@@ -409,21 +430,20 @@ export default function CircuitDetailPage() {
                         const [driverId, displayName] = name.split("|")
                         const info = winnerInfo.get(name)
                         return (
-                          <div key={driverId} className="rounded-lg border bg-card overflow-hidden">
+                          <div key={driverId} className="rounded-xl border border-default bg-secondary overflow-hidden">
                             <div className="p-4">
                               <div className="flex items-center gap-3">
                                 {info?.photo_url && (
-                                  <img src={info.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                                  <img src={info.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-border-strong" />
                                 )}
                                 <div className="min-w-0 flex-1">
-                                  <Link to={`/drivers/${driverId}`} className="font-medium hover:underline block truncate">
+                                  <Link to={`/drivers/${driverId}`} className="font-medium hover:underline block truncate text-text-primary">
                                     {displayName}
                                   </Link>
-
                                 </div>
                                 <div className="text-right shrink-0">
-                                  <div className="text-xl font-bold">{count}</div>
-                                  <div className="text-xs text-muted-foreground">wins</div>
+                                  <div className="text-xl font-bold text-text-primary">{count}</div>
+                                  <div className="text-[0.6rem] text-text-tertiary uppercase tracking-wide">wins</div>
                                 </div>
                               </div>
                             </div>
@@ -434,9 +454,8 @@ export default function CircuitDetailPage() {
                   </div>
                 </div>
               )}
-
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">All Winners</h3>
+                <h3 className="text-sm font-medium text-text-secondary mb-2">All Winners</h3>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -449,15 +468,15 @@ export default function CircuitDetailPage() {
                   <TableBody>
                     {winners?.map((w, i) => (
                       <TableRow key={i}>
-                        <TableCell>{w.races.season_year}</TableCell>
-                        <TableCell>{w.races.name}</TableCell>
+                        <TableCell className="text-text-primary">{w.races.season_year}</TableCell>
+                        <TableCell className="text-text-primary">{w.races.name}</TableCell>
                         <TableCell>
-                          <Link to={`/drivers/${w.driver.driver_id}`} className="hover:underline">
+                          <Link to={`/drivers/${w.driver.driver_id}`} className="hover:underline text-text-primary">
                             {w.driver.given_name} {w.driver.family_name}
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Link to={`/constructors/${w.constructor.constructor_id}`} className="hover:underline">
+                          <Link to={`/constructors/${w.constructor.constructor_id}`} className="hover:underline text-text-primary">
                             {w.constructor.name}
                           </Link>
                         </TableCell>
@@ -465,7 +484,7 @@ export default function CircuitDetailPage() {
                     ))}
                     {(!winners || winners.length === 0) && (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center text-text-secondary">
                           No winner data available.
                         </TableCell>
                       </TableRow>
@@ -495,19 +514,19 @@ export default function CircuitDetailPage() {
                 <TableBody>
                   {fastLaps?.map((fl, i) => (
                     <TableRow key={i}>
-                      <TableCell>{fl.races.season_year}</TableCell>
-                      <TableCell>{fl.races.name}</TableCell>
+                      <TableCell className="text-text-primary">{fl.races.season_year}</TableCell>
+                      <TableCell className="text-text-primary">{fl.races.name}</TableCell>
                       <TableCell>
-                        <Link to={`/drivers/${fl.driver.driver_id}`} className="hover:underline">
+                        <Link to={`/drivers/${fl.driver.driver_id}`} className="hover:underline text-text-primary">
                           {fl.driver.given_name} {fl.driver.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell className="font-mono">{fl.fastest_lap_time}</TableCell>
+                      <TableCell className="font-mono text-text-primary">{fl.fastest_lap_time}</TableCell>
                     </TableRow>
                   ))}
                   {(!fastLaps || fastLaps.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-text-secondary">
                         No fastest lap data available.
                       </TableCell>
                     </TableRow>
@@ -546,24 +565,24 @@ export default function CircuitDetailPage() {
                     .map((s) => (
                       <TableRow key={s.driverId}>
                         <TableCell>
-                          <Link to={`/drivers/${s.driverId}`} className="hover:underline">
+                          <Link to={`/drivers/${s.driverId}`} className="hover:underline text-text-primary">
                             {s.name}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right">{s.races}</TableCell>
-                        <TableCell className="text-right">{s.points}</TableCell>
-                        <TableCell className="text-right">{s.wins}</TableCell>
-                        <TableCell className="text-right">{s.podiums}</TableCell>
-                        <TableCell className="text-right">{s.p2}</TableCell>
-                        <TableCell className="text-right">{s.p3}</TableCell>
-                        <TableCell className="text-right">{s.poles}</TableCell>
-                        <TableCell className="text-right">{s.dnfs}</TableCell>
-                        <TableCell className="text-right">{s.dns}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.races}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.points}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.wins}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.podiums}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.p2}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.p3}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.poles}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.dnfs}</TableCell>
+                        <TableCell className="text-right text-text-primary">{s.dns}</TableCell>
                       </TableRow>
                     ))}
                   {Object.values(driverStats).length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-text-secondary">
                         No records available yet.
                       </TableCell>
                     </TableRow>
@@ -582,11 +601,10 @@ export default function CircuitDetailPage() {
                   <CardTitle>Circuit Hero</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <img src={circuitHero.image_url} alt="Circuit hero" className="w-full h-64 object-cover rounded-lg" />
+                  <img src={circuitHero.image_url} alt="Circuit hero" className="w-full h-64 object-cover rounded-xl" />
                 </CardContent>
               </Card>
             )}
-
             <Card>
               <CardHeader>
                 <CardTitle>Coordinates</CardTitle>
@@ -594,28 +612,26 @@ export default function CircuitDetailPage() {
               <CardContent>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Latitude</span>
-                    <span className="font-medium">{circuit.lat ?? "—"}</span>
+                    <span className="text-text-secondary">Latitude</span>
+                    <span className="font-medium text-text-primary">{circuit.lat ?? "—"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Longitude</span>
-                    <span className="font-medium">{circuit.lng ?? "—"}</span>
+                    <span className="text-text-secondary">Longitude</span>
+                    <span className="font-medium text-text-primary">{circuit.lng ?? "—"}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
             {circuitLayout && (
               <Card>
                 <CardHeader>
                   <CardTitle>Circuit Layout</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <img src={circuitLayout.image_url} alt="Circuit layout" className="w-full h-48 object-contain rounded-lg" />
+                  <img src={circuitLayout.image_url} alt="Circuit layout" className="w-full h-48 object-contain rounded-xl" />
                 </CardContent>
               </Card>
             )}
-
             {circuit.lat && circuit.lng && (
               <Card className="lg:col-span-2">
                 <CardHeader>
@@ -626,37 +642,35 @@ export default function CircuitDetailPage() {
                     title="Circuit Map"
                     width="100%"
                     height="350"
-                    className="rounded-lg border"
+                    className="rounded-xl border border-default"
                     src={`https://www.openstreetmap.org/export/embed.html?bbox=${circuit.lng - 0.02},${circuit.lat - 0.02},${circuit.lng + 0.02},${circuit.lat + 0.02}&layer=mapnik&marker=${circuit.lat},${circuit.lng}`}
                   />
                 </CardContent>
               </Card>
             )}
-
             {circuitAerial && (
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Aerial View</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <img src={circuitAerial.image_url} alt="Aerial view" className="w-full h-80 object-cover rounded-lg" />
+                  <img src={circuitAerial.image_url} alt="Aerial view" className="w-full h-80 object-cover rounded-xl" />
                 </CardContent>
               </Card>
             )}
-
             {circuit.image_url && (
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Circuit Image</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <img src={circuit.image_url} alt={circuit.name} className="w-full h-64 object-cover rounded-lg" />
+                  <img src={circuit.image_url} alt={circuit.name} className="w-full h-64 object-cover rounded-xl" />
                 </CardContent>
               </Card>
             )}
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   )
 }

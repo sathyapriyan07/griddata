@@ -9,8 +9,19 @@ import { getConstructorColors } from "@/lib/constructorColors"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
+import { motion } from "framer-motion"
 import type { Constructor, RaceResult, ConstructorStanding, DriverImage } from "@/types/database"
 import { Trophy, Medal, Flag, MapPin, Users, Wrench, BarChart3, Target, Crown } from "lucide-react"
+
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const } },
+}
 
 function formatSeasonRange(seasons: number[]): string {
   if (seasons.length === 0) return ""
@@ -25,7 +36,7 @@ export default function ConstructorDetailPage() {
   const { constructorId } = useParams()
 
   const { data: team } = useQuery({
-    queryKey: ["constructor", constructorId],
+    queryKey: ["constructor", constructorId ?? ""],
     queryFn: async () => {
       const { data } = await supabase
         .from("constructors")
@@ -37,7 +48,7 @@ export default function ConstructorDetailPage() {
   })
 
   const { data: teamRecord } = useQuery({
-    queryKey: ["constructor-record", constructorId],
+    queryKey: ["constructor-record", constructorId ?? ""],
     queryFn: async () => {
       if (!constructorId) return null
       const { data } = await supabase
@@ -212,26 +223,13 @@ export default function ConstructorDetailPage() {
 
   const driverMilestones = (() => {
     const map = new Map<string, {
-      driver_id: string
-      given_name: string
-      family_name: string
-      circuit_id: string
-      circuit_name: string
-      races: number
-      longestWins: number
-      longestPodiums: number
-      longestPoles: number
-      longestPoints: number
-      currentWinStreak: number
-      currentPodiumStreak: number
-      currentPoleStreak: number
-      currentPointsStreak: number
+      driver_id: string; given_name: string; family_name: string; circuit_id: string; circuit_name: string;
+      races: number; longestWins: number; longestPodiums: number; longestPoles: number; longestPoints: number;
+      currentWinStreak: number; currentPodiumStreak: number; currentPoleStreak: number; currentPointsStreak: number
     }>()
-
     const rows = [...(constructorResults ?? [])]
       .filter((r) => r.races?.circuit_id && r.races?.circuits?.name)
       .sort((a, b) => new Date(a.races.date).getTime() - new Date(b.races.date).getTime())
-
     for (const r of rows) {
       const driverId = r.driver.driver_id
       const circuitId = r.races.circuit_id
@@ -239,54 +237,23 @@ export default function ConstructorDetailPage() {
       const key = `${driverId}|${circuitId}`
       if (!map.has(key)) {
         map.set(key, {
-          driver_id: driverId,
-          given_name: r.driver.given_name,
-          family_name: r.driver.family_name,
-          circuit_id: circuitId,
-          circuit_name: circuitName,
-          races: 0,
-          longestWins: 0,
-          longestPodiums: 0,
-          longestPoles: 0,
-          longestPoints: 0,
-          currentWinStreak: 0,
-          currentPodiumStreak: 0,
-          currentPoleStreak: 0,
-          currentPointsStreak: 0,
+          driver_id: driverId, given_name: r.driver.given_name, family_name: r.driver.family_name,
+          circuit_id: circuitId, circuit_name: circuitName, races: 0,
+          longestWins: 0, longestPodiums: 0, longestPoles: 0, longestPoints: 0,
+          currentWinStreak: 0, currentPodiumStreak: 0, currentPoleStreak: 0, currentPointsStreak: 0,
         })
       }
       const entry = map.get(key)!
       entry.races += 1
-
-      if (r.position === 1) {
-        entry.currentWinStreak += 1
-      } else {
-        entry.currentWinStreak = 0
-      }
+      if (r.position === 1) entry.currentWinStreak += 1; else entry.currentWinStreak = 0
       entry.longestWins = Math.max(entry.longestWins, entry.currentWinStreak)
-
-      if (r.position !== null && r.position <= 3) {
-        entry.currentPodiumStreak += 1
-      } else {
-        entry.currentPodiumStreak = 0
-      }
+      if (r.position !== null && r.position <= 3) entry.currentPodiumStreak += 1; else entry.currentPodiumStreak = 0
       entry.longestPodiums = Math.max(entry.longestPodiums, entry.currentPodiumStreak)
-
-      if (r.grid === 1) {
-        entry.currentPoleStreak += 1
-      } else {
-        entry.currentPoleStreak = 0
-      }
+      if (r.grid === 1) entry.currentPoleStreak += 1; else entry.currentPoleStreak = 0
       entry.longestPoles = Math.max(entry.longestPoles, entry.currentPoleStreak)
-
-      if (r.points > 0) {
-        entry.currentPointsStreak += 1
-      } else {
-        entry.currentPointsStreak = 0
-      }
+      if (r.points > 0) entry.currentPointsStreak += 1; else entry.currentPointsStreak = 0
       entry.longestPoints = Math.max(entry.longestPoints, entry.currentPointsStreak)
     }
-
     return [...map.values()].sort((a, b) => b.longestWins - a.longestWins || b.longestPodiums - a.longestPodiums || b.longestPoints - a.longestPoints)
   })()
 
@@ -301,128 +268,159 @@ export default function ConstructorDetailPage() {
   const colors = getConstructorColors(team.name)
 
   return (
-    <div className="space-y-6">
-      <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-card to-muted p-6 lg:p-8">
-        <div className="absolute top-0 right-0 w-64 h-64 opacity-5">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] as const }}
+      className="space-y-6"
+    >
+      <section className="relative overflow-hidden rounded-3xl min-h-[240px] lg:min-h-[280px] flex items-end bg-gradient-to-br from-accent-red/10 via-bg-primary to-bg-primary border border-default">
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
           {colors && (
             <div className="w-full h-full rounded-full blur-3xl" style={{ background: colors.primary }} />
           )}
         </div>
-        <div className="relative flex items-start gap-4">
-          {team.logo_url && (
-            <div className="shrink-0 w-16 h-16 rounded-xl bg-card/50 p-2 border border-border/50 flex items-center justify-center">
-              <img
-                src={team.logo_url}
-                alt={`${team.name} logo`}
-                className="w-full h-full object-contain"
-              />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              {colors && (
-                <div className="w-4 h-4 rounded-sm shrink-0" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }} />
-              )}
-              <h1 className="text-3xl font-bold font-heading uppercase tracking-wide">{team.name}</h1>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {team.nationality && (
-                <Badge variant="secondary" className="gap-1">
-                  <Flag className="w-3 h-3" />
-                  {team.nationality}
-                </Badge>
-              )}
-              {team.founded_year && (
-                <Badge variant="outline">{team.founded_year}</Badge>
-              )}
-            </div>
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-xl text-sm">
-              {team.base && (
-                <div>
-                  <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium flex items-center gap-1">
-                    <MapPin className="w-3 h-3" /> Base
-                  </span>
-                  <p className="font-medium mt-0.5">{team.base}</p>
-                </div>
-              )}
-              {team.principal && (
-                <div>
-                  <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium flex items-center gap-1">
-                    <Users className="w-3 h-3" /> Principal
-                  </span>
-                  <p className="font-medium mt-0.5">{team.principal}</p>
-                </div>
-              )}
-              {team.engine_supplier && (
-                <div>
-                  <span className="text-muted-foreground text-xs uppercase tracking-wide font-medium flex items-center gap-1">
-                    <Wrench className="w-3 h-3" /> Engine
-                  </span>
-                  <p className="font-medium mt-0.5">{team.engine_supplier}</p>
-                </div>
-              )}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `radial-gradient(circle at 20% 50%, hsl(3,95%,46%) 0%, transparent 60%)`
+        }} />
+        <div className="relative z-10 w-full p-8 lg:p-12">
+          <div className="flex items-start gap-4">
+            {team.logo_url && (
+              <div className="shrink-0 w-16 h-16 rounded-2xl bg-secondary/80 backdrop-blur-xl p-2 border border-default flex items-center justify-center">
+                <img src={team.logo_url} alt={`${team.name} logo`} className="w-full h-full object-contain" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 flex-wrap">
+                {colors && (
+                  <div className="w-4 h-4 rounded-sm shrink-0" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }} />
+                )}
+                <h1 className="text-3xl lg:text-5xl font-heading font-bold uppercase leading-[0.9] tracking-[-0.02em] text-text-primary">
+                  {team.name}
+                </h1>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {team.nationality && (
+                  <Badge variant="brand" className="gap-1">
+                    <Flag className="w-3 h-3" />
+                    {team.nationality}
+                  </Badge>
+                )}
+                {team.founded_year && (
+                  <Badge variant="outline">{team.founded_year}</Badge>
+                )}
+              </div>
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-xl text-sm">
+                {team.base && (
+                  <div>
+                    <span className="text-text-tertiary text-[0.6rem] uppercase tracking-wide font-medium flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> Base
+                    </span>
+                    <p className="font-medium mt-0.5 text-text-primary">{team.base}</p>
+                  </div>
+                )}
+                {team.principal && (
+                  <div>
+                    <span className="text-text-tertiary text-[0.6rem] uppercase tracking-wide font-medium flex items-center gap-1">
+                      <Users className="w-3 h-3" /> Principal
+                    </span>
+                    <p className="font-medium mt-0.5 text-text-primary">{team.principal}</p>
+                  </div>
+                )}
+                {team.engine_supplier && (
+                  <div>
+                    <span className="text-text-tertiary text-[0.6rem] uppercase tracking-wide font-medium flex items-center gap-1">
+                      <Wrench className="w-3 h-3" /> Engine
+                    </span>
+                    <p className="font-medium mt-0.5 text-text-primary">{team.engine_supplier}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Flag className="w-8 h-8 text-muted-foreground/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Races</p>
-                <p className="text-2xl font-bold">{stats.totalRaces}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-500/60" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Wins</p>
-                <p className="text-2xl font-bold">{stats.wins}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Medal className="w-8 h-8 text-amber-500/60" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Podiums</p>
-                <p className="text-2xl font-bold">{stats.podiums}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Crown className="w-8 h-8 text-yellow-500/60" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Titles</p>
-                <p className="text-2xl font-bold">{stats.championships}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <Target className="w-8 h-8 text-muted-foreground/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Win Rate</p>
-                <p className="text-2xl font-bold">{(stats.winRate * 100).toFixed(1)}%</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <BarChart3 className="w-8 h-8 text-muted-foreground/40" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Points</p>
-                <p className="text-2xl font-bold">{stats.totalPoints}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <motion.div
+          variants={containerVariants}
+          initial="initial"
+          animate="animate"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"
+        >
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Flag className="w-8 h-8 text-text-tertiary" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Races</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.totalRaces}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-yellow-500/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Wins</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.wins}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-amber-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Medal className="w-8 h-8 text-amber-500/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Podiums</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.podiums}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Crown className="w-8 h-8 text-yellow-500/60" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Titles</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.championships}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-purple-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <Target className="w-8 h-8 text-text-tertiary" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Win Rate</p>
+                  <p className="text-2xl font-bold text-text-primary">{(stats.winRate * 100).toFixed(1)}%</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
+              <CardContent className="p-5 flex items-center gap-3">
+                <BarChart3 className="w-8 h-8 text-text-tertiary" />
+                <div>
+                  <p className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">Points</p>
+                  <p className="text-2xl font-bold text-text-primary">{stats.totalPoints}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
       )}
 
       {teamCarImages && teamCarImages.length > 0 && (
@@ -434,13 +432,9 @@ export default function ConstructorDetailPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {teamCarImages.map((img) => (
                 <div key={img.id} className="space-y-1">
-                  <img
-                    src={img.image_url}
-                    alt={`${team.name} ${img.year} car`}
-                    className="w-full h-32 object-contain rounded-md border bg-muted/30"
-                  />
-                  <p className="text-sm text-center font-medium">{img.year}</p>
-                  {img.caption && <p className="text-xs text-center text-muted-foreground">{img.caption}</p>}
+                  <img src={img.image_url} alt={`${team.name} ${img.year} car`} className="w-full h-32 object-contain rounded-xl border border-default bg-tertiary/30" />
+                  <p className="text-sm text-center font-medium text-text-primary">{img.year}</p>
+                  {img.caption && <p className="text-xs text-center text-text-secondary">{img.caption}</p>}
                 </div>
               ))}
             </div>
@@ -450,7 +444,7 @@ export default function ConstructorDetailPage() {
 
       <Tabs defaultValue="standings">
         <div className="overflow-x-auto hide-scrollbar">
-          <TabsList className="inline-flex w-max min-w-full">
+          <TabsList>
             <TabsTrigger value="standings">Season Standings</TabsTrigger>
             <TabsTrigger value="results">Race Results</TabsTrigger>
             <TabsTrigger value="drivers">Driver Roster</TabsTrigger>
@@ -476,15 +470,15 @@ export default function ConstructorDetailPage() {
                 <TableBody>
                   {standings?.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell>{s.season_year}</TableCell>
-                      <TableCell className="text-center">{s.position ? `P${s.position}` : "—"}</TableCell>
-                      <TableCell className="text-right">{s.points}</TableCell>
-                      <TableCell className="text-right">{s.wins}</TableCell>
+                      <TableCell className="text-text-primary">{s.season_year}</TableCell>
+                      <TableCell className="text-center text-text-primary">{s.position ? `P${s.position}` : "—"}</TableCell>
+                      <TableCell className="text-right text-text-primary">{s.points}</TableCell>
+                      <TableCell className="text-right text-text-primary">{s.wins}</TableCell>
                     </TableRow>
                   ))}
                   {(!standings || standings.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center text-text-secondary">
                         No standings data available yet.
                       </TableCell>
                     </TableRow>
@@ -516,25 +510,25 @@ export default function ConstructorDetailPage() {
                 <TableBody>
                   {constructorResults?.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.races.season_year}</TableCell>
-                      <TableCell>{r.races.round}</TableCell>
+                      <TableCell className="text-text-primary">{r.races.season_year}</TableCell>
+                      <TableCell className="text-text-primary">{r.races.round}</TableCell>
                       <TableCell>
-                        <Link to={`/races/${r.race_id}`} className="hover:underline">{r.races.name}</Link>
+                        <Link to={`/races/${r.race_id}`} className="hover:underline text-text-primary">{r.races.name}</Link>
                       </TableCell>
                       <TableCell>
-                        <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline">
+                        <Link to={`/drivers/${r.driver.driver_id}`} className="hover:underline text-text-primary">
                           {r.driver.given_name} {r.driver.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{r.position ?? r.position_text ?? "DNF"}</TableCell>
-                      <TableCell>{r.grid ?? "—"}</TableCell>
-                      <TableCell>{r.points}</TableCell>
-                      <TableCell>{r.status ?? "—"}</TableCell>
+                      <TableCell className="text-text-primary">{r.position ?? r.position_text ?? "DNF"}</TableCell>
+                      <TableCell className="text-text-primary">{r.grid ?? "—"}</TableCell>
+                      <TableCell className="text-text-primary">{r.points}</TableCell>
+                      <TableCell className="text-text-secondary">{r.status ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                   {(!constructorResults || constructorResults.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-text-secondary">
                         No race results available yet.
                       </TableCell>
                     </TableRow>
@@ -550,32 +544,39 @@ export default function ConstructorDetailPage() {
               <CardTitle>Drivers who drove for {team.name}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <motion.div
+                variants={containerVariants}
+                initial="initial"
+                animate="animate"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+              >
                 {drivers?.map((d) => (
-                  <Link key={d.driver_id} to={`/drivers/${d.driver_id}`}>
-                    <Card className="relative overflow-hidden transition-colors cursor-pointer border hover:border-foreground/20">
-                      {driverHeroMap.get(d.id) && (
-                        <>
-                          <div className="absolute inset-0">
-                            <img src={driverHeroMap.get(d.id)!} alt="" className="w-full h-full object-cover" />
-                          </div>
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-                        </>
-                      )}
-                      <CardContent className="relative p-4">
-                        <div className="font-medium truncate text-white drop-shadow-sm">{d.given_name} {d.family_name}</div>
-                        <div className="text-xs text-white/70 drop-shadow-sm mt-1">{d.nationality ?? "—"}</div>
-                        <div className="text-xs text-white/50 drop-shadow-sm mt-0.5">{formatSeasonRange(d.seasons)}</div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <motion.div key={d.driver_id} variants={itemVariants}>
+                    <Link to={`/drivers/${d.driver_id}`}>
+                      <Card className="relative overflow-hidden transition-all duration-300 border-default hover:border-strong">
+                        {driverHeroMap.get(d.id) && (
+                          <>
+                            <div className="absolute inset-0">
+                              <img src={driverHeroMap.get(d.id)!} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+                          </>
+                        )}
+                        <CardContent className="relative p-4">
+                          <div className="font-heading font-bold truncate text-white drop-shadow-sm">{d.given_name} {d.family_name}</div>
+                          <div className="text-xs text-white/70 drop-shadow-sm mt-1">{d.nationality ?? "—"}</div>
+                          <div className="text-xs text-white/50 drop-shadow-sm mt-0.5">{formatSeasonRange(d.seasons)}</div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
                 ))}
                 {(!drivers || drivers.length === 0) && (
-                  <div className="col-span-full text-center text-muted-foreground py-8">
+                  <div className="col-span-full text-center text-text-secondary py-8">
                     No driver data available.
                   </div>
                 )}
-              </div>
+              </motion.div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -601,21 +602,21 @@ export default function ConstructorDetailPage() {
                   {sortedDriverRecords.map((d) => (
                     <TableRow key={d.driver_id}>
                       <TableCell>
-                        <Link to={`/drivers/${d.driver_id}`} className="font-medium hover:underline">
+                        <Link to={`/drivers/${d.driver_id}`} className="font-medium hover:underline text-text-primary">
                           {d.given_name} {d.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{d.races + d.sprints}</TableCell>
-                      <TableCell className="font-semibold">{d.wins + d.sprintWins}</TableCell>
-                      <TableCell>{d.races + d.sprints > 0 ? `${((d.wins + d.sprintWins) / (d.races + d.sprints) * 100).toFixed(1)}%` : "—"}</TableCell>
-                      <TableCell>{d.podiums + d.sprintPodiums}</TableCell>
-                      <TableCell className="font-bold">{d.points + d.sprintPoints}</TableCell>
-                      <TableCell>{d.poles}</TableCell>
+                      <TableCell className="text-text-primary">{d.races + d.sprints}</TableCell>
+                      <TableCell className="font-semibold text-text-primary">{d.wins + d.sprintWins}</TableCell>
+                      <TableCell className="text-text-primary">{d.races + d.sprints > 0 ? `${((d.wins + d.sprintWins) / (d.races + d.sprints) * 100).toFixed(1)}%` : "—"}</TableCell>
+                      <TableCell className="text-text-primary">{d.podiums + d.sprintPodiums}</TableCell>
+                      <TableCell className="font-bold text-text-primary">{d.points + d.sprintPoints}</TableCell>
+                      <TableCell className="text-text-primary">{d.poles}</TableCell>
                     </TableRow>
                   ))}
                   {sortedDriverRecords.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center text-text-secondary">
                         No race results available yet.
                       </TableCell>
                     </TableRow>
@@ -648,21 +649,21 @@ export default function ConstructorDetailPage() {
                   {driverMilestones.map((item) => (
                     <TableRow key={`${item.driver_id}-${item.circuit_id}`}>
                       <TableCell>
-                        <Link to={`/drivers/${item.driver_id}`} className="font-medium hover:underline">
+                        <Link to={`/drivers/${item.driver_id}`} className="font-medium hover:underline text-text-primary">
                           {item.given_name} {item.family_name}
                         </Link>
                       </TableCell>
-                      <TableCell>{item.circuit_name}</TableCell>
-                      <TableCell>{item.races}</TableCell>
-                      <TableCell>{item.longestWins}</TableCell>
-                      <TableCell>{item.longestPodiums}</TableCell>
-                      <TableCell>{item.longestPoles}</TableCell>
-                      <TableCell>{item.longestPoints}</TableCell>
+                      <TableCell className="text-text-primary">{item.circuit_name}</TableCell>
+                      <TableCell className="text-text-primary">{item.races}</TableCell>
+                      <TableCell className="text-text-primary">{item.longestWins}</TableCell>
+                      <TableCell className="text-text-primary">{item.longestPodiums}</TableCell>
+                      <TableCell className="text-text-primary">{item.longestPoles}</TableCell>
+                      <TableCell className="text-text-primary">{item.longestPoints}</TableCell>
                     </TableRow>
                   ))}
                   {driverMilestones.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center text-text-secondary">
                         No driver milestones available yet.
                       </TableCell>
                     </TableRow>
@@ -673,6 +674,6 @@ export default function ConstructorDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   )
 }

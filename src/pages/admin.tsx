@@ -20,10 +20,21 @@ import { useAuth, getProfile } from "@/stores/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { motion } from "framer-motion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { SyncJob, Profile, CircuitImage } from "@/types/database"
 import { Shield, Database, Cloud } from "lucide-react"
+
+const containerVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.08 } },
+}
+
+const itemVariants = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const } },
+}
 
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
   try {
@@ -90,7 +101,7 @@ function SeasonImportForm({
           onChange={(e) => setSeason(e.target.value)}
           min={1950}
           max={new Date().getFullYear() + 1}
-          className="w-24 rounded-md border px-2 py-1 text-sm bg-background"
+          className="w-24 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
         />
         <Button
           variant="outline"
@@ -220,7 +231,7 @@ function RaceImportForm({
           onChange={(e) => setSeason(e.target.value)}
           min={1950}
           max={new Date().getFullYear() + 1}
-          className="w-24 rounded-md border px-2 py-1 text-sm bg-background"
+          className="w-24 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
           placeholder="Season"
         />
         <input
@@ -229,7 +240,7 @@ function RaceImportForm({
           onChange={(e) => setRound(e.target.value)}
           min={1}
           max={30}
-          className="w-20 rounded-md border px-2 py-1 text-sm bg-background"
+          className="w-20 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
           placeholder="Round"
         />
       </div>
@@ -311,7 +322,6 @@ function CrudTable({
 
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    // debounce update to searchText so typing doesn't steal focus
     debounceRef.current = window.setTimeout(() => {
       setSearchText(searchInput)
     }, 300)
@@ -353,7 +363,7 @@ function CrudTable({
     }
   }
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading...</p>
+  if (isLoading) return <p className="text-sm text-text-secondary">Loading...</p>
 
   return (
     <div className="space-y-3">
@@ -363,7 +373,7 @@ function CrudTable({
           placeholder="Search..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          className="rounded border px-2 py-1 text-sm bg-background w-64"
+          className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-64"
         />
         {!showAdd ? (
           <Button variant="outline" size="sm" onClick={() => setShowAdd(true)}>
@@ -376,12 +386,12 @@ function CrudTable({
         )}
       </div>
       {showAdd && (
-        <div className="flex flex-wrap gap-2 items-end border rounded-md p-3 bg-muted/30">
+        <div className="flex flex-wrap gap-2 items-end rounded-xl border border-default bg-secondary/50 p-3">
           {columns.map((col) => (
             <div key={col.key} className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">{col.label}</label>
+              <label className="text-xs text-text-secondary">{col.label}</label>
               <input
-                className="rounded border px-2 py-1 text-sm bg-background w-32"
+                className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-32"
                 placeholder={col.label}
                 value={newRow[col.key] ?? ""}
                 onChange={(e) => setNewRow({ ...newRow, [col.key]: e.target.value })}
@@ -403,41 +413,41 @@ function CrudTable({
           </TableHeader>
           <TableBody>
             {rows?.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={(row as Record<string, unknown>).id as string}>
                 {columns.map((col) => (
                   <TableCell key={col.key}>
-                    {editingId === row.id ? (
+                    {editingId === (row as Record<string, unknown>).id ? (
                       <input
-                        className="w-full rounded border px-2 py-1 text-sm bg-background"
+                        className="w-full rounded-xl border border-default bg-secondary px-3 py-1.5 text-sm text-text-primary"
                         value={edits[col.key] ?? ""}
                         onChange={(e) => setEdits({ ...edits, [col.key]: e.target.value })}
                       />
                     ) : (
                       <span
-                        className="cursor-pointer hover:bg-muted px-1 rounded"
-                        onDoubleClick={() => startEdit(row)}
+                        className="cursor-pointer hover:bg-tertiary px-1 rounded text-text-primary"
+                        onDoubleClick={() => startEdit(row as Record<string, unknown>)}
                         title="Double-click to edit"
                       >
-                        {row[col.key] != null ? String(row[col.key]).substring(0, 40) : "—"}
+                        {(row as Record<string, unknown>)[col.key] != null ? String((row as Record<string, unknown>)[col.key]).substring(0, 40) : "—"}
                       </span>
                     )}
                   </TableCell>
                 ))}
                 <TableCell>
-                  {editingId === row.id ? (
+                  {editingId === (row as Record<string, unknown>).id ? (
                     <div className="flex gap-1">
                       <Button variant="default" size="sm" onClick={saveEdit}>Save</Button>
                       <Button variant="outline" size="sm" onClick={cancelEdit}>Cancel</Button>
                     </div>
                   ) : (
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => startEdit(row)}>Edit</Button>
+                      <Button variant="outline" size="sm" onClick={() => startEdit(row as Record<string, unknown>)}>Edit</Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
                           if (confirm("Delete this record? This cannot be undone.")) {
-                            supabase.from(entityType).delete().eq("id", row.id).then(() => refetch())
+                            supabase.from(entityType).delete().eq("id", (row as Record<string, unknown>).id as string).then(() => refetch())
                           }
                         }}
                       >
@@ -450,7 +460,7 @@ function CrudTable({
             ))}
             {(!rows || rows.length === 0) && (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} className="text-center text-muted-foreground">
+                <TableCell colSpan={columns.length + 1} className="text-center text-text-secondary">
                   No records found.
                 </TableCell>
               </TableRow>
@@ -544,21 +554,18 @@ export default function AdminPage() {
     setIntegrityResults(null)
     const issues: string[] = []
 
-    // Orphaned race_results (no matching race)
     const { count: orphanResults } = await supabase
       .from("race_results")
       .select("id", { count: "exact", head: true })
       .not("race_id", "in", "(select id from races)")
     if (orphanResults && orphanResults > 0) issues.push(`Orphaned race_results: ${orphanResults}`)
 
-    // Orphaned qualifying_results
     const { count: orphanQuali } = await supabase
       .from("qualifying_results")
       .select("id", { count: "exact", head: true })
       .not("race_id", "in", "(select id from races)")
     if (orphanQuali && orphanQuali > 0) issues.push(`Orphaned qualifying_results: ${orphanQuali}`)
 
-    // Races without results
     const { data: racesWithResults } = await supabase
       .from("race_results")
       .select("race_id")
@@ -569,7 +576,6 @@ export default function AdminPage() {
       issues.push(`Races missing results: ${racesMissingResults.length} (e.g. ${racesMissingResults[0]?.name} ${racesMissingResults[0]?.season_year})`)
     }
 
-    // Drivers without results
     const { data: driversWithResults } = await supabase
       .from("race_results")
       .select("driver_id")
@@ -585,18 +591,6 @@ export default function AdminPage() {
     setCheckingIntegrity(false)
   }
 
-  const { data: syncJobs } = useQuery({
-    queryKey: ["sync-jobs"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("sync_jobs")
-        .select("*")
-        .order("started_at", { ascending: false })
-        .limit(20)
-      return (data ?? []) as SyncJob[]
-    },
-  })
-
   const checkConnection = async () => {
     const tables = ["seasons", "circuits", "constructors", "drivers", "races", "race_results", "weather", "race_sessions", "tire_stints"]
     const found: string[] = []
@@ -605,7 +599,6 @@ export default function AdminPage() {
         const { error } = await supabase.from(table).select("id", { count: "exact", head: true }).limit(0)
         if (!error || error.code === "PGRST116") found.push(table)
       } catch {
-        // table doesn't exist
       }
     }
     setDbStatus({ connected: found.length > 0, tables: found })
@@ -662,40 +655,41 @@ export default function AdminPage() {
     }
   }
 
-  const statusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: "bg-yellow-100 text-yellow-800",
-      running: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      failed: "bg-red-100 text-red-800",
-    }
-    return (
-      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[status] || "bg-gray-100"}`}>
-        {status}
-      </span>
-    )
-  }
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold font-heading uppercase tracking-wide flex items-center gap-3">
-          <Shield className="w-7 h-7 text-primary" />
-          Administration
-        </h1>
-        <p className="text-muted-foreground">
-          Protected area for data management, imports, and CRUD operations.
-        </p>
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] as const }}
+      className="space-y-6"
+    >
+      <section className="relative overflow-hidden rounded-3xl min-h-[160px] flex items-end bg-gradient-to-br from-accent-red/10 via-bg-primary to-bg-primary border border-default p-8 lg:p-12">
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `radial-gradient(circle at 20% 50%, hsl(3,95%,46%) 0%, transparent 60%)`
+        }} />
+        <div className="absolute inset-0 opacity-[0.015]" style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px'
+        }} />
+        <div className="absolute top-0 left-0 h-full w-[4px] bg-accent-red" />
+        <div className="relative z-10">
+          <h1 className="text-3xl lg:text-5xl font-heading font-bold uppercase leading-[0.9] tracking-[-0.02em] text-text-primary flex items-center gap-3">
+            <Shield className="w-8 h-8 text-accent-red" />
+            Administration
+          </h1>
+          <p className="text-text-secondary mt-2">
+            Protected area for data management, imports, and CRUD operations.
+          </p>
+        </div>
+      </section>
 
       {importStatus && (
-        <div className="rounded-md bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800 dark:text-green-200">
+        <div className="rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-400 border border-emerald-500/20">
           {importStatus}
         </div>
       )}
 
       {importError && (
-        <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-800 dark:text-red-200">
+        <div className="rounded-xl bg-red-500/10 p-4 text-sm text-red-400 border border-red-500/20">
           {importError}
         </div>
       )}
@@ -705,7 +699,7 @@ export default function AdminPage() {
           Check DB Connection
         </Button>
         {dbStatus && (
-          <span className={dbStatus.connected ? "text-green-600" : "text-red-600"}>
+          <span className={dbStatus.connected ? "text-emerald-400" : "text-red-400"}>
             {dbStatus.connected
               ? `Tables found: ${dbStatus.tables.join(", ") || "none (anon key may not have schema access)"}`
               : "No tables found — run Supabase migrations first"}
@@ -713,357 +707,385 @@ export default function AdminPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Database className="w-4 h-4" />
-              Jolpica Import
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">Import historical F1 data from Jolpica API.</p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={importing}
-                onClick={() => runImport("Seasons", importSeasons, "seasons")}
-              >
-                Import Seasons
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={importing}
-                onClick={() => runImport("Circuits", importCircuits, "circuits")}
-              >
-                Import Circuits
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={importing}
-                onClick={() => runImport("Constructors", importConstructors, "constructors")}
-              >
-                Import Constructors
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={importing}
-                onClick={() => runImport("Drivers", importDrivers, "drivers")}
-              >
-                Import Drivers
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={importing}
-                onClick={() => runImport("All Driver-Team Links", importDriverConstructorHistoryAll, "dch_all")}
-              >
-                All Driver-Team Links
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Cloud className="w-4 h-4" />
-              OpenF1 Import
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">Sync modern session data (weather, stints) from OpenF1 API.</p>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                value={openf1Season}
-                onChange={(e) => setOpenf1Season(e.target.value)}
-                min={2018}
-                max={new Date().getFullYear() + 1}
-                className="w-24 rounded-md border px-2 py-1 text-sm bg-background"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={importing || !openf1Season}
-                onClick={runOpenF1Import}
-              >
-                Sync OpenF1 Season
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Import Season
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">Import races and results for a specific season.</p>
-            <SeasonImportForm importing={importing} runImport={runImport} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Import Single Race
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">Import results for a specific race by season and round.</p>
-            <RaceImportForm importing={importing} runImport={runImport} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Admin Role
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-sm">
-              Your role: <Badge variant={userProfile?.role === "admin" ? "default" : "secondary"}>{userProfile?.role ?? "public"}</Badge>
-            </div>
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                value={adminRoleUserId}
-                onChange={(e) => setAdminRoleUserId(e.target.value)}
-                placeholder="User ID (UUID)"
-                className="flex-1 rounded-md border px-2 py-1 text-sm bg-background"
-              />
-              <Button variant="outline" size="sm" onClick={() => setAdminRole(adminRoleUserId)}>
-                Set Admin
-              </Button>
-            </div>
-            <Button variant="outline" size="sm" onClick={fetchProfiles}>
-              List Profiles
-            </Button>
-            {adminRoleStatus && <p className="text-xs text-muted-foreground">{adminRoleStatus}</p>}
-            {profiles.length > 0 && (
-              <div className="max-h-32 overflow-y-auto text-xs">
-                {profiles.map((p) => (
-                  <div key={p.id} className="flex justify-between py-0.5">
-                    <span className="font-mono">{p.id.substring(0, 12)}...</span>
-                    <Badge variant={p.role === "admin" ? "default" : "secondary"} className="text-[10px]">{p.role}</Badge>
-                  </div>
-                ))}
+      <motion.div
+        variants={containerVariants}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Jolpica Import
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-text-secondary">Import historical F1 data from Jolpica API.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={importing}
+                  onClick={() => runImport("Seasons", importSeasons, "seasons")}
+                >
+                  Import Seasons
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={importing}
+                  onClick={() => runImport("Circuits", importCircuits, "circuits")}
+                >
+                  Import Circuits
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={importing}
+                  onClick={() => runImport("Constructors", importConstructors, "constructors")}
+                >
+                  Import Constructors
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={importing}
+                  onClick={() => runImport("Drivers", importDrivers, "drivers")}
+                >
+                  Import Drivers
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Data Integrity
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">Orphan detection, missing results, referential checks.</p>
-            <Button variant="outline" size="sm" disabled={checkingIntegrity} onClick={runIntegrityChecks}>
-              {checkingIntegrity ? "Checking..." : "Run Checks"}
-            </Button>
-            {integrityResults && (
-              <ul className="text-xs space-y-1 mt-2">
-                {integrityResults.map((msg, i) => (
-                  <li key={i} className={msg === "No issues found." ? "text-green-600" : "text-amber-600"}>{msg}</li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Image Upload
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm">Upload driver photo, team logo, team car image, or circuit image.</p>
-            <div className="flex gap-2">
-              <select
-                value={uploadType}
-                onChange={(e) => { setUploadType(e.target.value as typeof uploadType); setUploadEntityId(""); setUploadStatus(null); setUploadError(null) }}
-                className="rounded-md border px-2 py-1 text-sm bg-background flex-1"
-              >
-                <option value="driver">Driver</option>
-                <option value="constructor">Team</option>
-                <option value="circuit">Circuit</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={importing}
+                  onClick={() => runImport("All Driver-Team Links", importDriverConstructorHistoryAll, "dch_all")}
+                >
+                  All Driver-Team Links
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium flex items-center gap-2">
+                <Cloud className="w-4 h-4" />
+                OpenF1 Import
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-text-secondary">Sync modern session data (weather, stints) from OpenF1 API.</p>
               <div className="flex gap-2 items-center">
                 <input
-                  type="search"
-                  placeholder="Search..."
-                  value={uploadSearch}
-                  onChange={(e) => setUploadSearch(e.target.value)}
-                  className="rounded-md border px-2 py-1 text-sm bg-background w-full"
+                  type="number"
+                  value={openf1Season}
+                  onChange={(e) => setOpenf1Season(e.target.value)}
+                  min={2018}
+                  max={new Date().getFullYear() + 1}
+                  className="w-24 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
                 />
-                <label className="text-sm flex items-center gap-1">
-                  <input type="checkbox" checked={searchAll} onChange={(e) => setSearchAll(e.target.checked)} />
-                  <span>Search all</span>
-                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={importing || !openf1Season}
+                  onClick={runOpenF1Import}
+                >
+                  Sync OpenF1 Season
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-              <select
-                value={uploadEntityId}
-                onChange={(e) => {
-                  const val = e.target.value
-                  if (val.includes("|")) {
-                    const [type, id] = val.split("|")
-                    setUploadType(type as typeof uploadType)
-                    setUploadEntityId(id)
-                  } else {
-                    setUploadEntityId(val)
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Import Season
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-text-secondary">Import races and results for a specific season.</p>
+              <SeasonImportForm importing={importing} runImport={runImport} />
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Import Single Race
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-text-secondary">Import results for a specific race by season and round.</p>
+              <RaceImportForm importing={importing} runImport={runImport} />
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Admin Role
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="text-sm text-text-primary">
+                Your role: <Badge variant={userProfile?.role === "admin" ? "default" : "secondary"}>{userProfile?.role ?? "public"}</Badge>
+              </div>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={adminRoleUserId}
+                  onChange={(e) => setAdminRoleUserId(e.target.value)}
+                  placeholder="User ID (UUID)"
+                  className="flex-1 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
+                />
+                <Button variant="outline" size="sm" onClick={() => setAdminRole(adminRoleUserId)}>
+                  Set Admin
+                </Button>
+              </div>
+              <Button variant="outline" size="sm" onClick={fetchProfiles}>
+                List Profiles
+              </Button>
+              {adminRoleStatus && <p className="text-xs text-text-secondary">{adminRoleStatus}</p>}
+              {profiles.length > 0 && (
+                <div className="max-h-32 overflow-y-auto text-xs">
+                  {profiles.map((p) => (
+                    <div key={p.id} className="flex justify-between py-0.5">
+                      <span className="font-mono text-text-primary">{p.id.substring(0, 12)}...</span>
+                      <Badge variant={p.role === "admin" ? "default" : "secondary"} className="text-[10px]">{p.role}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Data Integrity
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="text-sm text-text-secondary">Orphan detection, missing results, referential checks.</p>
+              <Button variant="outline" size="sm" disabled={checkingIntegrity} onClick={runIntegrityChecks}>
+                {checkingIntegrity ? "Checking..." : "Run Checks"}
+              </Button>
+              {integrityResults && (
+                <ul className="text-xs space-y-1 mt-2">
+                  {integrityResults.map((msg, i) => (
+                    <li key={i} className={msg === "No issues found." ? "text-emerald-400" : "text-amber-400"}>{msg}</li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Image Upload
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-text-secondary">Upload driver photo, team logo, team car image, or circuit image.</p>
+              <div className="flex gap-2">
+                <select
+                  value={uploadType}
+                  onChange={(e) => { setUploadType(e.target.value as typeof uploadType); setUploadEntityId(""); setUploadStatus(null); setUploadError(null) }}
+                  className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary flex-1"
+                >
+                  <option value="driver">Driver</option>
+                  <option value="constructor">Team</option>
+                  <option value="circuit">Circuit</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="search"
+                    placeholder="Search..."
+                    value={uploadSearch}
+                    onChange={(e) => setUploadSearch(e.target.value)}
+                    className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-full"
+                  />
+                  <label className="text-sm flex items-center gap-1 text-text-secondary">
+                    <input type="checkbox" checked={searchAll} onChange={(e) => setSearchAll(e.target.checked)} />
+                    <span>Search all</span>
+                  </label>
+                </div>
+
+                <select
+                  value={uploadEntityId}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val.includes("|")) {
+                      const [type, id] = val.split("|")
+                      setUploadType(type as typeof uploadType)
+                      setUploadEntityId(id)
+                    } else {
+                      setUploadEntityId(val)
+                    }
+                  }}
+                  className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-full"
+                >
+                  <option value="">Select {uploadType}...</option>
+                  {searchAll ? (
+                    [
+                      ...(driversList ?? []).map((d) => ({ type: "driver", id: d.id, label: `${d.given_name} ${d.family_name}` })),
+                      ...(constructorsList ?? []).map((c) => ({ type: "constructor", id: c.id, label: c.name })),
+                      ...(circuitsList ?? []).map((c) => ({ type: "circuit", id: c.id, label: `${c.name} ${c.country ?? ""}` })),
+                    ]
+                      .filter((item) => item.label.toLowerCase().includes(uploadSearch.toLowerCase()))
+                      .map((item) => (
+                        <option key={`${item.type}|${item.id}`} value={`${item.type}|${item.id}`}>{`[${item.type}] ${item.label}`}</option>
+                      ))
+                  ) : (
+                    <>
+                      {uploadType === "driver" && (driversList ?? []).filter(d => d.given_name.toLowerCase().includes(uploadSearch.toLowerCase()) || d.family_name.toLowerCase().includes(uploadSearch.toLowerCase())).map((d) => (
+                        <option key={d.id} value={d.id}>{d.given_name} {d.family_name}</option>
+                      ))}
+                      {uploadType === "constructor" && (constructorsList ?? []).filter(c => c.name.toLowerCase().includes(uploadSearch.toLowerCase())).map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                      {uploadType === "circuit" && (circuitsList ?? []).filter(c => c.name.toLowerCase().includes(uploadSearch.toLowerCase()) || (c.country ?? "").toLowerCase().includes(uploadSearch.toLowerCase())).map((c) => (
+                        <option key={c.id} value={c.id}>{c.name} {c.country ? `(${c.country})` : ""}</option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                className="text-sm text-text-secondary"
+              />
+              <Button
+                variant="default"
+                size="sm"
+                disabled={uploading || !uploadEntityId || !uploadFile}
+                onClick={async () => {
+                  if (!uploadFile || !uploadEntityId) return
+                  setUploading(true)
+                  setUploadStatus(null)
+                  setUploadError(null)
+                  try {
+                    const ext = uploadFile.name.split(".").pop() || "png"
+                    const filePath = `${uploadType}s/${uploadEntityId}.${ext}`
+                    const { error: uploadErr } = await supabase.storage
+                      .from("images")
+                      .upload(filePath, uploadFile, { upsert: true })
+                    if (uploadErr) throw uploadErr
+                    const { data: urlData } = supabase.storage
+                      .from("images")
+                      .getPublicUrl(filePath)
+                    const publicUrl = urlData.publicUrl
+
+                    const column = uploadType === "driver" ? "photo_url" : uploadType === "constructor" ? "logo_url" : "image_url"
+                    const table = uploadType === "driver" ? "drivers" : uploadType === "constructor" ? "constructors" : "circuits"
+                    const idColumn = "id"
+                    const { error: updateErr } = await supabase
+                      .from(table)
+                      .update({ [column]: publicUrl })
+                      .eq(idColumn, uploadEntityId)
+                    if (updateErr) throw updateErr
+                    setUploadStatus("Uploaded and linked successfully.")
+                    setUploadFile(null)
+                  } catch (err) {
+                    setUploadError(extractErrorMessage(err))
+                  } finally {
+                    setUploading(false)
                   }
                 }}
-                className="rounded-md border px-2 py-1 text-sm bg-background w-full"
               >
-                <option value="">Select {uploadType}...</option>
-                {searchAll ? (
-                  // combined list
-                  [
-                    ...(driversList ?? []).map((d) => ({ type: "driver", id: d.id, label: `${d.given_name} ${d.family_name}` })),
-                    ...(constructorsList ?? []).map((c) => ({ type: "constructor", id: c.id, label: c.name })),
-                    ...(circuitsList ?? []).map((c) => ({ type: "circuit", id: c.id, label: `${c.name} ${c.country ?? ""}` })),
-                  ]
-                    .filter((item) => item.label.toLowerCase().includes(uploadSearch.toLowerCase()))
-                    .map((item) => (
-                      <option key={`${item.type}|${item.id}`} value={`${item.type}|${item.id}`}>{`[${item.type}] ${item.label}`}</option>
-                    ))
-                ) : (
-                  <>
-                    {uploadType === "driver" && (driversList ?? []).filter(d => d.given_name.toLowerCase().includes(uploadSearch.toLowerCase()) || d.family_name.toLowerCase().includes(uploadSearch.toLowerCase())).map((d) => (
-                      <option key={d.id} value={d.id}>{d.given_name} {d.family_name}</option>
-                    ))}
-                    {uploadType === "constructor" && (constructorsList ?? []).filter(c => c.name.toLowerCase().includes(uploadSearch.toLowerCase())).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                    {uploadType === "circuit" && (circuitsList ?? []).filter(c => c.name.toLowerCase().includes(uploadSearch.toLowerCase()) || (c.country ?? "").toLowerCase().includes(uploadSearch.toLowerCase())).map((c) => (
-                      <option key={c.id} value={c.id}>{c.name} {c.country ? `(${c.country})` : ""}</option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
-              className="text-sm"
-            />
-            <Button
-              variant="default"
-              size="sm"
-              disabled={uploading || !uploadEntityId || !uploadFile}
-              onClick={async () => {
-                if (!uploadFile || !uploadEntityId) return
-                setUploading(true)
-                setUploadStatus(null)
-                setUploadError(null)
-                try {
-                  const ext = uploadFile.name.split(".").pop() || "png"
-                  const filePath = `${uploadType}s/${uploadEntityId}.${ext}`
-                  const { error: uploadErr } = await supabase.storage
-                    .from("images")
-                    .upload(filePath, uploadFile, { upsert: true })
-                  if (uploadErr) throw uploadErr
-                  const { data: urlData } = supabase.storage
-                    .from("images")
-                    .getPublicUrl(filePath)
-                  const publicUrl = urlData.publicUrl
+                {uploading ? "Uploading..." : "Upload Image"}
+              </Button>
+              {uploadStatus && <p className="text-xs text-emerald-400">{uploadStatus}</p>}
+              {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
+            </CardContent>
+          </Card>
+        </motion.div>
 
-                  const column = uploadType === "driver" ? "photo_url" : uploadType === "constructor" ? "logo_url" : "image_url"
-                  const table = uploadType === "driver" ? "drivers" : uploadType === "constructor" ? "constructors" : "circuits"
-                  const idColumn = "id"
-                  const { error: updateErr } = await supabase
-                    .from(table)
-                    .update({ [column]: publicUrl })
-                    .eq(idColumn, uploadEntityId)
-                  if (updateErr) throw updateErr
-                  setUploadStatus("Uploaded and linked successfully.")
-                  setUploadFile(null)
-                } catch (err) {
-                  setUploadError(extractErrorMessage(err))
-                } finally {
-                  setUploading(false)
-                }
-              }}
-            >
-              {uploading ? "Uploading..." : "Upload Image"}
-            </Button>
-            {uploadStatus && <p className="text-xs text-green-600">{uploadStatus}</p>}
-            {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Team Car Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TeamCarImagePanel />
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Team Car Images
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TeamCarImagePanel />
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Driver Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DriverImagePanel />
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Driver Images
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DriverImagePanel />
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Constructor Colors
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ConstructorColorPanel />
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Constructor Colors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ConstructorColorPanel />
-          </CardContent>
-        </Card>
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Nationality Flags
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <NationalityFlagPanel />
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Nationality Flags
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NationalityFlagPanel />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Circuit Images
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CircuitImagePanel />
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium">
+                Circuit Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CircuitImagePanel />
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
 
       <Tabs defaultValue="crud">
         <div className="overflow-x-auto hide-scrollbar">
@@ -1164,20 +1186,20 @@ export default function AdminPage() {
               <CardTitle>Database Schema</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
+              <p className="text-text-secondary">
                 The database contains tables for seasons, circuits, constructors, drivers,
                 races, sessions, qualifying, results, standings, pit stops, weather data,
                 tire stints, and sync job logs.
               </p>
-              <p className="text-sm mt-2">
-                Run the Supabase migrations in <code>supabase/migrations/</code> to set up the schema,
+              <p className="text-sm mt-2 text-text-secondary">
+                Run the Supabase migrations in <code className="text-text-primary">supabase/migrations/</code> to set up the schema,
                 then use the Import buttons above to populate data from the Jolpica API.
               </p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </motion.div>
   )
 }
 
@@ -1258,15 +1280,15 @@ function TeamCarImagePanel() {
         placeholder="Search teams..."
         value={searchQuery}
         onChange={(e) => { setSearchQuery(e.target.value); setSelectedConstructorId(null) }}
-        className="rounded border px-2 py-1 text-sm bg-background w-full"
+        className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-full"
       />
       {searchQuery && filteredConstructors.length > 0 && (
-        <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+        <div className="border border-default rounded-xl divide-y divide-default max-h-48 overflow-y-auto">
           {filteredConstructors.map((c) => (
             <button
               key={c.id}
               onClick={() => { setSelectedConstructorId(c.id); setSearchQuery(c.name) }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedConstructorId === c.id ? "bg-muted font-medium" : ""}`}
+              className={`w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-tertiary transition-colors ${selectedConstructorId === c.id ? "bg-tertiary font-medium" : ""}`}
             >
               {c.name}
             </button>
@@ -1274,7 +1296,7 @@ function TeamCarImagePanel() {
         </div>
       )}
       {searchQuery && filteredConstructors.length === 0 && (
-        <p className="text-xs text-muted-foreground px-1">No teams found.</p>
+        <p className="text-xs text-text-secondary px-1">No teams found.</p>
       )}
 
       {selectedConstructorId && (
@@ -1284,7 +1306,7 @@ function TeamCarImagePanel() {
               type="number"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-24 rounded border px-2 py-1 text-sm bg-background"
+              className="w-24 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
             />
             <input
               type="file"
@@ -1302,21 +1324,21 @@ function TeamCarImagePanel() {
             </Button>
           </div>
 
-          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+          {status && <p className="text-xs text-text-secondary">{status}</p>}
 
           {images && images.length > 0 && (
             <div className="grid gap-2 mt-2">
               {images.map((img) => (
                 <div key={img.id} className="flex items-center gap-2">
-                  <img src={img.image_url} alt={`car-${img.year}`} className="w-24 h-12 object-contain rounded" />
-                  <span className="text-sm font-medium flex-1">{img.year}</span>
+                  <img src={img.image_url} alt={`car-${img.year}`} className="w-24 h-12 object-contain rounded-xl" />
+                  <span className="text-sm font-medium text-text-primary flex-1">{img.year}</span>
                   <Button variant="outline" size="sm" onClick={() => deleteImage(img.id)}>Delete</Button>
                 </div>
               ))}
             </div>
           )}
           {images && images.length === 0 && (
-            <p className="text-xs text-muted-foreground">No images uploaded for this team yet.</p>
+            <p className="text-xs text-text-secondary">No images uploaded for this team yet.</p>
           )}
         </>
       )}
@@ -1418,15 +1440,15 @@ function DriverImagePanel() {
         placeholder="Search drivers..."
         value={searchQuery}
         onChange={(e) => { setSearchQuery(e.target.value); setSelectedDriverId(null) }}
-        className="rounded border px-2 py-1 text-sm bg-background w-full"
+        className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-full"
       />
       {searchQuery && filteredDrivers.length > 0 && (
-        <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+        <div className="border border-default rounded-xl divide-y divide-default max-h-48 overflow-y-auto">
           {filteredDrivers.map((d) => (
             <button
               key={d.id}
               onClick={() => { setSelectedDriverId(d.id); setSearchQuery(`${d.given_name} ${d.family_name}`) }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedDriverId === d.id ? "bg-muted font-medium" : ""}`}
+              className={`w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-tertiary transition-colors ${selectedDriverId === d.id ? "bg-tertiary font-medium" : ""}`}
             >
               {d.given_name} {d.family_name}
             </button>
@@ -1434,7 +1456,7 @@ function DriverImagePanel() {
         </div>
       )}
       {searchQuery && filteredDrivers.length === 0 && (
-        <p className="text-xs text-muted-foreground px-1">No drivers found.</p>
+        <p className="text-xs text-text-secondary px-1">No drivers found.</p>
       )}
 
       {selectedDriverId && (
@@ -1443,7 +1465,7 @@ function DriverImagePanel() {
             <select
               value={imageType}
               onChange={(e) => setImageType(e.target.value)}
-              className="rounded border px-2 py-1 text-sm bg-background"
+              className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
             >
               {typeOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -1454,7 +1476,7 @@ function DriverImagePanel() {
               value={year ?? ""}
               onChange={(e) => setYear(e.target.value ? Number(e.target.value) : null)}
               placeholder="Year"
-              className="w-20 rounded border px-2 py-1 text-sm bg-background"
+              className="w-20 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
             />
             <input
               type="file"
@@ -1472,16 +1494,16 @@ function DriverImagePanel() {
             </Button>
           </div>
 
-          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+          {status && <p className="text-xs text-text-secondary">{status}</p>}
 
           {images && images.length > 0 && (
             <div className="grid gap-2 mt-2">
               {images.map((img) => (
                 <div key={img.id} className="flex items-center gap-2">
-                  <img src={img.image_url} alt={`${img.type}`} className="w-24 h-12 object-contain rounded" />
-                  <div className="flex-1 text-sm">
+                  <img src={img.image_url} alt={`${img.type}`} className="w-24 h-12 object-contain rounded-xl" />
+                  <div className="flex-1 text-sm text-text-primary">
                     <span className="font-medium capitalize">{img.type}</span>
-                    {img.year && <span className="text-muted-foreground ml-2">({img.year})</span>}
+                    {img.year && <span className="text-text-secondary ml-2">({img.year})</span>}
                   </div>
                   <Button variant="outline" size="sm" onClick={() => deleteImage(img.id, img.image_url)}>Delete</Button>
                 </div>
@@ -1489,7 +1511,7 @@ function DriverImagePanel() {
             </div>
           )}
           {images && images.length === 0 && (
-            <p className="text-xs text-muted-foreground">No images uploaded for this driver yet.</p>
+            <p className="text-xs text-text-secondary">No images uploaded for this driver yet.</p>
           )}
         </>
       )}
@@ -1587,15 +1609,15 @@ function CircuitImagePanel() {
         placeholder="Search circuits..."
         value={searchQuery}
         onChange={(e) => { setSearchQuery(e.target.value); setSelectedCircuitId(null) }}
-        className="rounded border px-2 py-1 text-sm bg-background w-full"
+        className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary w-full"
       />
       {searchQuery && filteredCircuits.length > 0 && (
-        <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
+        <div className="border border-default rounded-xl divide-y divide-default max-h-48 overflow-y-auto">
           {filteredCircuits.map((c) => (
             <button
               key={c.id}
               onClick={() => { setSelectedCircuitId(c.id); setSearchQuery(c.name) }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedCircuitId === c.id ? "bg-muted font-medium" : ""}`}
+              className={`w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-tertiary transition-colors ${selectedCircuitId === c.id ? "bg-tertiary font-medium" : ""}`}
             >
               {c.name} {c.country ? `(${c.country})` : ""}
             </button>
@@ -1603,7 +1625,7 @@ function CircuitImagePanel() {
         </div>
       )}
       {searchQuery && filteredCircuits.length === 0 && (
-        <p className="text-xs text-muted-foreground px-1">No circuits found.</p>
+        <p className="text-xs text-text-secondary px-1">No circuits found.</p>
       )}
 
       {selectedCircuitId && (
@@ -1612,7 +1634,7 @@ function CircuitImagePanel() {
             <select
               value={imageType}
               onChange={(e) => setImageType(e.target.value)}
-              className="rounded border px-2 py-1 text-sm bg-background"
+              className="rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
             >
               {typeOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -1623,14 +1645,14 @@ function CircuitImagePanel() {
               value={year ?? ""}
               onChange={(e) => setYear(e.target.value ? Number(e.target.value) : null)}
               placeholder="Year"
-              className="w-20 rounded border px-2 py-1 text-sm bg-background"
+              className="w-20 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
             />
             <input
               type="text"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Caption"
-              className="flex-1 min-w-[120px] rounded border px-2 py-1 text-sm bg-background"
+              className="flex-1 min-w-[120px] rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
             />
             <input
               type="file"
@@ -1648,17 +1670,17 @@ function CircuitImagePanel() {
             </Button>
           </div>
 
-          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+          {status && <p className="text-xs text-text-secondary">{status}</p>}
 
           {images && images.length > 0 && (
             <div className="grid gap-2 mt-2">
               {images.map((img) => (
                 <div key={img.id} className="flex items-center gap-2">
-                  <img src={img.image_url} alt={`${img.type}`} className="w-24 h-12 object-cover rounded" />
-                  <div className="flex-1 text-sm">
+                  <img src={img.image_url} alt={`${img.type}`} className="w-24 h-12 object-cover rounded-xl" />
+                  <div className="flex-1 text-sm text-text-primary">
                     <span className="font-medium capitalize">{img.type.replace("_", " ")}</span>
-                    {img.year && <span className="text-muted-foreground ml-2">({img.year})</span>}
-                    {img.caption && <span className="text-muted-foreground ml-2">— {img.caption}</span>}
+                    {img.year && <span className="text-text-secondary ml-2">({img.year})</span>}
+                    {img.caption && <span className="text-text-secondary ml-2">— {img.caption}</span>}
                   </div>
                   <Button variant="outline" size="sm" onClick={() => deleteImage(img.id)}>Delete</Button>
                 </div>
@@ -1666,7 +1688,7 @@ function CircuitImagePanel() {
             </div>
           )}
           {images && images.length === 0 && (
-            <p className="text-xs text-muted-foreground">No images uploaded for this circuit yet.</p>
+            <p className="text-xs text-text-secondary">No images uploaded for this circuit yet.</p>
           )}
         </>
       )}
@@ -1755,15 +1777,15 @@ function ConstructorColorPanel() {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Search constructors..."
-        className="w-full rounded border px-3 py-2 text-sm bg-background"
+        className="w-full rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
       />
       {searchQuery && filteredConstructors.length > 0 && (
-        <div className="max-h-40 overflow-y-auto rounded border">
+        <div className="max-h-40 overflow-y-auto rounded-xl border border-default">
           {filteredConstructors.map((c) => (
             <button
               key={c.id}
               onClick={() => selectConstructor(c.id)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors ${selectedId === c.id ? "bg-muted font-medium" : ""}`}
+              className={`w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-tertiary transition-colors ${selectedId === c.id ? "bg-tertiary font-medium" : ""}`}
             >
               <span className="inline-flex items-center gap-2">
                 <span className="inline-block w-3 h-3 rounded-full" style={{ background: c.color_primary ?? getConstructorColors(c.name)?.primary ?? "#6b7280" }} />
@@ -1774,35 +1796,35 @@ function ConstructorColorPanel() {
         </div>
       )}
       {searchQuery && filteredConstructors.length === 0 && (
-        <p className="text-xs text-muted-foreground px-1">No constructors found.</p>
+        <p className="text-xs text-text-secondary px-1">No constructors found.</p>
       )}
 
       {selectedId && (
         <div className="space-y-3 pt-2">
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium">Primary</label>
+            <label className="text-xs font-medium text-text-primary">Primary</label>
             <div className="flex items-center gap-2">
               <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="w-10 h-8 rounded cursor-pointer" />
-              <input type="text" value={primary} onChange={(e) => setPrimary(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm font-mono bg-background" />
+              <input type="text" value={primary} onChange={(e) => setPrimary(e.target.value)} className="flex-1 rounded-xl border border-default bg-secondary px-3 py-2 text-sm font-mono text-text-primary" />
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium">Secondary</label>
+            <label className="text-xs font-medium text-text-primary">Secondary</label>
             <div className="flex items-center gap-2">
               <input type="color" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="w-10 h-8 rounded cursor-pointer" />
-              <input type="text" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm font-mono bg-background" />
+              <input type="text" value={secondary} onChange={(e) => setSecondary(e.target.value)} className="flex-1 rounded-xl border border-default bg-secondary px-3 py-2 text-sm font-mono text-text-primary" />
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium">Accent</label>
+            <label className="text-xs font-medium text-text-primary">Accent</label>
             <div className="flex items-center gap-2">
               <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="w-10 h-8 rounded cursor-pointer" />
-              <input type="text" value={accent} onChange={(e) => setAccent(e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm font-mono bg-background" />
+              <input type="text" value={accent} onChange={(e) => setAccent(e.target.value)} className="flex-1 rounded-xl border border-default bg-secondary px-3 py-2 text-sm font-mono text-text-primary" />
             </div>
           </div>
 
           <div className="flex items-center gap-3 pt-1">
-            <div className="flex-1 h-8 rounded border flex items-center justify-center text-xs font-medium" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})`, color: accent }}>
+            <div className="flex-1 h-8 rounded-xl border border-default flex items-center justify-center text-xs font-medium" style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})`, color: accent }}>
               Preview
             </div>
             <Button variant="default" size="sm" disabled={saving} onClick={save}>
@@ -1813,7 +1835,7 @@ function ConstructorColorPanel() {
             </Button>
           </div>
 
-          {status && <p className="text-xs text-muted-foreground">{status}</p>}
+          {status && <p className="text-xs text-text-secondary">{status}</p>}
         </div>
       )}
     </div>
@@ -1853,20 +1875,20 @@ function NationalityFlagPanel() {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder="Search nationality..."
-        className="w-full rounded border px-3 py-2 text-sm bg-background"
+        className="w-full rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
       />
       {searchQuery && filtered.length > 0 && (
-        <div className="max-h-40 overflow-y-auto rounded border">
+        <div className="max-h-40 overflow-y-auto rounded-xl border border-default">
           {filtered.map((n) => (
             <button
               key={n}
               onClick={() => { setSelected(n); setSearchQuery(n) }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 ${selected === n ? "bg-muted font-medium" : ""}`}
+              className={`w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-tertiary transition-colors flex items-center gap-2 ${selected === n ? "bg-tertiary font-medium" : ""}`}
             >
               {getFlagUrl(n, 24) ? (
                 <img src={getFlagUrl(n, 24)!} alt={n} className="w-5 h-3.5 object-cover" />
               ) : (
-                <span className="w-5 h-3.5 rounded bg-muted" />
+                <span className="w-5 h-3.5 rounded bg-tertiary" />
               )}
               <span>{n}</span>
             </button>
@@ -1874,24 +1896,24 @@ function NationalityFlagPanel() {
         </div>
       )}
       {searchQuery && filtered.length === 0 && (
-        <p className="text-xs text-muted-foreground px-1">No nationalities found.</p>
+        <p className="text-xs text-text-secondary px-1">No nationalities found.</p>
       )}
 
       {selected && (
         <div className="space-y-3 pt-2">
           {flagPreviewUrl && (
             <div className="flex items-center gap-3">
-              <img src={flagPreviewUrl} alt={selected} className="w-12 h-8 object-cover border" />
-              <span className="text-sm font-medium">{selected}</span>
+              <img src={flagPreviewUrl} alt={selected} className="w-12 h-8 object-cover border border-default" />
+              <span className="text-sm font-medium text-text-primary">{selected}</span>
             </div>
           )}
           {flagPreviewUrl && (
-            <p className="text-xs text-muted-foreground break-all">
+            <p className="text-xs text-text-secondary break-all">
               {flagPreviewUrl}
             </p>
           )}
           {!flagPreviewUrl && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-text-secondary">
               No flag mapping found for "{selected}".
             </p>
           )}

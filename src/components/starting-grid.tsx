@@ -147,6 +147,7 @@ const DriverCard = ({
             to={`/constructors/${result.constructor.constructor_id}`}
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate"
+            style={{ fontFamily: "var(--font-team)" }}
           >
             {result.constructor.logo_url && (
               <img
@@ -155,7 +156,7 @@ const DriverCard = ({
                 className="h-3 w-auto object-contain"
               />
             )}
-            {result.constructor.name.toUpperCase()}
+            {result.constructor.name}
           </Link>
         </div>
 

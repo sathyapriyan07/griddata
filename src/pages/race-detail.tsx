@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageSkeleton } from "@/components/loading-skeleton"
 import StartingGrid, { GridSkeleton } from "@/components/starting-grid"
 import { getFlagUrl } from "@/lib/nationalityFlags"
-import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint } from "@/types/database"
+import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint, DriverImage } from "@/types/database"
 import { Trophy, CalendarDays, MapPin, Thermometer, Gauge, Route, Flag } from "lucide-react"
 
 export default function RaceDetailPage() {
@@ -171,6 +171,33 @@ export default function RaceDetailPage() {
     return (results ?? []).find((r) => r.fastest_lap_rank === 1) ?? null
   }, [results])
 
+  const podiumDriverIds = useMemo(() => [...new Set(podium.map((r) => r.driver.driver_id).filter(Boolean))], [podium])
+
+  const { data: podiumCardImages } = useQuery({
+    queryKey: ["podium-driver-card-images", raceYear, podiumDriverIds.join(",")],
+    queryFn: async () => {
+      if (podiumDriverIds.length === 0 || !raceYear) return []
+      const { data } = await supabase
+        .from("driver_images")
+        .select("*")
+        .in("driver_id", podiumDriverIds)
+        .eq("type", "card")
+        .eq("year", raceYear)
+      return (data ?? []) as DriverImage[]
+    },
+    enabled: podiumDriverIds.length > 0 && !!raceYear,
+  })
+
+  const podiumCardImageMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const img of podiumCardImages ?? []) {
+      if (!map.has(img.driver_id)) {
+        map.set(img.driver_id, img.image_url)
+      }
+    }
+    return map
+  }, [podiumCardImages])
+
   const firstWeather = weatherData?.[0] ?? null
 
   if (!race) {
@@ -217,12 +244,12 @@ export default function RaceDetailPage() {
                 <Flag className="w-3 h-3 mr-1" />
                 Round {race.round}
               </Badge>
-              <span className="text-sm text-white/70">{race.season_year} Season</span>
+              <span className="text-sm text-white/70" style={{ fontFamily: "var(--font-team)" }}>{race.season_year} Season</span>
             </div>
             <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight font-heading uppercase tracking-wide">
               {race.name}
             </h1>
-            <div className="flex items-center gap-2 text-white/80">
+            <div className="flex items-center gap-2 text-white/80" style={{ fontFamily: "var(--font-team)" }}>
               <CalendarDays className="w-4 h-4" />
               {raceDate.toLocaleDateString(undefined, {
                 weekday: "long",
@@ -236,19 +263,13 @@ export default function RaceDetailPage() {
                 <Link
                   to={`/circuits/${circuit.circuit_id}`}
                   className="font-medium text-white/90 hover:text-white hover:underline inline-flex items-center gap-2"
+                  style={{ fontFamily: "var(--font-team)" }}
                 >
                   <MapPin className="w-4 h-4" />
                   {circuit.name}
                 </Link>
-                <div className="flex items-center gap-2 text-sm text-white/60">
+                <div className="flex items-center gap-2 text-sm text-white/60" style={{ fontFamily: "var(--font-team)" }}>
                   <span>{circuit.location}, {circuit.country}</span>
-                  {circuit.country && getFlagUrl(circuit.country) && (
-                    <img
-                      src={getFlagUrl(circuit.country)!}
-                      alt={circuit.country}
-                      className="w-4 h-3 object-cover rounded-none"
-                    />
-                  )}
                 </div>
               </div>
             )}
@@ -277,14 +298,12 @@ export default function RaceDetailPage() {
         {winner && (
           <div className="relative border-t border-white/10 px-6 lg:px-8 py-3">
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm font-medium text-white/70">Winner</span>
-              </div>
+              <Trophy className="w-4 h-4 text-yellow-400" />
               <div className="flex items-center gap-2">
                 <Link
                   to={`/drivers/${winner.driver.driver_id}`}
                   className="font-semibold text-white hover:underline inline-flex items-center gap-2"
+                  style={{ fontFamily: "var(--font-team)" }}
                 >
                   {winner.driver.photo_url && (
                     <img src={winner.driver.photo_url} alt="" className="w-6 h-6 rounded-full object-cover" />
@@ -294,6 +313,7 @@ export default function RaceDetailPage() {
                 <Link
                   to={`/constructors/${winner.constructor.constructor_id}`}
                   className="text-sm text-white/60 hover:text-white/80 hover:underline inline-flex items-center gap-1.5"
+                  style={{ fontFamily: "var(--font-team)" }}
                 >
                   {winner.constructor.logo_url && (
                     <img src={winner.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
@@ -311,7 +331,7 @@ export default function RaceDetailPage() {
 
       <Tabs defaultValue="overview">
         <div className="overflow-x-auto hide-scrollbar">
-          <TabsList className="inline-flex w-max min-w-full">
+          <TabsList className="inline-flex w-max min-w-full" style={{ fontFamily: "var(--font-team)" }}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="podium">Podium</TabsTrigger>
             <TabsTrigger value="results">Results</TabsTrigger>
@@ -319,7 +339,6 @@ export default function RaceDetailPage() {
             <TabsTrigger value="sprint">Sprint</TabsTrigger>
             <TabsTrigger value="grid">Starting Grid</TabsTrigger>
             <TabsTrigger value="strategy">Strategy</TabsTrigger>
-            <TabsTrigger value="circuit">Circuit</TabsTrigger>
           </TabsList>
         </div>
 
@@ -328,7 +347,7 @@ export default function RaceDetailPage() {
             {winner && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Winner</CardTitle>
+                  <CardTitle style={{ fontFamily: "var(--font-team)" }}>Winner</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-3">
@@ -340,7 +359,7 @@ export default function RaceDetailPage() {
                         {`${winner.driver.given_name} ${winner.driver.family_name}`}
                       </Link>
                       <div className="text-sm text-muted-foreground">
-                        <Link to={`/constructors/${winner.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                        <Link to={`/constructors/${winner.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5" style={{ fontFamily: "var(--font-team)" }}>
                           {winner.constructor.logo_url && (
                             <img src={winner.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
                           )}
@@ -364,10 +383,10 @@ export default function RaceDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Race Info</CardTitle>
+                  <CardTitle style={{ fontFamily: "var(--font-team)" }}>Race Info</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-sm" style={{ fontFamily: "var(--font-team)" }}>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Circuit</span>
                     <span className="font-medium text-right">{circuit?.name ?? "—"}</span>
@@ -375,14 +394,6 @@ export default function RaceDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Location</span>
                     <span className="font-medium text-right">{circuit ? `${circuit.location}, ${circuit.country}` : "—"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Laps</span>
-                    <span className="font-medium">{race.laps ?? "—"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Distance</span>
-                    <span className="font-medium">{race.distance_km ? `${race.distance_km} km` : circuit?.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Date</span>
@@ -397,24 +408,22 @@ export default function RaceDetailPage() {
             {fastestLap && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Fastest Lap</CardTitle>
+                  <CardTitle style={{ fontFamily: "var(--font-team)" }}>Fastest Lap</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3" style={{ fontFamily: "var(--font-team)" }}>
                     {fastestLap.driver.photo_url && (
                       <img src={fastestLap.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
                     )}
                     <div>
-                      <Link to={`/drivers/${fastestLap.driver.driver_id}`} className="font-medium hover:underline">
+                      <Link to={`/drivers/${fastestLap.driver.driver_id}`} className="font-medium hover:underline" style={{ fontFamily: "var(--font-heading)" }}>
                         {`${fastestLap.driver.given_name} ${fastestLap.driver.family_name}`}
                       </Link>
                       <div className="text-xs text-muted-foreground">{fastestLap.constructor.name}</div>
                     </div>
                     <div className="ml-auto text-right">
                       <div className="font-mono text-sm">{fastestLap.fastest_lap_time ?? "—"}</div>
-                      {fastestLap.fastest_lap_rank != null && (
-                        <div className="text-xs text-muted-foreground">Rank #{fastestLap.fastest_lap_rank}</div>
-                      )}
+
                     </div>
                   </div>
                 </CardContent>
@@ -511,20 +520,20 @@ export default function RaceDetailPage() {
                       <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
                         <span className="text-lg font-bold leading-none" style={{ fontFamily: "var(--font-heading)" }}>{r.position}</span>
                       </div>
-                      {r.driver.photo_url && (
+                      {podiumCardImageMap.get(r.driver.driver_id) && (
                         <div className="flex-shrink-0 self-end -mb-2 z-10">
-                          <img src={r.driver.photo_url} alt="" className="h-20 w-auto object-contain drop-shadow-xl" loading="lazy" />
+                          <img src={podiumCardImageMap.get(r.driver.driver_id)} alt="" className="h-20 w-auto object-contain drop-shadow-xl" loading="lazy" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0 z-10">
                         <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
                           {r.driver.family_name.toUpperCase()}
                         </Link>
-                        <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate">
+                        <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate" style={{ fontFamily: "var(--font-team)" }}>
                           {r.constructor.logo_url && (
                             <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="h-3 w-auto object-contain" />
                           )}
-                          {r.constructor.name.toUpperCase()}
+                          {r.constructor.name}
                         </Link>
                       </div>
                     </div>
@@ -557,7 +566,10 @@ export default function RaceDetailPage() {
                         <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
                           {r.driver.family_name.toUpperCase()}
                         </Link>
-                        <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block">
+                        <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate" style={{ fontFamily: "var(--font-team)" }}>
+                          {r.constructor.logo_url && (
+                            <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="h-3 w-auto object-contain" />
+                          )}
                           {r.constructor.name}
                         </Link>
                       </div>
@@ -615,7 +627,10 @@ export default function RaceDetailPage() {
                         <Link to={`/drivers/${q.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate" style={{ fontFamily: "var(--font-heading)" }}>
                           {q.driver.family_name.toUpperCase()}
                         </Link>
-                        <Link to={`/constructors/${q.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-white/70 hover:text-white/90 hover:underline truncate block">
+                        <Link to={`/constructors/${q.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate" style={{ fontFamily: "var(--font-team)" }}>
+                          {q.constructor.logo_url && (
+                            <img src={q.constructor.logo_url} alt={`${q.constructor.name} logo`} className="h-3 w-auto object-contain" />
+                          )}
                           {q.constructor.name}
                         </Link>
                       </div>
@@ -861,112 +876,7 @@ export default function RaceDetailPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="circuit">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{circuit?.name ?? "Circuit"} Info</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Location</span>
-                    <p className="font-medium">{circuit ? `${circuit.location}, ${circuit.country}` : "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Length</span>
-                    <p className="font-medium">{circuit?.length_km ? `${circuit.length_km.toFixed(3)} km` : "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Turns</span>
-                    <p className="font-medium">{circuit?.turns ?? "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Direction</span>
-                    <p className="font-medium capitalize">{circuit?.direction ?? "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">First Grand Prix</span>
-                    <p className="font-medium">{circuit?.first_gp_year ?? "—"}</p>
-                  </div>
-                </div>
-                {circuit?.image_url && (
-                  <img
-                    src={circuit.image_url}
-                    alt={circuit.name}
-                    className="w-full h-48 object-cover rounded-lg mt-4"
-                  />
-                )}
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Weather Conditions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {weatherData && weatherData.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">Air Temp</TableHead>
-                        <TableHead className="text-right">Track Temp</TableHead>
-                        <TableHead className="text-center">Rainfall</TableHead>
-                        <TableHead className="text-right">Wind Speed</TableHead>
-                        <TableHead className="text-right">Humidity</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {weatherData.map((w) => (
-                        <TableRow key={w.id}>
-                          <TableCell className="text-right">{w.air_temp != null ? `${w.air_temp}°C` : "—"}</TableCell>
-                          <TableCell className="text-right">{w.track_temp != null ? `${w.track_temp}°C` : "—"}</TableCell>
-                          <TableCell className="text-center">{w.rainfall ? "Yes" : w.rainfall === false ? "No" : "—"}</TableCell>
-                          <TableCell className="text-right">{w.wind_speed != null ? `${w.wind_speed} m/s` : "—"}</TableCell>
-                          <TableCell className="text-right">{w.humidity != null ? `${w.humidity}%` : "—"}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-muted-foreground">No weather data available for this race.</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Session Times</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {sessions && sessions.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Session</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Start</TableHead>
-                        <TableHead className="text-right">End</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sessions.map((s) => (
-                        <TableRow key={s.id}>
-                          <TableCell className="font-medium">{sessionLabels[s.type] || s.type}</TableCell>
-                          <TableCell>{formatDate(s.start_time)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatTime(s.start_time)}</TableCell>
-                          <TableCell className="text-right font-mono">{formatTime(s.end_time)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-muted-foreground">No session time data available for this race.</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
       </Tabs>
     </div>
   )

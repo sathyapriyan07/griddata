@@ -16,6 +16,12 @@ import {
 import { syncOpenF1Season } from "@/lib/import/openf1"
 import { getConstructorColors } from "@/lib/constructorColors"
 import { getFlagUrl } from "@/lib/nationalityFlags"
+import {
+  syncWikipediaHistorical, syncWikipediaSeason,
+  syncWikipediaDriver, syncWikipediaConstructor, syncWikipediaCircuit, syncWikipediaRace,
+  importDriverWikipedia, importConstructorWikipedia, importCircuitWikipedia,
+  importRaceWikipedia, importSeasonWikipedia,
+} from "@/lib/import/wikipedia"
 import { useAuth, getProfile } from "@/stores/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,7 +30,7 @@ import { motion } from "framer-motion"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { SyncJob, Profile, CircuitImage } from "@/types/database"
-import { Shield, Database, Cloud } from "lucide-react"
+import { Shield, Database, Cloud, Book } from "lucide-react"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -39,7 +45,7 @@ const itemVariants = {
 async function logSyncJob(source: string, entityType: string, status: string, log?: string) {
   try {
     await supabase.from("sync_jobs").insert({
-      source: source as "jolpica" | "openf1",
+      source: source as SyncJob["source"],
       entity_type: entityType,
       status: status as SyncJob["status"],
       started_at: status === "running" ? new Date().toISOString() : null,
@@ -472,6 +478,83 @@ function CrudTable({
   )
 }
 
+function WikipediaImportForm({
+  importing,
+  runWikipediaImport,
+}: {
+  importing: boolean
+  runWikipediaImport: (name: string, fn: () => Promise<unknown>, entityType: string) => Promise<void>
+}) {
+  const [season, setSeason] = useState(new Date().getFullYear().toString())
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing}
+          onClick={() => runWikipediaImport("All Historical", syncWikipediaHistorical, "wp_all")}
+        >
+          Import All Historical
+        </Button>
+      </div>
+      <div className="flex gap-2 items-center">
+        <input
+          type="number"
+          value={season}
+          onChange={(e) => setSeason(e.target.value)}
+          min={1950}
+          max={new Date().getFullYear() + 1}
+          className="w-24 rounded-xl border border-default bg-secondary px-3 py-2 text-sm text-text-primary"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season}
+          onClick={() => runWikipediaImport(`Season ${season}`, () => syncWikipediaSeason(Number(season)), `wp_season_${season}`)}
+        >
+          Import Season
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing}
+          onClick={() => runWikipediaImport("Drivers Wikipedia", importDriverWikipedia, "wp_drivers")}
+        >
+          Import Drivers
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing}
+          onClick={() => runWikipediaImport("Constructors Wikipedia", importConstructorWikipedia, "wp_constructors")}
+        >
+          Import Constructors
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing}
+          onClick={() => runWikipediaImport("Circuits Wikipedia", importCircuitWikipedia, "wp_circuits")}
+        >
+          Import Circuits
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={importing || !season}
+          onClick={() => runWikipediaImport(`Races ${season} Wikipedia`, () => importRaceWikipedia(Number(season)), `wp_races_${season}`)}
+        >
+          Import Races
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const queryClient = useQueryClient()
   const [importStatus, setImportStatus] = useState<string | null>(null)
@@ -655,6 +738,43 @@ export default function AdminPage() {
     }
   }
 
+  const runWikipediaImport = async (
+    name: string,
+    fn: () => Promise<unknown>,
+    entityType: string
+  ) => {
+    setImporting(true)
+    setImportStatus(`Importing Wikipedia ${name}...`)
+    setImportError(null)
+    await logSyncJob("wikipedia", entityType, "running")
+
+    try {
+      const result = await fn()
+      const resultObj = result as Record<string, unknown>
+      let detail = ""
+      if (resultObj && typeof resultObj === "object") {
+        const parts: string[] = []
+        for (const [k, v] of Object.entries(resultObj)) {
+          if (typeof v === "object" && v !== null) {
+            const sub = v as Record<string, unknown>
+            parts.push(`${k}: imported=${sub.imported}, skipped=${sub.skipped}, errors=${sub.errors}`)
+          }
+        }
+        detail = parts.join(" | ")
+      }
+      setImportStatus(`Wikipedia ${name} complete. ${detail}`)
+      await logSyncJob("wikipedia", entityType, "completed", detail)
+      queryClient.invalidateQueries({ queryKey: ["sync-jobs"] })
+    } catch (err) {
+      const msg = extractErrorMessage(err)
+      setImportError(`Wikipedia ${name} import failed: ${msg}`)
+      await logSyncJob("wikipedia", entityType, "failed", msg)
+      queryClient.invalidateQueries({ queryKey: ["sync-jobs"] })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -798,6 +918,21 @@ export default function AdminPage() {
                   Sync OpenF1 Season
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-[0.6rem] text-text-secondary uppercase tracking-wide font-medium flex items-center gap-2">
+                <Book className="w-4 h-4" />
+                Wikipedia Import
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-text-secondary">Enrich data with Wikipedia biographies, history, and editorial content.</p>
+              <WikipediaImportForm importing={importing} runWikipediaImport={runWikipediaImport} />
             </CardContent>
           </Card>
         </motion.div>

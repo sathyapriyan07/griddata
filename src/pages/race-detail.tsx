@@ -2,17 +2,16 @@ import { useParams, Link } from "react-router-dom"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { getConstructorColors, getConstructorColorsFromRecord } from "@/lib/constructorColors"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
-import StartingGrid, { GridSkeleton } from "@/components/starting-grid"
-import RaceResults from "@/components/race-results"
+import { GridSkeleton } from "@/components/starting-grid"
+
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import { motion } from "framer-motion"
-import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint, DriverImage } from "@/types/database"
+import type { Race, RaceResult, QualifyingResult, SprintResult, Circuit, PitStop, Weather, RaceSession, TireStint } from "@/types/database"
 import { CalendarDays, MapPin, Thermometer, Route, Flag, Clock, Trophy, Gauge } from "lucide-react"
 
 const containerVariants = {
@@ -70,8 +69,6 @@ export default function RaceDetailPage() {
     },
     enabled: !!raceId,
   })
-
-  const raceYear = race?.season_year
 
   const { data: qualifying } = useQuery({
     queryKey: ["race-qualifying", raceId],
@@ -168,33 +165,6 @@ export default function RaceDetailPage() {
   const fastestLap = useMemo(() => {
     return (results ?? []).find((r) => r.fastest_lap_rank === 1) ?? null
   }, [results])
-
-  const podiumDriverIds = useMemo(() => [...new Set(podium.map((r) => r.driver.driver_id).filter(Boolean))], [podium])
-
-  const { data: podiumCardImages } = useQuery({
-    queryKey: ["podium-driver-card-images", raceYear, podiumDriverIds.join(",")],
-    queryFn: async () => {
-      if (podiumDriverIds.length === 0 || !raceYear) return []
-      const { data } = await supabase
-        .from("driver_images")
-        .select("*")
-        .in("driver_id", podiumDriverIds)
-        .eq("type", "card")
-        .eq("year", raceYear)
-      return (data ?? []) as DriverImage[]
-    },
-    enabled: podiumDriverIds.length > 0 && !!raceYear,
-  })
-
-  const podiumCardImageMap = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const img of podiumCardImages ?? []) {
-      if (!map.has(img.driver_id)) {
-        map.set(img.driver_id, img.image_url)
-      }
-    }
-    return map
-  }, [podiumCardImages])
 
   const firstWeather = weatherData?.[0] ?? null
 
@@ -315,443 +285,506 @@ export default function RaceDetailPage() {
         </div>
 
         <TabsContent value="overview">
-          <motion.div
-            variants={containerVariants}
-            initial="initial"
-            animate="animate"
-            className="grid grid-cols-1 lg:grid-cols-3 gap-5"
-          >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {winner && (
-              <motion.div variants={itemVariants}>
-                <Card className="relative overflow-hidden h-full">
-                  <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-accent-red" />
-                      Winner
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3">
-                      {winner.driver.photo_url && (
-                        <img src={winner.driver.photo_url} alt="" className="w-12 h-12 rounded-full object-cover ring-2 ring-border-strong" />
-                      )}
-                      <div>
-                        <Link to={`/drivers/${winner.driver.driver_id}`} className="font-heading font-bold text-base text-text-primary hover:text-accent-red transition-colors">
-                          {`${winner.driver.given_name} ${winner.driver.family_name}`}
-                        </Link>
-                        <div className="text-xs text-text-secondary mt-0.5">
-                          <Link to={`/constructors/${winner.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                            {winner.constructor.logo_url && (
-                              <img src={winner.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
-                            )}
-                            {winner.constructor.name}
-                          </Link>
-                        </div>
-                      </div>
-                      <div className="ml-auto text-right">
-                        <div className="text-2xl font-bold text-text-primary tabular-nums">{winner.points}</div>
-                        <div className="text-[0.6rem] uppercase tracking-wide text-text-tertiary">pts</div>
-                      </div>
-                    </div>
-                    {winner.time && (
-                      <div className="mt-3 pt-3 border-t border-subtle text-sm font-mono text-text-secondary">
-                        Time: {winner.time}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            <motion.div variants={itemVariants}>
               <Card className="relative overflow-hidden h-full">
-                <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+                <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-yellow-500" />
-                    Race Info
+                    <Trophy className="h-4 w-4 text-accent-red" />
+                    Winner
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">Circuit</span>
-                      <span className="font-medium text-text-primary text-right">{circuit?.name ?? "—"}</span>
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <Link to={`/drivers/${winner.driver.driver_id}`} className="font-heading font-bold text-base text-text-primary hover:text-accent-red transition-colors">
+                        {`${winner.driver.given_name} ${winner.driver.family_name}`}
+                      </Link>
+                      <div className="text-xs text-text-secondary mt-0.5">
+                        <Link to={`/constructors/${winner.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
+                          {winner.constructor.logo_url && (
+                            <img src={winner.constructor.logo_url} alt="" className="w-3 h-3 object-contain" />
+                          )}
+                          {winner.constructor.name}
+                        </Link>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">Location</span>
-                      <span className="font-medium text-text-primary text-right">{circuit ? `${circuit.location}, ${circuit.country}` : "—"}</span>
+                    <div className="ml-auto text-right">
+                      <div className="text-2xl font-bold text-text-primary tabular-nums">{winner.points}</div>
+                      <div className="text-[0.6rem] uppercase tracking-wide text-text-tertiary">pts</div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">Date</span>
-                      <span className="font-medium text-text-primary">{raceDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                  </div>
+                  {winner.time && (
+                    <div className="mt-3 pt-3 border-t border-subtle text-sm font-mono text-text-secondary">
+                      Time: {winner.time}
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-text-secondary">Laps</span>
-                      <span className="font-medium text-text-primary">{race.laps ?? "—"}</span>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="relative overflow-hidden h-full">
+              <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-yellow-500" />
+                  Race Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Circuit</span>
+                    <span className="font-medium text-text-primary text-right">{circuit?.name ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Location</span>
+                    <span className="font-medium text-text-primary text-right">{circuit ? `${circuit.location}, ${circuit.country}` : "—"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Date</span>
+                    <span className="font-medium text-text-primary">{raceDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-secondary">Laps</span>
+                    <span className="font-medium text-text-primary">{race.laps ?? "—"}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {fastestLap && (
+              <Card className="relative overflow-hidden h-full">
+                <div className="absolute top-0 left-0 w-[3px] h-full bg-purple-500" />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-purple-400" />
+                    Fastest Lap
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <Link to={`/drivers/${fastestLap.driver.driver_id}`} className="font-heading font-bold text-sm text-text-primary hover:text-accent-red transition-colors">
+                        {`${fastestLap.driver.given_name} ${fastestLap.driver.family_name}`}
+                      </Link>
+                      <div className="text-xs text-text-secondary mt-0.5">{fastestLap.constructor.name}</div>
+                    </div>
+                    <div className="ml-auto text-right">
+                      <div className="font-mono text-sm font-bold text-text-primary tabular-nums">{fastestLap.fastest_lap_time ?? "—"}</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-
-            {fastestLap && (
-              <motion.div variants={itemVariants}>
-                <Card className="relative overflow-hidden h-full">
-                  <div className="absolute top-0 left-0 w-[3px] h-full bg-purple-500" />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-purple-400" />
-                      Fastest Lap
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3">
-                      {fastestLap.driver.photo_url && (
-                        <img src={fastestLap.driver.photo_url} alt="" className="w-10 h-10 rounded-full object-cover ring-2 ring-border-strong" />
-                      )}
-                      <div>
-                        <Link to={`/drivers/${fastestLap.driver.driver_id}`} className="font-heading font-bold text-sm text-text-primary hover:text-accent-red transition-colors">
-                          {`${fastestLap.driver.given_name} ${fastestLap.driver.family_name}`}
-                        </Link>
-                        <div className="text-xs text-text-secondary mt-0.5">{fastestLap.constructor.name}</div>
-                      </div>
-                      <div className="ml-auto text-right">
-                        <div className="font-mono text-sm font-bold text-text-primary tabular-nums">{fastestLap.fastest_lap_time ?? "—"}</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
             )}
 
             {firstWeather && (
-              <motion.div variants={itemVariants}>
-                <Card className="relative overflow-hidden h-full">
-                  <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Thermometer className="h-4 w-4 text-blue-400" />
-                      Weather
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {firstWeather.air_temp != null && (
-                        <div>
-                          <span className="text-xs text-text-secondary">Air Temp</span>
-                          <p className="font-medium text-text-primary">{firstWeather.air_temp}°C</p>
-                        </div>
-                      )}
-                      {firstWeather.track_temp != null && (
-                        <div>
-                          <span className="text-xs text-text-secondary">Track Temp</span>
-                          <p className="font-medium text-text-primary">{firstWeather.track_temp}°C</p>
-                        </div>
-                      )}
-                      {firstWeather.rainfall != null && (
-                        <div>
-                          <span className="text-xs text-text-secondary">Rainfall</span>
-                          <p className="font-medium text-text-primary">{firstWeather.rainfall ? "Yes" : "No"}</p>
-                        </div>
-                      )}
-                      {firstWeather.wind_speed != null && (
-                        <div>
-                          <span className="text-xs text-text-secondary">Wind</span>
-                          <p className="font-medium text-text-primary">{firstWeather.wind_speed} m/s</p>
-                        </div>
-                      )}
-                      {firstWeather.humidity != null && (
-                        <div>
-                          <span className="text-xs text-text-secondary">Humidity</span>
-                          <p className="font-medium text-text-primary">{firstWeather.humidity}%</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+              <Card className="relative overflow-hidden h-full">
+                <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Thermometer className="h-4 w-4 text-blue-400" />
+                    Weather
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {firstWeather.air_temp != null && (
+                      <div>
+                        <span className="text-xs text-text-secondary">Air Temp</span>
+                        <p className="font-medium text-text-primary">{firstWeather.air_temp}°C</p>
+                      </div>
+                    )}
+                    {firstWeather.track_temp != null && (
+                      <div>
+                        <span className="text-xs text-text-secondary">Track Temp</span>
+                        <p className="font-medium text-text-primary">{firstWeather.track_temp}°C</p>
+                      </div>
+                    )}
+                    {firstWeather.rainfall != null && (
+                      <div>
+                        <span className="text-xs text-text-secondary">Rainfall</span>
+                        <p className="font-medium text-text-primary">{firstWeather.rainfall ? "Yes" : "No"}</p>
+                      </div>
+                    )}
+                    {firstWeather.wind_speed != null && (
+                      <div>
+                        <span className="text-xs text-text-secondary">Wind</span>
+                        <p className="font-medium text-text-primary">{firstWeather.wind_speed} m/s</p>
+                      </div>
+                    )}
+                    {firstWeather.humidity != null && (
+                      <div>
+                        <span className="text-xs text-text-secondary">Humidity</span>
+                        <p className="font-medium text-text-primary">{firstWeather.humidity}%</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {sessions && sessions.length > 0 && (
-              <motion.div variants={itemVariants} className="lg:col-span-2">
-                <Card className="relative overflow-hidden h-full">
-                  <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-emerald-400" />
-                      Session Timeline
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-0">
-                      {sessions.map((s, i) => (
-                        <div key={s.id} className="flex items-start gap-3 pb-3 relative">
-                          <div className="flex flex-col items-center">
-                            <div className={`w-3 h-3 rounded-full border-2 ${i === sessions.length - 1 ? "border-accent-red bg-accent-red" : "border-text-tertiary/30"}`} />
-                            {i < sessions.length - 1 && <div className="w-px flex-1 bg-border-subtle mt-1" />}
-                          </div>
-                          <div className="flex-1 flex items-center justify-between min-w-0">
-                            <div>
-                              <span className="font-medium text-sm text-text-primary">{sessionLabels[s.type] || s.type}</span>
-                              <span className="text-xs text-text-secondary ml-2">{formatDate(s.start_time)}</span>
-                            </div>
-                            <div className="text-xs text-text-tertiary font-mono whitespace-nowrap ml-2">
-                              {formatTime(s.start_time)}
-                              {s.end_time && ` — ${formatTime(s.end_time)}`}
-                            </div>
-                          </div>
-                        </div>
+              <Card className="relative overflow-hidden h-full lg:col-span-2">
+                <div className="absolute top-0 left-0 w-[3px] h-full bg-emerald-500" />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-emerald-400" />
+                    Session Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Session</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessions.map((s) => (
+                        <TableRow key={s.id}>
+                          <TableCell className="font-medium text-text-primary">{sessionLabels[s.type] || s.type}</TableCell>
+                          <TableCell className="text-text-secondary">{formatDate(s.start_time)}</TableCell>
+                          <TableCell className="text-right font-mono text-text-secondary text-xs">
+                            {formatTime(s.start_time)}
+                            {s.end_time && ` — ${formatTime(s.end_time)}`}
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             )}
-          </motion.div>
+          </div>
         </TabsContent>
 
         <TabsContent value="podium">
           {podium.length > 0 ? (
-            <motion.div
-              variants={containerVariants}
-              initial="initial"
-              animate="animate"
-              className="grid grid-cols-1 lg:grid-cols-3 gap-3"
-            >
-              {podium.map((r) => {
-                const c = getConstructorColorsFromRecord(r.constructor)
-                return (
-                  <motion.div key={r.id} variants={itemVariants}>
-                    <div className="group relative select-none" style={{ borderRadius: "0.75rem" }}>
-                      <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                        <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, ${c.primary}CC, ${c.secondary}88)` }} />
-                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)` }} />
-                        <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: `radial-gradient(circle at top right, ${c.accent}, transparent 70%)` }} />
-                      </div>
-                      <div className="relative flex items-center gap-2 p-2 w-full">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
-                          <span className="text-lg font-bold leading-none font-heading">{r.position}</span>
-                        </div>
-                        {podiumCardImageMap.get(r.driver.driver_id) && (
-                          <div className="flex-shrink-0 self-end -mb-2 z-10">
-                            <img src={podiumCardImageMap.get(r.driver.driver_id)} alt="" className="h-20 w-auto object-contain drop-shadow-xl" loading="lazy" />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0 z-10">
-                          <Link to={`/drivers/${r.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate font-heading">
-                            {r.driver.family_name.toUpperCase()}
-                          </Link>
-                          <Link to={`/constructors/${r.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate">
-                            {r.constructor.logo_url && (
-                              <img src={r.constructor.logo_url} alt={`${r.constructor.name} logo`} className="h-3 w-auto object-contain" />
-                            )}
-                            {r.constructor.name}
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </motion.div>
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">Pos</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Team</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead className="text-right">Pts</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {podium.map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="text-center font-heading font-bold text-text-primary">
+                            <div className="flex items-center justify-center">
+                              <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${r.position === 1 ? "bg-yellow-500/20 text-yellow-500" : r.position === 2 ? "bg-gray-300/20 text-gray-300" : "bg-amber-600/20 text-amber-600"}`}>
+                                {r.position}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/drivers/${r.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
+                              {r.driver.given_name.charAt(0)}. {r.driver.family_name}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/constructors/${r.constructor.constructor_id}`} className="inline-flex items-center gap-1.5 hover:underline text-text-secondary">
+                              {r.constructor.logo_url && (
+                                <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                              )}
+                              {r.constructor.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="font-mono text-text-secondary">{r.time ?? "—"}</TableCell>
+                          <TableCell className="text-right font-heading font-bold text-text-primary">{r.points}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <p className="text-center text-text-secondary py-8">No podium data available.</p>
           )}
         </TabsContent>
 
         <TabsContent value="results">
-          <RaceResults
-            results={results ?? []}
-            race={race}
-            circuit={circuit as Circuit | null}
-            pitStops={pitStops ?? []}
-            tireStints={tireStints ?? []}
-            weatherData={weatherData ?? []}
-            podiumCardImageMap={podiumCardImageMap}
-          />
+          {results && results.length > 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">Pos</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Team</TableHead>
+                        <TableHead className="text-center">Laps</TableHead>
+                        <TableHead className="text-center">Grid</TableHead>
+                        <TableHead className="text-center">Pits</TableHead>
+                        <TableHead>Best Lap</TableHead>
+                        <TableHead>Time / Status</TableHead>
+                        <TableHead className="text-right">Pts</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((r) => {
+                        const pitCount = pitStops?.filter((ps) => ps.driver.driver_id === r.driver.driver_id).length ?? 0
+                        const posChange = r.position != null && r.grid != null ? r.grid - r.position : null
+                        return (
+                          <TableRow key={r.id}>
+                            <TableCell className="text-center font-heading font-bold text-text-primary">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {r.position === 1 && <Trophy className="w-3 h-3 text-yellow-500" />}
+                                {r.fastest_lap_rank === 1 && <span className="text-[10px] text-purple-400">FL</span>}
+                                {r.position ?? "—"}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/drivers/${r.driver.driver_id}`} className="inline-flex items-center gap-2 hover:text-accent-red transition-colors">
+                                <span className="font-medium text-text-primary">
+                                  {r.driver.given_name.charAt(0)}. {r.driver.family_name}
+                                </span>
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/constructors/${r.constructor.constructor_id}`} className="inline-flex items-center gap-1.5 hover:underline text-text-secondary">
+                                {r.constructor.logo_url && (
+                                  <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                                )}
+                                {r.constructor.name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-text-secondary">{r.laps ?? "—"}</TableCell>
+                            <TableCell className="text-center font-mono text-text-secondary">
+                              <span className="inline-flex items-center gap-1">
+                                {r.grid ?? "—"}
+                                {posChange != null && posChange !== 0 && (
+                                  <span className={`text-[10px] ${posChange > 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                    {posChange > 0 ? `+${posChange}` : posChange}
+                                  </span>
+                                )}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-text-secondary">{pitCount}</TableCell>
+                            <TableCell className="font-mono text-text-secondary text-xs">{r.fastest_lap_time ?? "—"}</TableCell>
+                            <TableCell className="font-mono text-text-secondary text-xs">
+                              {r.status && r.status !== "Finished" ? (
+                                <Badge variant="destructive" className="text-[10px]">{r.status}</Badge>
+                              ) : (
+                                r.time ?? "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-heading font-bold text-text-primary">{r.points}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-center text-text-secondary py-8">No race results available.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="qualifying">
-          <motion.div
-            variants={containerVariants}
-            initial="initial"
-            animate="animate"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-          >
-            {qualifying?.map((q) => {
-              const c = getConstructorColorsFromRecord(q.constructor)
-              return (
-                <motion.div key={q.id} variants={itemVariants}>
-                  <div className="group relative select-none" style={{ borderRadius: "0.75rem" }}>
-                    <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                      <div className="absolute inset-0 opacity-90" style={{ background: `linear-gradient(135deg, ${c.primary}CC, ${c.secondary}88)` }} />
-                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px), repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 16px)` }} />
-                      <div className="absolute top-0 right-0 w-24 h-24 opacity-10" style={{ background: `radial-gradient(circle at top right, ${c.accent}, transparent 70%)` }} />
-                    </div>
-                    <div className="relative p-3 w-full">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg z-10" style={{ backgroundColor: c.primary, color: c.accent }}>
-                          <span className="text-lg font-bold leading-none font-heading">{q.position}</span>
-                        </div>
-                        <div className="flex-1 min-w-0 z-10">
-                          <Link to={`/drivers/${q.driver.driver_id}`} onClick={(e) => e.stopPropagation()} className="block text-base font-bold leading-tight text-white hover:underline truncate font-heading">
-                            {q.driver.family_name.toUpperCase()}
-                          </Link>
-                          <Link to={`/constructors/${q.constructor.constructor_id}`} onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white/90 hover:underline truncate">
-                            {q.constructor.logo_url && (
-                              <img src={q.constructor.logo_url} alt={`${q.constructor.name} logo`} className="h-3 w-auto object-contain" />
-                            )}
-                            {q.constructor.name}
-                          </Link>
-                        </div>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-white/10 grid grid-cols-3 gap-2 text-[11px]">
-                        <div>
-                          <span className="block text-white/40 uppercase tracking-wider">Q1</span>
-                          <span className="text-white/80 font-mono">{q.q1 ?? "—"}</span>
-                        </div>
-                        <div>
-                          <span className="block text-white/40 uppercase tracking-wider">Q2</span>
-                          <span className="text-white/80 font-mono">{q.q2 ?? "—"}</span>
-                        </div>
-                        <div>
-                          <span className="block text-white/40 uppercase tracking-wider">Q3</span>
-                          <span className="text-white/80 font-mono">{q.q3 ?? "—"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )
-            })}
-            {(!qualifying || qualifying.length === 0) && (
-              <p className="col-span-full text-center text-text-secondary py-8">
-                No qualifying data available.
-              </p>
-            )}
-          </motion.div>
+          {qualifying && qualifying.length > 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">Pos</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Team</TableHead>
+                        <TableHead className="text-center">Q1</TableHead>
+                        <TableHead className="text-center">Q2</TableHead>
+                        <TableHead className="text-center">Q3</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {qualifying.map((q) => (
+                        <TableRow key={q.id}>
+                          <TableCell className="text-center font-heading font-bold text-text-primary">{q.position}</TableCell>
+                          <TableCell>
+                            <Link to={`/drivers/${q.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
+                              {q.driver.given_name.charAt(0)}. {q.driver.family_name}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <Link to={`/constructors/${q.constructor.constructor_id}`} className="inline-flex items-center gap-1.5 hover:underline text-text-secondary">
+                              {q.constructor.logo_url && (
+                                <img src={q.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                              )}
+                              {q.constructor.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-text-secondary">{q.q1 ?? "—"}</TableCell>
+                          <TableCell className="text-center font-mono text-text-secondary">{q.q2 ?? "—"}</TableCell>
+                          <TableCell className="text-center font-mono text-text-secondary">{q.q3 ?? "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <p className="text-center text-text-secondary py-8">No qualifying data available.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="sprint">
-          <motion.div
-            variants={containerVariants}
-            initial="initial"
-            animate="animate"
-            className="space-y-6"
-          >
-            <div>
-              <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary mb-3">Sprint Qualifying Grid</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {sprints?.length ? (
-                  [...sprints]
-                    .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
-                    .map((s) => {
-                      const colors = getConstructorColors(s.constructor.name || "")
-                      return (
-                        <motion.div key={s.id} variants={itemVariants}>
-                          <Card className="relative overflow-hidden h-full">
-                            <div className="h-1" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-tertiary font-heading font-bold text-base text-text-primary">
-                                    {s.grid ?? "—"}
-                                  </div>
-                                  <div>
-                                    <Link to={`/drivers/${s.driver.driver_id}`} className="font-heading font-bold text-sm text-text-primary hover:text-accent-red transition-colors">
-                                      {`${s.driver.given_name} ${s.driver.family_name}`}
-                                    </Link>
-                                    <div className="text-xs text-text-secondary mt-0.5">
-                                      <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                        {s.constructor.logo_url && (
-                                          <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                                        )}
-                                        {s.constructor.name}
-                                      </Link>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      )
-                    })
-                ) : (
-                  <p className="col-span-full text-center text-text-secondary py-8">No sprint qualifying data available.</p>
-                )}
-              </div>
-            </div>
+          {sprints && sprints.length > 0 ? (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sprint Qualifying</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 text-center">Grid</TableHead>
+                          <TableHead>Driver</TableHead>
+                          <TableHead>Team</TableHead>
+                          <TableHead className="text-center">Pts</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...sprints].sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99)).map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell className="text-center font-heading font-bold text-text-primary">{s.grid ?? "—"}</TableCell>
+                            <TableCell>
+                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
+                                {s.driver.given_name.charAt(0)}. {s.driver.family_name}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/constructors/${s.constructor.constructor_id}`} className="inline-flex items-center gap-1.5 hover:underline text-text-secondary">
+                                {s.constructor.logo_url && (
+                                  <img src={s.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                                )}
+                                {s.constructor.name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-center font-heading font-bold text-text-primary">{s.points}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div>
-              <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary mb-3">Sprint Race Results</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {sprints?.length ? (
-                  sprints.map((s) => {
-                    const colors = getConstructorColors(s.constructor.name || "")
-                    return (
-                      <motion.div key={s.id} variants={itemVariants}>
-                        <Card className="relative overflow-hidden h-full">
-                          <div className="h-1" style={{ background: `linear-gradient(90deg, ${colors?.primary ?? "#6b7280"}, ${colors?.secondary ?? "#6b7280"})` }} />
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-tertiary font-heading font-bold text-base text-text-primary">
-                                  {s.position ?? "DNF"}
-                                </div>
-                                <div>
-                                  <Link to={`/drivers/${s.driver.driver_id}`} className="font-heading font-bold text-sm text-text-primary hover:text-accent-red transition-colors">
-                                    {`${s.driver.given_name} ${s.driver.family_name}`}
-                                  </Link>
-                                  <div className="text-xs text-text-secondary mt-0.5">
-                                    <Link to={`/constructors/${s.constructor.constructor_id}`} className="hover:underline inline-flex items-center gap-1.5">
-                                      {s.constructor.logo_url && (
-                                        <img src={s.constructor.logo_url} alt={`${s.constructor.name} logo`} className="w-3 h-3 object-contain" />
-                                      )}
-                                      {s.constructor.name}
-                                    </Link>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-text-primary tabular-nums">{s.points}</div>
-                                <div className="text-[0.6rem] uppercase tracking-wide text-text-tertiary">pts</div>
-                              </div>
-                            </div>
-                            <div className="mt-3 pt-3 border-t border-subtle grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <span className="block font-medium text-text-primary">Laps</span>
-                                <span className="text-text-secondary">{s.laps ?? "—"}</span>
-                              </div>
-                              <div>
-                                <span className="block font-medium text-text-primary">Status</span>
-                                <span className="text-text-secondary">{s.status ?? "—"}</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )
-                  })
-                ) : (
-                  <p className="col-span-full text-center text-text-secondary py-8">
-                    No sprint race data available. This race may not have had a sprint.
-                  </p>
-                )}
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sprint Race Results</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 text-center">Pos</TableHead>
+                          <TableHead>Driver</TableHead>
+                          <TableHead>Team</TableHead>
+                          <TableHead className="text-center">Laps</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Pts</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sprints.map((s) => (
+                          <TableRow key={s.id}>
+                            <TableCell className="text-center font-heading font-bold text-text-primary">{s.position ?? "DNF"}</TableCell>
+                            <TableCell>
+                              <Link to={`/drivers/${s.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
+                                {s.driver.given_name.charAt(0)}. {s.driver.family_name}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/constructors/${s.constructor.constructor_id}`} className="inline-flex items-center gap-1.5 hover:underline text-text-secondary">
+                                {s.constructor.logo_url && (
+                                  <img src={s.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                                )}
+                                {s.constructor.name}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-center font-mono text-text-secondary">{s.laps ?? "—"}</TableCell>
+                            <TableCell className="text-text-secondary text-xs">{s.status ?? "—"}</TableCell>
+                            <TableCell className="text-right font-heading font-bold text-text-primary">{s.points}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </motion.div>
+          ) : (
+            <p className="text-center text-text-secondary py-8">No sprint data available.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="grid">
-          {results?.length ? (
-            <StartingGrid
-              results={results}
-              qualifying={qualifying ?? []}
-              race={race}
-            />
+          {results && results.length > 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">Pos</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Team</TableHead>
+                        <TableHead>Q1</TableHead>
+                        <TableHead>Q2</TableHead>
+                        <TableHead>Q3</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {[...results]
+                        .sort((a, b) => (a.grid ?? 99) - (b.grid ?? 99))
+                        .map((r) => {
+                          const q = qualifying?.find((qr) => qr.driver.driver_id === r.driver.driver_id)
+                          return (
+                            <TableRow key={r.id}>
+                              <TableCell className="text-center font-heading font-bold text-text-primary">{r.grid ?? "—"}</TableCell>
+                              <TableCell>
+                                <Link to={`/drivers/${r.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
+                                  {r.driver.given_name.charAt(0)}. {r.driver.family_name}
+                                </Link>
+                              </TableCell>
+                              <TableCell>
+                                <Link to={`/constructors/${r.constructor.constructor_id}`} className="inline-flex items-center gap-1.5 hover:underline text-text-secondary">
+                                  {r.constructor.logo_url && (
+                                    <img src={r.constructor.logo_url} alt="" className="w-3.5 h-3.5 object-contain" />
+                                  )}
+                                  {r.constructor.name}
+                                </Link>
+                              </TableCell>
+                              <TableCell className="font-mono text-text-secondary text-xs">{q?.q1 ?? "—"}</TableCell>
+                              <TableCell className="font-mono text-text-secondary text-xs">{q?.q2 ?? "—"}</TableCell>
+                              <TableCell className="font-mono text-text-secondary text-xs">{q?.q3 ?? "—"}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <GridSkeleton />
           )}

@@ -1,12 +1,12 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
-import { Search, X, MapPin, Ruler, CornerDownRight } from "lucide-react"
-import type { Circuit } from "@/types/database"
+import { Search, X, MapPin, Ruler, CornerDownRight, Book } from "lucide-react"
+import type { Circuit, CircuitWikipedia } from "@/types/database"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -36,6 +36,29 @@ export default function CircuitsPage() {
       const { data } = await query
       return (data ?? []) as Circuit[]
     },
+  })
+
+  const circuitIds = useMemo(() => circuits?.map((c) => c.id) ?? [], [circuits])
+
+  const { data: wikipediaData } = useQuery({
+    queryKey: ["circuit-wikipedia-batch", circuitIds],
+    queryFn: async () => {
+      if (circuitIds.length === 0) return {}
+      const CHUNK_SIZE = 100
+      const map: Record<string, Pick<CircuitWikipedia, "short_description" | "summary" | "page_url">> = {}
+      for (let i = 0; i < circuitIds.length; i += CHUNK_SIZE) {
+        const chunk = circuitIds.slice(i, i + CHUNK_SIZE)
+        const { data } = await supabase
+          .from("circuit_wikipedia")
+          .select("entity_id, short_description, summary, page_url")
+          .in("entity_id", chunk)
+        for (const row of (data ?? []) as Pick<CircuitWikipedia, "entity_id" | "short_description" | "summary" | "page_url">[]) {
+          map[row.entity_id] = { short_description: row.short_description, summary: row.summary, page_url: row.page_url }
+        }
+      }
+      return map
+    },
+    enabled: circuitIds.length > 0,
   })
 
   return (
@@ -82,11 +105,28 @@ export default function CircuitsPage() {
         animate="animate"
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
       >
-        {circuits?.map((circuit) => (
-          <motion.div key={circuit.id} variants={itemVariants}>
-            <Link to={`/circuits/${circuit.circuit_id}`} className="block h-full">
-              <Card className="relative overflow-hidden h-full group">
-                <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red/40" />
+        {circuits?.map((circuit) => {
+              const wp = wikipediaData?.[circuit.id]
+              return (
+              <motion.div key={circuit.id} variants={itemVariants}>
+                <Link to={`/circuits/${circuit.circuit_id}`} className="block h-full">
+                  <Card className="relative overflow-hidden h-full group">
+                    {wp && (
+                      <a
+                        href={wp.page_url ?? "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-2 right-2 z-10"
+                        title="View on Wikipedia"
+                      >
+                        <div className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] text-amber-400 border border-amber-500/20 hover:bg-amber-500/25 transition-colors">
+                          <Book className="w-2.5 h-2.5" />
+                          <span>WP</span>
+                        </div>
+                      </a>
+                    )}
+                    <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red/40" />
                 <CardContent className="p-5">
                   <div className="flex items-start gap-3">
                     {circuit.image_url ? (
@@ -131,7 +171,8 @@ export default function CircuitsPage() {
               </Card>
             </Link>
           </motion.div>
-        ))}
+          )
+        })}
       </motion.div>
 
       {circuits?.length === 0 && !isLoading && (

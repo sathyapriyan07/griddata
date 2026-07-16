@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { getFlagUrl } from "@/lib/nationalityFlags"
 import { motion } from "framer-motion"
-import { Search, X, Users } from "lucide-react"
-import type { Driver } from "@/types/database"
+import { Search, X, Users, Book } from "lucide-react"
+import type { Driver, DriverWikipedia } from "@/types/database"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -40,23 +40,30 @@ export default function DriversPage() {
     },
   })
 
-  const { data: currentStandings } = useQuery({
-    queryKey: ["drivers-current-standings", latestSeason],
+  const { data: currentRaceDrivers } = useQuery({
+    queryKey: ["drivers-current-race-results", latestSeason],
     queryFn: async () => {
       if (!latestSeason) return []
-      const result = await supabase
-        .from("driver_standings")
-        .select("driver_id, position")
+      const { data: raceData } = await supabase
+        .from("races")
+        .select("id")
         .eq("season_year", latestSeason)
-        .order("position", { ascending: true, nullsFirst: false })
-      return (result.data ?? []) as { driver_id: string; position: number | null }[]
+      const races = (raceData ?? []) as { id: string }[]
+      if (races.length === 0) return []
+      const raceIds = races.map((r) => r.id)
+      const { data: resultData } = await supabase
+        .from("race_results")
+        .select("driver_id")
+        .in("race_id", raceIds)
+      const results = (resultData ?? []) as { driver_id: string }[]
+      return [...new Set(results.map((r) => r.driver_id))]
     },
     enabled: !!latestSeason,
   })
 
   const currentDriverIds = useMemo(
-    () => new Set(currentStandings?.map((s) => s.driver_id) ?? []),
-    [currentStandings],
+    () => new Set(currentRaceDrivers ?? []),
+    [currentRaceDrivers],
   )
 
   const { data: drivers, isLoading } = useQuery({
@@ -76,6 +83,29 @@ export default function DriversPage() {
     },
   })
 
+  const driverIds = useMemo(() => drivers?.map((d) => d.id) ?? [], [drivers])
+
+  const { data: wikipediaData } = useQuery({
+    queryKey: ["driver-wikipedia-batch", driverIds],
+    queryFn: async () => {
+      if (driverIds.length === 0) return {}
+      const CHUNK_SIZE = 100
+      const map: Record<string, Pick<DriverWikipedia, "short_description" | "summary" | "page_url" | "images">> = {}
+      for (let i = 0; i < driverIds.length; i += CHUNK_SIZE) {
+        const chunk = driverIds.slice(i, i + CHUNK_SIZE)
+        const { data } = await supabase
+          .from("driver_wikipedia")
+          .select("entity_id, short_description, summary, page_url, images")
+          .in("entity_id", chunk)
+        for (const row of (data ?? []) as Pick<DriverWikipedia, "entity_id" | "short_description" | "summary" | "page_url" | "images">[]) {
+          map[row.entity_id] = { short_description: row.short_description, summary: row.summary, page_url: row.page_url, images: row.images }
+        }
+      }
+      return map
+    },
+    enabled: driverIds.length > 0,
+  })
+
   const { data: nationalities } = useQuery({
     queryKey: ["driver-nationalities"],
     queryFn: async () => {
@@ -90,12 +120,9 @@ export default function DriversPage() {
   })
 
   const currentDrivers = useMemo(() => {
-    if (!drivers || !currentStandings) return []
-    const driverMap = new Map(drivers.map((d) => [d.driver_id, d]))
-    return currentStandings
-      .map((s) => driverMap.get(s.driver_id))
-      .filter(Boolean) as Driver[]
-  }, [drivers, currentStandings])
+    if (!drivers || !currentDriverIds.size) return []
+    return drivers.filter((d) => currentDriverIds.has(d.driver_id))
+  }, [drivers, currentDriverIds])
 
   const pastDrivers = useMemo(
     () => drivers?.filter((d) => !currentDriverIds.has(d.driver_id)),
@@ -185,10 +212,27 @@ export default function DriversPage() {
           animate="animate"
           className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
         >
-          {(tab === "current" ? currentDrivers : pastDrivers ?? []).map((driver) => (
+          {(tab === "current" ? currentDrivers : pastDrivers ?? []).map((driver) => {
+            const wp = wikipediaData?.[driver.id]
+            return (
             <motion.div key={driver.id} variants={itemVariants}>
               <Link to={`/drivers/${driver.driver_id}`} className="block h-full">
                 <Card className="relative overflow-hidden h-full group">
+                  {wp && (
+                    <a
+                      href={wp.page_url ?? "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-2 right-2 z-10"
+                      title="View on Wikipedia"
+                    >
+                      <div className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] text-amber-400 border border-amber-500/20 hover:bg-amber-500/25 transition-colors">
+                        <Book className="w-2.5 h-2.5" />
+                        <span>WP</span>
+                      </div>
+                    </a>
+                  )}
                   <CardContent className="p-5 flex flex-col items-center text-center gap-3">
                     <div className="w-16 h-16 rounded-full bg-tertiary flex items-center justify-center overflow-hidden ring-2 ring-border-strong group-hover:ring-accent-red/50 transition-all duration-300">
                       {driver.photo_url ? (
@@ -206,6 +250,11 @@ export default function DriversPage() {
                       <p className="text-[11px] text-text-secondary truncate mt-0.5">
                         {driver.given_name}
                       </p>
+                      {wp?.short_description && (
+                        <p className="text-[10px] text-text-tertiary truncate mt-1 leading-tight">
+                          {wp.short_description}
+                        </p>
+                      )}
                     </div>
                     {driver.nationality && (
                       <div className="flex items-center gap-1.5">
@@ -224,7 +273,8 @@ export default function DriversPage() {
                 </Card>
               </Link>
             </motion.div>
-          ))}
+            )
+          })}
         </motion.div>
       )}
 

@@ -38,13 +38,35 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
       .limit(5),
   ])
 
+  const [driverWpRes, constructorWpRes, circuitWpRes] = await Promise.all([
+    supabase
+      .from("driver_wikipedia")
+      .select("entity_id, short_description")
+      .textSearch("search_vector", searchTerm, { type: "websearch" })
+      .limit(5),
+    supabase
+      .from("constructor_wikipedia")
+      .select("entity_id, short_description")
+      .textSearch("search_vector", searchTerm, { type: "websearch" })
+      .limit(5),
+    supabase
+      .from("circuit_wikipedia")
+      .select("entity_id, short_description")
+      .textSearch("search_vector", searchTerm, { type: "websearch" })
+      .limit(5),
+  ])
+
+  const driverWpMap = new Map((driverWpRes.data ?? []).map((r) => [r.entity_id, r.short_description]))
+  const constructorWpMap = new Map((constructorWpRes.data ?? []).map((r) => [r.entity_id, r.short_description]))
+  const circuitWpMap = new Map((circuitWpRes.data ?? []).map((r) => [r.entity_id, r.short_description]))
+
   if (driversRes.data) {
     for (const d of driversRes.data) {
       results.push({
         id: d.id,
         type: "driver",
         label: `${d.given_name} ${d.family_name}`,
-        description: d.nationality || "Driver",
+        description: driverWpMap.get(d.id) || d.nationality || "Driver",
         href: `/drivers/${d.driver_id}`,
         image: d.photo_url || undefined,
       })
@@ -57,7 +79,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
         id: c.id,
         type: "constructor",
         label: c.name,
-        description: c.nationality || "Constructor",
+        description: constructorWpMap.get(c.id) || c.nationality || "Constructor",
         href: `/constructors/${c.constructor_id}`,
         image: c.logo_url || undefined,
       })
@@ -70,7 +92,7 @@ export async function globalSearch(query: string): Promise<SearchResult[]> {
         id: c.id,
         type: "circuit",
         label: c.name,
-        description: `${c.location}, ${c.country}`,
+        description: circuitWpMap.get(c.id) || `${c.location}, ${c.country}`,
         href: `/circuits/${c.circuit_id}`,
       })
     }

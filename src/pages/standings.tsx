@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { motion } from "framer-motion"
-import type { DriverStanding, ConstructorStanding, Season } from "@/types/database"
-import { Trophy, Medal, Crown, Building2, BarChart3, Users } from "lucide-react"
+import type { DriverStanding, ConstructorStanding, Season, SeasonWikipedia } from "@/types/database"
+import { Trophy, Medal, Crown, Building2, BarChart3, Users, Book, ExternalLink } from "lucide-react"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -104,6 +104,19 @@ export default function StandingsPage() {
     },
   })
 
+  const { data: seasonWikipedia } = useQuery({
+    queryKey: ["season-wikipedia", selectedSeason],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("season_wikipedia")
+        .select("*")
+        .eq("entity_id", selectedSeason)
+        .maybeSingle()
+      return data as SeasonWikipedia | null
+    },
+    enabled: !!selectedSeason,
+  })
+
   const chartData = (driverStandings ?? [])
     .filter((s) => s.position && s.position <= 10)
     .map((s) => ({
@@ -186,6 +199,28 @@ export default function StandingsPage() {
           ))}
         </div>
       </div>
+
+      {seasonWikipedia?.short_description && (
+        <Card className="border-amber-500/20 bg-amber-500/5">
+          <CardContent className="p-4 flex items-start gap-3">
+            <Book className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-text-secondary leading-relaxed">{seasonWikipedia.short_description}</p>
+              {seasonWikipedia.page_url && (
+                <a
+                  href={seasonWikipedia.page_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-1 text-[10px] text-amber-400/60 hover:text-amber-400 transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>Read more on Wikipedia</span>
+                </a>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="drivers">
         <div className="overflow-x-auto hide-scrollbar">

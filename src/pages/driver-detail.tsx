@@ -11,8 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { getFlagUrl } from "@/lib/nationalityFlags"
-import type { Driver, DriverImage, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
-import { Trophy, Medal, Flag, Zap, Target, BarChart3, Gauge, CalendarDays } from "lucide-react"
+import type { Driver, DriverImage, DriverWikipedia, QualifyingResult, RaceResult, SprintResult } from "@/types/database"
+import { Trophy, Medal, Flag, Zap, Target, BarChart3, Gauge, CalendarDays, Book, ExternalLink } from "lucide-react"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -274,6 +274,20 @@ export default function DriverDetailPage() {
         .eq("type", "pole")
         .maybeSingle()
       return data as DriverImage | null
+    },
+    enabled: !!driverUuid,
+  })
+
+  const { data: driverWikipedia } = useQuery({
+    queryKey: ["driver-wikipedia", driverUuid],
+    queryFn: async () => {
+      if (!driverUuid) return null
+      const { data } = await supabase
+        .from("driver_wikipedia")
+        .select("*")
+        .eq("entity_id", driverUuid)
+        .maybeSingle()
+      return data as DriverWikipedia | null
     },
     enabled: !!driverUuid,
   })
@@ -555,6 +569,23 @@ export default function DriverDetailPage() {
               {driver.bio && (
                 <p className="mt-3 max-w-xl text-sm text-white/60 drop-shadow-sm leading-relaxed">{driver.bio}</p>
               )}
+              {driverWikipedia?.short_description && (
+                <p className="mt-2 max-w-xl text-sm text-white/40 drop-shadow-sm italic">
+                  {driverWikipedia.short_description}
+                </p>
+              )}
+              {driverWikipedia?.page_url && (
+                <a
+                  href={driverWikipedia.page_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-2 text-[10px] text-amber-400/60 hover:text-amber-400 transition-colors"
+                >
+                  <Book className="w-3 h-3" />
+                  <span>View on Wikipedia</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -676,6 +707,7 @@ export default function DriverDetailPage() {
             <TabsTrigger value="team-mates">Teammates</TabsTrigger>
             <TabsTrigger value="teammates">Teammate Battle</TabsTrigger>
             <TabsTrigger value="milestones">Milestones</TabsTrigger>
+            <TabsTrigger value="about">About</TabsTrigger>
             <TabsTrigger value="circuit-performance">Circuit Performance</TabsTrigger>
             <TabsTrigger value="achievements">Achievements</TabsTrigger>
             <TabsTrigger value="advanced-stats">Advanced Stats</TabsTrigger>
@@ -1158,6 +1190,71 @@ export default function DriverDetailPage() {
                   </div>
                 ) : (
                   <p className="text-text-secondary">No wins yet — achievements will appear here once the driver has a win.</p>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="about">
+          <motion.div
+            variants={itemVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Book className="w-4 h-4 text-amber-400" />
+                  About {driver.given_name} {driver.family_name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {driverWikipedia?.summary ? (
+                  <div className="space-y-4">
+                    <div className="prose prose-sm max-w-none text-text-secondary leading-relaxed whitespace-pre-line">
+                      {driverWikipedia.summary}
+                    </div>
+                    {driverWikipedia.images && (driverWikipedia.images as { url: string; description: string | null }[]).length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {(driverWikipedia.images as { url: string; description: string | null }[]).slice(0, 6).map((img, i) => (
+                          <a key={i} href={img.url} target="_blank" rel="noopener noreferrer" className="block">
+                            <div className="relative overflow-hidden rounded-xl bg-tertiary aspect-video">
+                              <img src={img.url} alt={img.description ?? ""} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" />
+                            </div>
+                            {img.description && (
+                              <p className="text-[10px] text-text-tertiary mt-1 line-clamp-2">{img.description}</p>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {driverWikipedia.sections && (driverWikipedia.sections as { line: string; index: string }[]).length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-text-primary mb-2">Sections</h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(driverWikipedia.sections as { line: string; index: string }[]).filter((s) => s.index.split(".").length <= 2).slice(0, 20).map((s, i) => (
+                            <span key={i} className="text-xs bg-tertiary text-text-secondary rounded-full px-2.5 py-1">
+                              {s.line}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {driverWikipedia.page_url && (
+                      <a
+                        href={driverWikipedia.page_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Read full biography on Wikipedia
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-text-secondary">No Wikipedia biography available for this driver.</p>
                 )}
               </CardContent>
             </Card>

@@ -101,6 +101,31 @@ export interface Database {
         Insert: Omit<Profile, "id">
         Update: Partial<Omit<Profile, "id">>
       }
+      driver_wikipedia: {
+        Row: DriverWikipedia
+        Insert: Omit<DriverWikipedia, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<DriverWikipedia, "id">>
+      }
+      constructor_wikipedia: {
+        Row: ConstructorWikipedia
+        Insert: Omit<ConstructorWikipedia, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<ConstructorWikipedia, "id">>
+      }
+      circuit_wikipedia: {
+        Row: CircuitWikipedia
+        Insert: Omit<CircuitWikipedia, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<CircuitWikipedia, "id">>
+      }
+      race_wikipedia: {
+        Row: RaceWikipedia
+        Insert: Omit<RaceWikipedia, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<RaceWikipedia, "id">>
+      }
+      season_wikipedia: {
+        Row: SeasonWikipedia
+        Insert: Omit<SeasonWikipedia, "id" | "created_at" | "updated_at">
+        Update: Partial<Omit<SeasonWikipedia, "id">>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -332,9 +357,114 @@ export interface TireStint {
   stint_end_lap: number | null
 }
 
+export interface DriverWikipedia {
+  id: string
+  entity_id: string
+  title: string
+  summary: string | null
+  content: Record<string, unknown> | null
+  sections: unknown[] | null
+  infobox: Record<string, unknown> | null
+  images: unknown[] | null
+  references: string[] | null
+  categories: unknown[] | null
+  coordinates: Record<string, unknown> | null
+  revision_id: number | null
+  last_updated: string | null
+  page_url: string | null
+  short_description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConstructorWikipedia {
+  id: string
+  entity_id: string
+  title: string
+  summary: string | null
+  content: Record<string, unknown> | null
+  sections: unknown[] | null
+  infobox: Record<string, unknown> | null
+  images: unknown[] | null
+  references: string[] | null
+  categories: unknown[] | null
+  coordinates: Record<string, unknown> | null
+  revision_id: number | null
+  last_updated: string | null
+  page_url: string | null
+  short_description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CircuitWikipedia {
+  id: string
+  entity_id: string
+  title: string
+  summary: string | null
+  content: Record<string, unknown> | null
+  sections: unknown[] | null
+  infobox: Record<string, unknown> | null
+  images: unknown[] | null
+  references: string[] | null
+  categories: unknown[] | null
+  coordinates: Record<string, unknown> | null
+  revision_id: number | null
+  last_updated: string | null
+  page_url: string | null
+  short_description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RaceWikipedia {
+  id: string
+  entity_id: string
+  title: string
+  summary: string | null
+  content: Record<string, unknown> | null
+  sections: unknown[] | null
+  infobox: Record<string, unknown> | null
+  images: unknown[] | null
+  references: string[] | null
+  categories: unknown[] | null
+  coordinates: Record<string, unknown> | null
+  revision_id: number | null
+  last_updated: string | null
+  page_url: string | null
+  short_description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SeasonWikipedia {
+  id: string
+  entity_id: number
+  title: string
+  summary: string | null
+  content: Record<string, unknown> | null
+  sections: unknown[] | null
+  infobox: Record<string, unknown> | null
+  images: unknown[] | null
+  references: string[] | null
+  categories: unknown[] | null
+  coordinates: Record<string, unknown> | null
+  revision_id: number | null
+  last_updated: string | null
+  page_url: string | null
+  short_description: string | null
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
 export interface SyncJob {
   id: string
-  source: "jolpica" | "openf1"
+  source: "jolpica" | "openf1" | "wikipedia"
   entity_type: string
   status: "pending" | "running" | "completed" | "failed"
   started_at: string | null

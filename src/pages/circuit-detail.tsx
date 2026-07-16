@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { motion } from "framer-motion"
-import type { Circuit, Race, CircuitImage } from "@/types/database"
-import { MapPin, Gauge, Route, Flag, Trophy } from "lucide-react"
+import type { Circuit, CircuitWikipedia, Race, CircuitImage } from "@/types/database"
+import { MapPin, Gauge, Route, Flag, Trophy, Book, ExternalLink } from "lucide-react"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -131,6 +131,20 @@ export default function CircuitDetailPage() {
   const circuitHero = circuitImages?.find((img) => img.type === "hero")
   const circuitAerial = circuitImages?.find((img) => img.type === "aerial")
 
+  const { data: circuitWikipedia } = useQuery({
+    queryKey: ["circuit-wikipedia", circuitUuid],
+    queryFn: async () => {
+      if (!circuitUuid) return null
+      const { data } = await supabase
+        .from("circuit_wikipedia")
+        .select("*")
+        .eq("entity_id", circuitUuid)
+        .maybeSingle()
+      return data as CircuitWikipedia | null
+    },
+    enabled: !!circuitUuid,
+  })
+
   const { data: raceResults } = useQuery({
     queryKey: ["circuit-race-results", raceIds],
     queryFn: async () => {
@@ -239,6 +253,21 @@ export default function CircuitDetailPage() {
                     {circuit.direction}
                   </Badge>
                 )}
+              {circuitWikipedia?.short_description && (
+                <p className="mt-2 text-sm text-text-secondary italic">{circuitWikipedia.short_description}</p>
+              )}
+              {circuitWikipedia?.page_url && (
+                <a
+                  href={circuitWikipedia.page_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-1 text-[10px] text-amber-400/60 hover:text-amber-400 transition-colors"
+                >
+                  <Book className="w-3 h-3" />
+                  <span>View on Wikipedia</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              )}
               </div>
             </div>
           </div>
@@ -310,6 +339,7 @@ export default function CircuitDetailPage() {
             <TabsTrigger value="records">Records</TabsTrigger>
             <TabsTrigger value="team-records">Team Records</TabsTrigger>
             <TabsTrigger value="circuit-info">Circuit Info</TabsTrigger>
+            <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
         </div>
 
@@ -669,6 +699,64 @@ export default function CircuitDetailPage() {
               </Card>
             )}
           </div>
+        </TabsContent>
+        <TabsContent value="about">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Book className="w-4 h-4 text-amber-400" />
+                About {circuit.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {circuitWikipedia?.summary ? (
+                <div className="space-y-4">
+                  <div className="prose prose-sm max-w-none text-text-secondary leading-relaxed whitespace-pre-line">
+                    {circuitWikipedia.summary}
+                  </div>
+                  {circuitWikipedia.images && (circuitWikipedia.images as { url: string; description: string | null }[]).length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {(circuitWikipedia.images as { url: string; description: string | null }[]).slice(0, 6).map((img, i) => (
+                        <a key={i} href={img.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <div className="relative overflow-hidden rounded-xl bg-tertiary aspect-video">
+                            <img src={img.url} alt={img.description ?? ""} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" />
+                          </div>
+                          {img.description && (
+                            <p className="text-[10px] text-text-tertiary mt-1 line-clamp-2">{img.description}</p>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {circuitWikipedia.sections && (circuitWikipedia.sections as { line: string; index: string }[]).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-text-primary mb-2">Sections</h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(circuitWikipedia.sections as { line: string; index: string }[]).filter((s) => s.index.split(".").length <= 2).slice(0, 20).map((s, i) => (
+                          <span key={i} className="text-xs bg-tertiary text-text-secondary rounded-full px-2.5 py-1">
+                            {s.line}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {circuitWikipedia.page_url && (
+                    <a
+                      href={circuitWikipedia.page_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Read full article on Wikipedia
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <p className="text-text-secondary">No Wikipedia information available for this circuit.</p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </motion.div>

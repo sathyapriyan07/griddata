@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PageSkeleton } from "@/components/loading-skeleton"
 import { motion } from "framer-motion"
-import type { Constructor, RaceResult, ConstructorStanding, DriverImage } from "@/types/database"
-import { Trophy, Medal, Flag, MapPin, Users, Wrench, BarChart3, Target, Crown } from "lucide-react"
+import type { Constructor, ConstructorWikipedia, RaceResult, ConstructorStanding, DriverImage } from "@/types/database"
+import { Trophy, Medal, Flag, MapPin, Users, Wrench, BarChart3, Target, Crown, Book, ExternalLink } from "lucide-react"
 
 const containerVariants = {
   initial: { opacity: 0 },
@@ -190,6 +190,20 @@ export default function ConstructorDetailPage() {
     enabled: !!teamUuid,
   })
 
+  const { data: constructorWikipedia } = useQuery({
+    queryKey: ["constructor-wikipedia", teamUuid],
+    queryFn: async () => {
+      if (!teamUuid) return null
+      const { data } = await supabase
+        .from("constructor_wikipedia")
+        .select("*")
+        .eq("entity_id", teamUuid)
+        .maybeSingle()
+      return data as ConstructorWikipedia | null
+    },
+    enabled: !!teamUuid,
+  })
+
   const driverRecords = (constructorResults ?? []).reduce((acc, r) => {
     const did = r.driver.driver_id
     if (!acc.has(did)) acc.set(did, { driver_id: did, given_name: r.driver.given_name, family_name: r.driver.family_name, races: 0, wins: 0, podiums: 0, points: 0, poles: 0, sprints: 0, sprintWins: 0, sprintPodiums: 0, sprintPoints: 0 })
@@ -278,8 +292,29 @@ export default function ConstructorDetailPage() {
         <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
           {colors && (
             <div className="w-full h-full rounded-full blur-3xl" style={{ background: colors.primary }} />
-          )}
-        </div>
+                )}
+              </div>
+              {constructorWikipedia?.short_description && (
+                <div className="col-span-full">
+                  <p className="text-sm text-text-secondary italic mt-1">
+                    {constructorWikipedia.short_description}
+                  </p>
+                </div>
+              )}
+              {constructorWikipedia?.page_url && (
+                <div className="col-span-full">
+                  <a
+                    href={constructorWikipedia.page_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[10px] text-amber-400/60 hover:text-amber-400 transition-colors"
+                  >
+                    <Book className="w-3 h-3" />
+                    <span>View on Wikipedia</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+              )}
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `radial-gradient(circle at 20% 50%, hsl(3,95%,46%) 0%, transparent 60%)`
         }} />
@@ -450,6 +485,7 @@ export default function ConstructorDetailPage() {
             <TabsTrigger value="drivers">Driver Roster</TabsTrigger>
             <TabsTrigger value="records">Driver Records</TabsTrigger>
             <TabsTrigger value="milestones">Driver Milestones</TabsTrigger>
+            <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="standings">
@@ -670,6 +706,64 @@ export default function ConstructorDetailPage() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="about">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Book className="w-4 h-4 text-amber-400" />
+                About {team.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {constructorWikipedia?.summary ? (
+                <div className="space-y-4">
+                  <div className="prose prose-sm max-w-none text-text-secondary leading-relaxed whitespace-pre-line">
+                    {constructorWikipedia.summary}
+                  </div>
+                  {constructorWikipedia.images && (constructorWikipedia.images as { url: string; description: string | null }[]).length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {(constructorWikipedia.images as { url: string; description: string | null }[]).slice(0, 6).map((img, i) => (
+                        <a key={i} href={img.url} target="_blank" rel="noopener noreferrer" className="block">
+                          <div className="relative overflow-hidden rounded-xl bg-tertiary aspect-video">
+                            <img src={img.url} alt={img.description ?? ""} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" loading="lazy" />
+                          </div>
+                          {img.description && (
+                            <p className="text-[10px] text-text-tertiary mt-1 line-clamp-2">{img.description}</p>
+                          )}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {constructorWikipedia.sections && (constructorWikipedia.sections as { line: string; index: string }[]).length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-text-primary mb-2">Sections</h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(constructorWikipedia.sections as { line: string; index: string }[]).filter((s) => s.index.split(".").length <= 2).slice(0, 20).map((s, i) => (
+                          <span key={i} className="text-xs bg-tertiary text-text-secondary rounded-full px-2.5 py-1">
+                            {s.line}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {constructorWikipedia.page_url && (
+                    <a
+                      href={constructorWikipedia.page_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Read full history on Wikipedia
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <p className="text-text-secondary">No Wikipedia information available for this team.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

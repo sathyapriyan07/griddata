@@ -3,23 +3,9 @@ import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { motion } from "framer-motion"
-import { Search, X, MapPin, Ruler, CornerDownRight, Book } from "lucide-react"
-import type { Circuit, CircuitWikipedia } from "@/types/database"
-
-const containerVariants = {
-  initial: { opacity: 0 },
-  animate: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05, delayChildren: 0.1 },
-  },
-}
-
-const itemVariants = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.2, 1] as const } },
-}
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Search, X, MapPin } from "lucide-react"
+import type { Circuit } from "@/types/database"
 
 export default function CircuitsPage() {
   const [search, setSearch] = useState("")
@@ -38,36 +24,8 @@ export default function CircuitsPage() {
     },
   })
 
-  const circuitIds = useMemo(() => circuits?.map((c) => c.id) ?? [], [circuits])
-
-  const { data: wikipediaData } = useQuery({
-    queryKey: ["circuit-wikipedia-batch", circuitIds],
-    queryFn: async () => {
-      if (circuitIds.length === 0) return {}
-      const CHUNK_SIZE = 100
-      const map: Record<string, Pick<CircuitWikipedia, "short_description" | "summary" | "page_url">> = {}
-      for (let i = 0; i < circuitIds.length; i += CHUNK_SIZE) {
-        const chunk = circuitIds.slice(i, i + CHUNK_SIZE)
-        const { data } = await supabase
-          .from("circuit_wikipedia")
-          .select("entity_id, short_description, summary, page_url")
-          .in("entity_id", chunk)
-        for (const row of (data ?? []) as Pick<CircuitWikipedia, "entity_id" | "short_description" | "summary" | "page_url">[]) {
-          map[row.entity_id] = { short_description: row.short_description, summary: row.summary, page_url: row.page_url }
-        }
-      }
-      return map
-    },
-    enabled: circuitIds.length > 0,
-  })
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0, 0, 0.2, 1] as const }}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-heading uppercase tracking-wide text-text-primary">Circuits</h1>
@@ -99,81 +57,51 @@ export default function CircuitsPage() {
         </div>
       )}
 
-      <motion.div
-        variants={containerVariants}
-        initial="initial"
-        animate="animate"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-      >
-        {circuits?.map((circuit) => {
-              const wp = wikipediaData?.[circuit.id]
-              return (
-              <motion.div key={circuit.id} variants={itemVariants}>
-                <Link to={`/circuits/${circuit.circuit_id}`} className="block h-full">
-                  <Card className="relative overflow-hidden h-full group">
-                    {wp && (
-                      <a
-                        href={wp.page_url ?? "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute top-2 right-2 z-10"
-                        title="View on Wikipedia"
-                      >
-                        <div className="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[9px] text-amber-400 border border-amber-500/20 hover:bg-amber-500/25 transition-colors">
-                          <Book className="w-2.5 h-2.5" />
-                          <span>WP</span>
-                        </div>
-                      </a>
-                    )}
-                    <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red/40" />
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-3">
-                    {circuit.image_url ? (
-                      <img src={circuit.image_url} alt="" className="w-14 h-14 object-contain rounded-xl shrink-0 bg-tertiary p-1.5 border border-default" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-xl bg-tertiary flex items-center justify-center shrink-0 border border-default">
-                        <MapPin className="h-5 w-5 text-text-tertiary" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-heading uppercase tracking-wide text-sm font-bold text-text-primary truncate">{circuit.name}</h3>
-                      <p className="text-xs text-text-secondary mt-0.5">{circuit.location}, {circuit.country}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {circuit.length_km && (
-                          <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
-                            <Ruler className="h-3 w-3" />
-                            {circuit.length_km.toFixed(3)} km
-                          </div>
-                        )}
-                        {circuit.turns && (
-                          <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
-                            <CornerDownRight className="h-3 w-3" />
-                            {circuit.turns} turns
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-1.5 mt-2">
-                        {circuit.first_gp_year && (
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                            Since {circuit.first_gp_year}
-                          </Badge>
-                        )}
-                        {circuit.direction && (
-                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0 capitalize">
-                            {circuit.direction}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </motion.div>
-          )
-        })}
-      </motion.div>
+      {!isLoading && circuits && circuits.length > 0 && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Circuit</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Country</TableHead>
+                    <TableHead className="text-right">Length</TableHead>
+                    <TableHead className="text-center">Turns</TableHead>
+                    <TableHead className="text-center">First GP</TableHead>
+                    <TableHead>Direction</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {circuits.map((circuit) => (
+                    <TableRow key={circuit.id}>
+                      <TableCell>
+                        <Link to={`/circuits/${circuit.circuit_id}`} className="inline-flex items-center gap-2.5 hover:text-accent-red transition-colors">
+                          {circuit.image_url ? (
+                            <img src={circuit.image_url} alt="" className="w-8 h-8 object-contain rounded shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded bg-tertiary flex items-center justify-center shrink-0">
+                              <MapPin className="h-4 w-4 text-text-tertiary" />
+                            </div>
+                          )}
+                          <span className="font-medium text-text-primary">{circuit.name}</span>
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-text-secondary text-sm">{circuit.location ?? "—"}</TableCell>
+                      <TableCell className="text-text-secondary text-sm">{circuit.country ?? "—"}</TableCell>
+                      <TableCell className="text-right font-mono text-text-secondary text-sm">{circuit.length_km != null ? `${circuit.length_km.toFixed(3)} km` : "—"}</TableCell>
+                      <TableCell className="text-center font-mono text-text-secondary text-sm">{circuit.turns ?? "—"}</TableCell>
+                      <TableCell className="text-center font-mono text-text-secondary text-sm">{circuit.first_gp_year ?? "—"}</TableCell>
+                      <TableCell className="text-text-secondary text-xs capitalize">{circuit.direction ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {circuits?.length === 0 && !isLoading && (
         <div className="text-center py-16">
@@ -181,6 +109,6 @@ export default function CircuitsPage() {
           <p className="text-text-secondary">No circuits found.</p>
         </div>
       )}
-    </motion.div>
+    </div>
   )
 }

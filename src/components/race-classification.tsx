@@ -235,7 +235,7 @@ function ClassificationRow({
                   }`}
                   style={{ fontSize: "0.9rem", fontFamily: "var(--font-heading)" }}
                 >
-                  {result.driver.family_name.toUpperCase()}
+                  {result.driver.code ?? result.driver.family_name.substring(0, 3).toUpperCase()}
                 </Link>
                 {isWinner && (
                   <span className="text-yellow-400/70 flex-shrink-0" style={{ fontSize: "0.75rem" }}>🏆</span>

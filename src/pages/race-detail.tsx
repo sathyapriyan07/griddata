@@ -549,7 +549,7 @@ export default function RaceDetailPage() {
                             <TableCell>
                               <Link to={`/drivers/${r.driver.driver_id}`} className="inline-flex items-center gap-2 hover:text-accent-red transition-colors">
                                 <span className="font-medium text-text-primary">
-                                  {r.driver.given_name.charAt(0)}. {r.driver.family_name}
+                                  {r.driver.code ?? r.driver.family_name.substring(0, 3).toUpperCase()}
                                 </span>
                               </Link>
                             </TableCell>
@@ -617,7 +617,7 @@ export default function RaceDetailPage() {
                           <TableCell className="text-center font-heading font-bold text-text-primary">{q.position}</TableCell>
                           <TableCell>
                             <Link to={`/drivers/${q.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
-                              {q.driver.given_name.charAt(0)}. {q.driver.family_name}
+                              {q.driver.code ?? q.driver.family_name.substring(0, 3).toUpperCase()}
                             </Link>
                           </TableCell>
                           <TableCell>
@@ -667,7 +667,7 @@ export default function RaceDetailPage() {
                             <TableCell className="text-center font-heading font-bold text-text-primary">{s.grid ?? "—"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
-                                {s.driver.given_name.charAt(0)}. {s.driver.family_name}
+                                {s.driver.code ?? s.driver.family_name.substring(0, 3).toUpperCase()}
                               </Link>
                             </TableCell>
                             <TableCell>
@@ -710,7 +710,7 @@ export default function RaceDetailPage() {
                             <TableCell className="text-center font-heading font-bold text-text-primary">{s.position ?? "DNF"}</TableCell>
                             <TableCell>
                               <Link to={`/drivers/${s.driver.driver_id}`} className="hover:text-accent-red transition-colors font-medium text-text-primary">
-                                {s.driver.given_name.charAt(0)}. {s.driver.family_name}
+                                {s.driver.code ?? s.driver.family_name.substring(0, 3).toUpperCase()}
                               </Link>
                             </TableCell>
                             <TableCell>

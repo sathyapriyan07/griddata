@@ -168,7 +168,7 @@ function PodiumCard({
             fontSize: isWinner ? "clamp(1.2rem, 3.5vw, 1.8rem)" : "clamp(0.9rem, 2.5vw, 1.25rem)",
           }}
         >
-          {result.driver.family_name.toUpperCase()}
+          {result.driver.code ?? result.driver.family_name.substring(0, 3).toUpperCase()}
         </Link>
 
         <div

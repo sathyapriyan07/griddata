@@ -176,7 +176,7 @@ export default function RaceResults({
                     className="font-bold text-white hover:text-purple-200 hover:underline transition-colors"
                     style={{ fontFamily: "var(--font-heading)", fontSize: "1.05rem" }}
                   >
-                    {fastestLap.driver.family_name.toUpperCase()}
+                    {fastestLap.driver.code ?? fastestLap.driver.family_name.substring(0, 3).toUpperCase()}
                   </Link>
                   <span className="text-white/25 text-sm">·</span>
                   <Link
@@ -264,7 +264,7 @@ export default function RaceResults({
                           className="font-semibold text-white/75 hover:text-white hover:underline text-sm transition-colors"
                           style={{ fontFamily: "var(--font-heading)" }}
                         >
-                          {r.driver.family_name.toUpperCase()}
+                           {r.driver.code ?? r.driver.family_name.substring(0, 3).toUpperCase()}
                         </Link>
                         <div className="text-white/35 text-xs" style={{ fontFamily: "var(--font-team)" }}>
                           {r.constructor.name}
@@ -312,7 +312,7 @@ export default function RaceResults({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5">
             {race && (
               <>
-                <StatItem label="Race Winner" value={podium[0] ? `${podium[0].driver.family_name}` : "\u2014"} />
+                <StatItem label="Race Winner" value={podium[0] ? `${podium[0].driver.code ?? podium[0].driver.family_name.substring(0, 3).toUpperCase()}` : "\u2014"} />
                 <StatItem label="Winning Team" value={podium[0]?.constructor.name ?? "\u2014"} />
                 <StatItem label="Winning Time" value={podium[0]?.time ?? "\u2014"} />
               </>
@@ -321,7 +321,7 @@ export default function RaceResults({
             {fastestLap && (
               <>
                 <StatItem label="Fastest Lap" value={fastestLap.fastest_lap_time ?? "\u2014"} />
-                <StatItem label="Fastest Driver" value={`${fastestLap.driver.family_name}`} />
+                <StatItem label="Fastest Driver" value={`${fastestLap.driver.code ?? fastestLap.driver.family_name.substring(0, 3).toUpperCase()}`} />
               </>
             )}
             <StatItem label="Total Drivers" value={`${results.length}`} />

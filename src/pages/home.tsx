@@ -16,10 +16,7 @@ import {
   ArrowRight,
   Calendar,
   ChevronRight,
-  Book,
-  ExternalLink,
 } from "lucide-react"
-import type { SeasonWikipedia } from "@/types/database"
 
 function Countdown({ targetDate }: { targetDate: Date }) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 })
@@ -156,20 +153,6 @@ export default function HomePage() {
     enabled: !!recentRaces?.[0]?.id,
   })
 
-  const { data: seasonWikipedia } = useQuery({
-    queryKey: ["home-season-wikipedia", latestSeason?.year],
-    queryFn: async () => {
-      if (!latestSeason?.year) return null
-      const { data } = await supabase
-        .from("season_wikipedia")
-        .select("*")
-        .eq("entity_id", latestSeason.year)
-        .maybeSingle()
-      return data as SeasonWikipedia | null
-    },
-    enabled: !!latestSeason?.year,
-  })
-
   const quickLinks = [
     { href: "/races", label: "Races", icon: Flag, desc: "Browse every Grand Prix" },
     { href: "/drivers", label: "Drivers", icon: Users, desc: "Driver profiles & stats" },
@@ -242,30 +225,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {seasonWikipedia?.summary && (
-        <Card className="border-amber-500/20 bg-amber-500/5">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-3">
-              <Book className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">{seasonWikipedia.summary}</p>
-                {seasonWikipedia.page_url && (
-                  <a
-                    href={seasonWikipedia.page_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 mt-2 text-xs text-amber-400/60 hover:text-amber-400 transition-colors"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    <span>Read season overview on Wikipedia</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {latestResult && recentRaces?.[0] && (
           <motion.div
@@ -275,7 +234,7 @@ export default function HomePage() {
           >
             <Card className="relative overflow-hidden h-full">
               <div className="absolute top-0 left-0 w-[3px] h-full bg-accent-red" />
-              <CardContent className="p-6">
+              <CardContent className="p-6 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                     Latest Winner
@@ -293,7 +252,7 @@ export default function HomePage() {
                 </Link>
                 <Link
                   to={`/races/${recentRaces[0].id}`}
-                  className="flex items-center gap-1 mt-4 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+                  className="flex items-center gap-1 mt-auto pt-4 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
                 >
                   View race details <ChevronRight className="h-3 w-3" />
                 </Link>
@@ -310,14 +269,14 @@ export default function HomePage() {
           >
             <Card className="relative overflow-hidden h-full">
               <div className="absolute top-0 left-0 w-[3px] h-full bg-yellow-500" />
-              <CardContent className="p-6">
+              <CardContent className="p-6 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                     Drivers' Championship
                   </span>
                   <Badge variant="default">{currentSeason}</Badge>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3 flex-1">
                   {driverLeaders.slice(0, 3).map((s, i) => (
                     <div key={s.driver.driver_id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
@@ -340,7 +299,7 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
-                <Link to="/standings" className="flex items-center gap-1 mt-4 text-xs text-text-tertiary hover:text-text-secondary transition-colors">
+                <Link to="/standings" className="flex items-center gap-1 mt-auto pt-4 text-xs text-text-tertiary hover:text-text-secondary transition-colors">
                   Full standings <ChevronRight className="h-3 w-3" />
                 </Link>
               </CardContent>
@@ -356,14 +315,14 @@ export default function HomePage() {
           >
             <Card className="relative overflow-hidden h-full">
               <div className="absolute top-0 left-0 w-[3px] h-full bg-blue-500" />
-              <CardContent className="p-6">
+              <CardContent className="p-6 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
                     Constructors' Championship
                   </span>
                   <Badge variant="default">{currentSeason}</Badge>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3 flex-1">
                   {constructorLeaders.slice(0, 3).map((s, i) => (
                     <div key={s.constructor.constructor_id} className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
@@ -386,7 +345,7 @@ export default function HomePage() {
                     </div>
                   ))}
                 </div>
-                <Link to="/standings" className="flex items-center gap-1 mt-4 text-xs text-text-tertiary hover:text-text-secondary transition-colors">
+                <Link to="/standings" className="flex items-center gap-1 mt-auto pt-4 text-xs text-text-tertiary hover:text-text-secondary transition-colors">
                   Full standings <ChevronRight className="h-3 w-3" />
                 </Link>
               </CardContent>
@@ -413,7 +372,7 @@ export default function HomePage() {
               >
                 <Link
                   to={link.href}
-                  className="group flex flex-col items-center gap-3 rounded-2xl border border-default bg-secondary p-6 text-center hover:border-strong hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                  className="group flex flex-col items-center gap-3 rounded-2xl border border-default bg-bg-secondary/80 backdrop-blur-xl p-6 text-center hover:border-strong hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
                 >
                   <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-tertiary group-hover:bg-elevated transition-colors">
                     <Icon className="h-5 w-5 text-text-secondary group-hover:text-accent-red transition-colors" />
